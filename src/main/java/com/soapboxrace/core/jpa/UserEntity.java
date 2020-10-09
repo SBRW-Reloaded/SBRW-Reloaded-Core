@@ -52,6 +52,9 @@ public class UserEntity {
 
     @Column(name = "isLocked")
     private boolean isLocked;
+        
+    @Column(name = "isDeveloper")
+    private boolean isDeveloper;
 
     @Column(name = "created")
     private LocalDateTime created;
@@ -112,6 +115,14 @@ public class UserEntity {
 
     public void setPremium(boolean premium) {
         this.premium = premium;
+    }
+        
+    public boolean isDeveloper() {
+        return isDeveloper;
+    }
+
+    public void setIsDeveloper(boolean isDeveloper) {
+        this.isDeveloper = isDeveloper;
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
