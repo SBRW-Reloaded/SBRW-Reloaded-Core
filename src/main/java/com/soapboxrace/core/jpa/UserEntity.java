@@ -56,6 +56,12 @@ public class UserEntity {
     @Column(name = "isDeveloper")
     private boolean isDeveloper;
 
+    @Column(name = "DiscordID", length = 255)
+	private String discordid;
+
+	@Column(name = "UserAgent", length = 255)
+	private String ua;
+
     @Column(name = "created")
     private LocalDateTime created;
 
@@ -120,6 +126,22 @@ public class UserEntity {
     public boolean isDeveloper() {
         return isDeveloper;
     }
+
+	public String getDiscordId() {
+		return discordid;
+	}
+
+	public void setDiscordId(String discordid) {
+		this.discordid = discordid;
+	}
+
+	public String getUA() {
+		return ua;
+	}
+
+	public void setUA(String ua) {
+		this.ua = ua;
+	}
 
     public void setIsDeveloper(boolean isDeveloper) {
         this.isDeveloper = isDeveloper;

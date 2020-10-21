@@ -108,7 +108,7 @@ public class TokenSessionBO {
         return loginStatusVO;
     }
 
-    public LoginStatusVO login(String email, String password, HttpServletRequest httpRequest) {
+public LoginStatusVO login(String email, String password, HttpServletRequest httpRequest) {
         LoginStatusVO loginStatusVO = checkGeoIp(httpRequest.getRemoteAddr());
         if (!loginStatusVO.isLoginOk()) {
             return loginStatusVO;
@@ -118,32 +118,40 @@ public class TokenSessionBO {
         if (email != null && !email.isEmpty() && password != null && !password.isEmpty()) {
             UserEntity userEntity = userDAO.findByEmail(email);
             if (userEntity != null) {
-                if (password.equals(userEntity.getPassword())) {
-                    if (userEntity.isLocked()) {
-                        loginStatusVO.setDescription("Account locked. Contact an administrator.");
+                if(userEntity.isAdmin() || parameterBO.getBoolParam("IS_MAINTENANCE") == false) {
+                    if (password.equals(userEntity.getPassword())) {
+                        if (userEntity.isLocked()) {
+                            loginStatusVO.setDescription("Account locked. Contact an administrator.");
+                            return loginStatusVO;
+                        }
+
+                        BanEntity banEntity = authenticationBO.checkUserBan(userEntity);
+
+                        if (banEntity != null) {
+                            LoginStatusVO.Ban ban = new LoginStatusVO.Ban();
+                            ban.setReason(banEntity.getReason());
+                            if (banEntity.getEndsAt() != null)
+                                ban.setExpires(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault()).format(banEntity.getEndsAt()));
+                            loginStatusVO.setBan(ban);
+                            return loginStatusVO;
+                        }
+
+                        userEntity.setLastLogin(LocalDateTime.now());
+                        userEntity.setDiscordId(httpRequest.getHeader("X-DiscordID"));
+						userEntity.setUA(httpRequest.getHeader("X-UserAgent") + httpRequest.getHeader("user-agent"));
+
+                        userDAO.update(userEntity);
+                        Long userId = userEntity.getId();
+                        deleteByUserId(userId);
+                        String randomUUID = createToken(userId, httpRequest.getRemoteHost());
+                        loginStatusVO = new LoginStatusVO(userId, randomUUID, true);
+                        loginStatusVO.setDescription("");
+
                         return loginStatusVO;
                     }
-
-                    BanEntity banEntity = authenticationBO.checkUserBan(userEntity);
-
-                    if (banEntity != null) {
-                        LoginStatusVO.Ban ban = new LoginStatusVO.Ban();
-                        ban.setReason(banEntity.getReason());
-                        if (banEntity.getEndsAt() != null)
-                            ban.setExpires(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault()).format(banEntity.getEndsAt()));
-                        loginStatusVO.setBan(ban);
-                        return loginStatusVO;
-                    }
-
-                    userEntity.setLastLogin(LocalDateTime.now());
-                    userDAO.update(userEntity);
-                    Long userId = userEntity.getId();
-                    deleteByUserId(userId);
-                    String randomUUID = createToken(userId, httpRequest.getRemoteHost());
-                    loginStatusVO = new LoginStatusVO(userId, randomUUID, true);
-                    loginStatusVO.setDescription("");
-
-                    return loginStatusVO;
+                } else {
+					loginStatusVO.setDescription("Server is in maintenance. Please follow our discord for more info.");
+         			return loginStatusVO;
                 }
             }
         }
