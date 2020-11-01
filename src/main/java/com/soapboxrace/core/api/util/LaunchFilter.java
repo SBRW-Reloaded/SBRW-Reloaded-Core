@@ -60,6 +60,33 @@ public class LaunchFilter implements ContainerRequestFilter {
             userDao.update(userEntity);
         }
 
+        //UNTESTED CONCEPT!!
+        if (parameterBO.getBoolParam("SIGNED_LAUNCHER")) {
+            boolean lock_access = false;
+
+            //Temporarely this works for SBRW Only, starting from 2.1.6.3
+            if (requestContext.getHeaderString("X-UserAgent") != null) {
+                String allowedLaunchersHash = parameterBO.getStrParam("SIGNED_LAUNCHER_HASH", "");
+                String allowedLaunchersHwid = parameterBO.getStrParam("SIGNED_LAUNCHER_HWID_WL", "");
+                String currentLauncherHash = requestContext.getHeaderString("X-GameLauncherHash");
+
+                if(allowedLaunchersHash.contains(currentLauncherHash) == false) lock_access = true;
+
+                if(lock_access == true) {
+                    if(allowedLaunchersHwid.contains(hwid)) lock_access = false;
+                }
+
+                if(lock_access == true) {
+                    LoginStatusVO loginStatusVO = new LoginStatusVO(0L, "", false);
+                    loginStatusVO.setDescription("You're using the wrong launcher, please update to the latest one:\n\n" +
+                            "    SBRW Launcher: https://git.io/Download_NFSW\n" +
+                            "    Electron Launcher: https://launcher.sparkserver.eu/");
+
+                    requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).entity(loginStatusVO).build());
+                }
+            }
+        }
+
         if (parameterBO.getBoolParam("ENABLE_WHITELISTED_LAUNCHERS_ONLY")) {
             String json_whitelisted_launchers = parameterBO.getStrParam("WHITELISTED_LAUNCHERS_ONLY", null);
             String get_useragent = "";
