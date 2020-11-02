@@ -60,7 +60,6 @@ public class LaunchFilter implements ContainerRequestFilter {
             userDao.update(userEntity);
         }
 
-        //UNTESTED CONCEPT!!
         if (parameterBO.getBoolParam("SIGNED_LAUNCHER")) {
             boolean lock_access = false;
 
@@ -79,8 +78,7 @@ public class LaunchFilter implements ContainerRequestFilter {
                 if(lock_access == true) {
                     LoginStatusVO loginStatusVO = new LoginStatusVO(0L, "", false);
                     loginStatusVO.setDescription("You're using the wrong launcher, please update to the latest one:\n\n" +
-                            "    SBRW Launcher: https://git.io/Download_NFSW\n" +
-                            "    Electron Launcher: https://launcher.sparkserver.eu/");
+                            "    SBRW Launcher: https://git.io/Download_NFSW");
 
                     requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).entity(loginStatusVO).build());
                 }

@@ -29,6 +29,7 @@ public class GetServerInformationBO {
         serverInformationVO.setMessageSrv(parameterBO.getStrParam("SERVER_INFO_MESSAGE"));
         serverInformationVO.setHomePageUrl(parameterBO.getStrParam("SERVER_INFO_HOMEPAGE_URL"));
         serverInformationVO.setFacebookUrl(parameterBO.getStrParam("SERVER_INFO_FACEBOOK_URL"));
+        serverInformationVO.setTwitterUrl(parameterBO.getStrParam("SERVER_INFO_TWITTER_URL"));
         serverInformationVO.setDiscordUrl(parameterBO.getStrParam("SERVER_INFO_DISCORD_URL"));
         serverInformationVO.setServerName(parameterBO.getStrParam("SERVER_INFO_NAME"));
         serverInformationVO.setCountry(parameterBO.getStrParam("SERVER_INFO_COUNTRY"));

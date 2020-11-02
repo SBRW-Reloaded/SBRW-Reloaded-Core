@@ -7,6 +7,7 @@ public class ServerInformationVO {
 
     private String homePageUrl;
     private String facebookUrl;
+    private String twitterUrl;
     private String discordUrl;
 
     private String serverName;
@@ -48,6 +49,14 @@ public class ServerInformationVO {
 
     public void setFacebookUrl(String facebookUrl) {
         this.facebookUrl = facebookUrl;
+    }
+
+    public String getTwitterUrl() {
+        return twitterUrl;
+    }
+
+    public void setTwitterUrl(String twitterUrl) {
+        this.twitterUrl = twitterUrl;
     }
 
     public String getDiscordUrl() {
