@@ -38,7 +38,7 @@ public class Reporting {
     @Produces(MediaType.APPLICATION_XML)
     public String sendHardwareInfo(InputStream is, @HeaderParam("securityToken") String securityToken, @HeaderParam("userId") Long userId) {
         HardwareInfo hardwareInfo = JAXBUtility.unMarshal(is, HardwareInfo.class);
-        if(hardwareInfo.getCpuid0().equals("GenuineIntel") || hardwareInfo.getCpuid0().equals("AuthenticAMD")) {
+        if(hardwareInfo.getCpuid0().equals("GenuineIntel") || hardwareInfo.getCpuid0().equals("AuthenticAMD") || hardwareInfo.getCpuid0().equals("VIA VIA VIA ")) {
             HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
             UserEntity user = tokenBO.getUser(securityToken);
             user.setGameHardwareHash(hardwareInfoEntity.getHardwareHash());

@@ -53,6 +53,7 @@ public class AdminBO {
     public void sendChatCommand(Long personaId, String command, String personaName) {
         String personaToBan = command.split(" ")[1];
         PersonaEntity personaEntity = personaDao.findByName(personaToBan);
+        command = command.replace(personaToBan + " ", "");
 		sendCommand(personaId, personaEntity.getPersonaId(), command);
 	}
 
@@ -78,7 +79,15 @@ public class AdminBO {
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("Yay, user has been banned."), personaId);
 
 				if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
-					discord.sendMessage(constructMsg_ds.replace("%s", "banned"), 
+					discord.sendMessage(constructMsg_ds.replace("%s", "banned") + ". Reason: " + commandInfo.reason, 
+						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL"), 
+						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_NAME", "Botte"),
+						0xff0000
+					);
+				}
+
+                if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_PUBLIC_URL") != null) {
+					discord.sendMessage(constructMsg_ds.replace("%s", "banned") + ". Reason: " + commandInfo.reason, 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL"), 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_NAME", "Botte"),
 						0xff0000
