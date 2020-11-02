@@ -88,7 +88,7 @@ public class AdminBO {
 
                 if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_PUBLIC_URL") != null) {
 					discord.sendMessage(constructMsg_ds.replace("%s", "banned") + ". Reason: " + commandInfo.reason, 
-						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL"), 
+						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_PUBLIC_URL"), 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_NAME", "Botte"),
 						0xff0000
 					);
