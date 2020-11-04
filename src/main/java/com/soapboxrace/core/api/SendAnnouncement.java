@@ -21,7 +21,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-@Path("/SendAnnouncement")
+@Path("/Send")
 public class SendAnnouncement {
 
     @EJB
@@ -38,6 +38,7 @@ public class SendAnnouncement {
 
     @POST
     @Produces(MediaType.TEXT_HTML)
+    @Path("/Announcement")
     public String sendAnnouncement(@FormParam("message") String message, @FormParam("announcementAuth") String token) {
         String announcementToken = parameterBO.getStrParam("ANNOUNCEMENT_AUTH");
 
@@ -55,7 +56,7 @@ public class SendAnnouncement {
 
     @GET
     @Produces(MediaType.TEXT_HTML)
-    @Path("/sendChat")
+    @Path("/Chat")
     public String sendChat(@QueryParam("announcementAuth") String token, @QueryParam("message") String message, @QueryParam("from") Long from, @QueryParam("channel") String channel) {
         String announcementToken = parameterBO.getStrParam("ANNOUNCEMENT_AUTH");
         if (announcementToken == null) {
