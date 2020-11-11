@@ -16,6 +16,7 @@ import com.soapboxrace.core.jpa.HardwareInfoEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
 import com.soapboxrace.core.xmpp.XmppChat;
 
 import com.soapboxrace.core.bo.util.DiscordWebhook;
@@ -50,6 +51,9 @@ public class AdminBO {
     @EJB
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
+    @EJB
+    private OpenFireRestApiCli openFireRestApiCli;
+
     public void sendChatCommand(Long personaId, String command, String personaName) {
         String personaToBan = command.split(" ")[1];
         PersonaEntity personaEntity = personaDao.findByName(personaToBan);
@@ -75,6 +79,8 @@ public class AdminBO {
                     break;
                 }
 
+                openFireRestApiCli.sendChatAnnouncement(constructMsg.replace("%s", "banned"));
+
                 sendBan(personaEntity, personaDao.findById(personaId), commandInfo.timeEnd, commandInfo.reason);
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("Yay, user has been banned."), personaId);
 
@@ -96,6 +102,8 @@ public class AdminBO {
 
                 break;
             case KICK:
+                openFireRestApiCli.sendChatAnnouncement(constructMsg.replace("%s", "kicked"));
+
                 sendKick(personaEntity.getUser().getId(), personaEntity.getPersonaId());
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("Kicked out the butt of the user."), personaId);
 
@@ -114,6 +122,8 @@ public class AdminBO {
                     openFireSoapBoxCli.send(XmppChat.createSystemMessage("Why you wanna unban that user ? Isn't even banned !"), personaId);
                     break;
                 }
+
+                openFireRestApiCli.sendChatAnnouncement(constructMsg.replace("%s", "unbanned"));
 
                 if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
 					discord.sendMessage(constructMsg_ds.replace("%s", "unbanned"), 
