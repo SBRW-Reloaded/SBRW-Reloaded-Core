@@ -52,6 +52,9 @@ public class RewardBO {
     @EJB
     private AmplifierDAO amplifierDAO;
 
+    @EJB
+    private OnlineUsersBO onlineUsersBO;
+
     public Float getPlayerLevelConst(int playerLevel, float levelCashRewardMultiplier) {
         return levelCashRewardMultiplier * playerLevel;
     }
@@ -188,13 +191,22 @@ public class RewardBO {
         return accolades;
     }
 
+    public Float getPlayerCountConst() {
+        OnlineUsersEntity onlineUsersEntity = onlineUsersBO.getOnlineUsersStats();
+
+		float divider = parameterBO.getFloatParam("PLAYERCOUNT_REWARD_DIVIDER", 0f);
+		if (divider == 0) return 1f;
+		long playerCount = onlineUsersEntity.getNumberOfOnline();
+		return 1f + playerCount / divider;
+	}
+
     public void setMultiplierReward(EventEntity eventEntity, RewardVO rewardVO) {
         float rep = rewardVO.getRep();
         float cash = rewardVO.getCash();
         float finalRepRewardMultiplier = eventEntity.getFinalRepRewardMultiplier();
         float finalCashRewardMultiplier = eventEntity.getFinalCashRewardMultiplier();
-        float finalRep = rep * finalRepRewardMultiplier;
-        float finalCash = cash * finalCashRewardMultiplier;
+        float finalRep = (rep * finalRepRewardMultiplier) * getPlayerCountConst();
+        float finalCash = (cash * finalCashRewardMultiplier) * getPlayerCountConst();
         rewardVO.add((int) finalRep, 0, EnumRewardCategory.AMPLIFIER, EnumRewardType.REP_AMPLIFIER);
         rewardVO.add(0, (int) finalCash, EnumRewardCategory.AMPLIFIER, EnumRewardType.TOKEN_AMPLIFIER);
     }

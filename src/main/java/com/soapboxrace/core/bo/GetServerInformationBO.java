@@ -22,6 +22,9 @@ public class GetServerInformationBO {
     @EJB
     private ParameterBO parameterBO;
 
+	@EJB
+	private RewardBO rewardBO;
+
     public ServerInformationVO getServerInformation() {
         OnlineUsersEntity onlineUsersEntity = onlineUsersBO.getOnlineUsersStats();
 
@@ -44,6 +47,7 @@ public class GetServerInformationBO {
         serverInformationVO.setDisactivatedHolidaySceneryGroups(parameterBO.getStrListParam("SERVER_INFO_DISABLED_SCENERY"));
         serverInformationVO.setOnlineNumber(onlineUsersEntity.getNumberOfOnline());
         serverInformationVO.setRequireTicket(parameterBO.getStrParam("TICKET_TOKEN") != null);
+        serverInformationVO.setPlayerCountRewardMultiplier(rewardBO.getPlayerCountConst());
         serverInformationVO.setServerVersion(BuildInfo.getVersion());
 
         return serverInformationVO;

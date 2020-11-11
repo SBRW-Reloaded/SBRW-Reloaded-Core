@@ -25,6 +25,7 @@ public class ServerInformationVO {
 
     private Long onlineNumber;
     private boolean requireTicket = false;
+    private float playerCountRewardMultiplier;
     private String serverVersion;
 
     public String getMessageSrv() {
@@ -178,4 +179,12 @@ public class ServerInformationVO {
     public void setServerVersion(String serverVersion) {
         this.serverVersion = serverVersion;
     }
+
+	public float getPlayerCountRewardMultiplier() {
+		return playerCountRewardMultiplier;
+	}
+
+	public void setPlayerCountRewardMultiplier(float playerCountRewardMultiplier) {
+		this.playerCountRewardMultiplier = playerCountRewardMultiplier;
+	}
 }
