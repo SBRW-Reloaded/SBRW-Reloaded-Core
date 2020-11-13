@@ -33,7 +33,7 @@ public class CustomCarEntity {
     private int skillModSlotCount;
     private int version;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ownedCarId", referencedColumnName = "ID", foreignKey = @ForeignKey(name =
             "FK_CUSTOMCAR_OWNEDCAR"))
     private OwnedCarEntity ownedCar;
@@ -41,31 +41,31 @@ public class CustomCarEntity {
     @OneToMany(mappedBy = "customCar", targetEntity = PaintEntity.class,
             orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
     @LazyCollection(LazyCollectionOption.FALSE)
-    @Fetch(FetchMode.JOIN)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<PaintEntity> paints;
 
     @OneToMany(mappedBy = "customCar", targetEntity = PerformancePartEntity.class,
             orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
     @LazyCollection(LazyCollectionOption.FALSE)
-    @Fetch(FetchMode.JOIN)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<PerformancePartEntity> performanceParts;
 
     @OneToMany(mappedBy = "customCar", targetEntity = SkillModPartEntity.class,
             orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
     @LazyCollection(LazyCollectionOption.FALSE)
-    @Fetch(FetchMode.JOIN)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<SkillModPartEntity> skillModParts;
 
     @OneToMany(mappedBy = "customCar", targetEntity = VinylEntity.class,
             orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
     @LazyCollection(LazyCollectionOption.FALSE)
-    @Fetch(FetchMode.JOIN)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<VinylEntity> vinyls;
 
     @OneToMany(mappedBy = "customCar", targetEntity = VisualPartEntity.class,
             orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
     @LazyCollection(LazyCollectionOption.FALSE)
-    @Fetch(FetchMode.JOIN)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<VisualPartEntity> visualParts;
 
     public Long getId() {
