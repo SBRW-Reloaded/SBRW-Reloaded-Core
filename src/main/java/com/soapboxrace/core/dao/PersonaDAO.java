@@ -6,27 +6,24 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.CacheableDAO;
 import com.soapboxrace.core.jpa.PersonaEntity;
 
-import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Singleton;
+import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import java.util.List;
 
-@Stateless
-public class PersonaDAO extends BaseDAO<PersonaEntity> {
+@Singleton
+@Lock(LockType.READ)
+public class PersonaDAO extends CacheableDAO<PersonaEntity, Long> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public PersonaEntity findById(Long id) {
-        return entityManager.find(PersonaEntity.class, id);
+    public PersonaDAO() {
+        super(PersonaEntity.class);
     }
 
     public PersonaEntity findByName(String name) {
@@ -36,6 +33,13 @@ public class PersonaDAO extends BaseDAO<PersonaEntity> {
 
         List<PersonaEntity> resultList = query.getResultList();
         return !resultList.isEmpty() ? resultList.get(0) : null;
+    }
+
+    public void addPointsToScore(Long personaId, Integer points) {
+        Query query = entityManager.createNamedQuery("PersonaEntity.addPointsToScore");
+        query.setParameter("personaId", personaId);
+        query.setParameter("points", points);
+        query.executeUpdate();
     }
 
     public Long countPersonas() {
