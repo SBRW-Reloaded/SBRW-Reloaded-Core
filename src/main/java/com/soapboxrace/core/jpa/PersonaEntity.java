@@ -15,9 +15,10 @@ import java.time.temporal.ChronoUnit;
 @NamedQueries({ //
         @NamedQuery(name = "PersonaEntity.findByName", query = "SELECT obj FROM PersonaEntity obj WHERE obj.name = " +
                 ":name"), //
-        @NamedQuery(name = "PersonaEntity.countPersonas", query = "SELECT count(obj) FROM PersonaEntity obj")
+        @NamedQuery(name = "PersonaEntity.countPersonas", query = "SELECT count(obj) FROM PersonaEntity obj"), //
+        @NamedQuery(name = "PersonaEntity.addPointsToScore", query = "UPDATE PersonaEntity obj SET obj.score=obj.score+:points WHERE obj.personaId=:personaId")
 })
-public class PersonaEntity {
+public class PersonaEntity implements CacheableEntity<Long> {
 
     @Id
     @Column(name = "ID", nullable = false)
@@ -48,6 +49,11 @@ public class PersonaEntity {
 
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
+
+    @Override
+    public Long getKey() {
+        return getPersonaId();
+    }
 
     public double getBoost() {
         return boost;
