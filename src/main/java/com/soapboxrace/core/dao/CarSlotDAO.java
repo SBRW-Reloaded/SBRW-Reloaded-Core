@@ -6,57 +6,47 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.LongKeyedDAO;
+import com.soapboxrace.core.dao.util.BaseDAO;
 import com.soapboxrace.core.jpa.CarSlotEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 
 import javax.ejb.Stateless;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
 @Stateless
-public class CarSlotDAO extends LongKeyedDAO<CarSlotEntity> {
+public class CarSlotDAO extends BaseDAO<CarSlotEntity> {
 
-    public CarSlotDAO() {
-        super(CarSlotEntity.class);
+    @PersistenceContext
+    protected void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
+    public CarSlotEntity findById(Long id) {
+        return entityManager.find(CarSlotEntity.class, id);
     }
 
     public List<CarSlotEntity> findByPersonaId(Long personaId) {
+        PersonaEntity personaEntity = new PersonaEntity();
+        personaEntity.setPersonaId(personaId);
+
         TypedQuery<CarSlotEntity> query = entityManager.createNamedQuery("CarSlotEntity.findByPersonaId",
                 CarSlotEntity.class);
-        query.setParameter("persona", personaId);
+        query.setParameter("persona", personaEntity);
         return query.getResultList();
     }
 
-    public CarSlotEntity findByPersonaIdEager(Long personaId, int index) {
-        TypedQuery<CarSlotEntity> query = entityManager.createNamedQuery("CarSlotEntity.findByPersonaIdEager",
-                CarSlotEntity.class);
-        query.setParameter("persona", personaId);
-        query.setFirstResult(index);
-        query.setMaxResults(1);
-        return query.getSingleResult();
-    }
+    public List<CarSlotEntity> findNonRentalsByPersonaId(Long personaId) {
+        PersonaEntity personaEntity = new PersonaEntity();
+        personaEntity.setPersonaId(personaId);
 
-    public List<CarSlotEntity> findByPersonaIdEager(Long personaId) {
-        TypedQuery<CarSlotEntity> query = entityManager.createNamedQuery("CarSlotEntity.findByPersonaIdEager",
+        TypedQuery<CarSlotEntity> query = entityManager.createNamedQuery("CarSlotEntity.findNonRentalsByPersonaId",
                 CarSlotEntity.class);
-        query.setParameter("persona", personaId);
+        query.setParameter("persona", personaEntity);
         return query.getResultList();
-    }
-
-    public Long findNumNonRentalsByPersonaId(Long personaId) {
-        TypedQuery<Long> query = entityManager.createNamedQuery("CarSlotEntity.findNumNonRentalsByPersonaId",
-                Long.class);
-        query.setParameter("persona", personaId);
-        return query.getSingleResult();
-    }
-
-    public int findNumByPersonaId(Long personaId) {
-        TypedQuery<Long> query = entityManager.createNamedQuery("CarSlotEntity.findNumByPersonaId",
-                Long.class);
-        query.setParameter("persona", personaId);
-        return query.getSingleResult().intValue();
     }
 
     public List<CarSlotEntity> findAllExpired() {

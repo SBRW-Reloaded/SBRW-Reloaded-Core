@@ -13,8 +13,8 @@ import com.soapboxrace.jaxb.http.*;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Stateless
 public class RewardBO {
@@ -52,6 +52,9 @@ public class RewardBO {
     @EJB
     private AmplifierDAO amplifierDAO;
 
+    @EJB
+    private OnlineUsersBO onlineUsersBO;
+
     public Float getPlayerLevelConst(int playerLevel, float levelCashRewardMultiplier) {
         return levelCashRewardMultiplier * playerLevel;
     }
@@ -66,15 +69,15 @@ public class RewardBO {
         return (int) baseRewardResult;
     }
 
-    public void setBaseReward(PersonaEntity personaEntity, EventRewardEntity eventRewardEntity,
+    public void setBaseReward(PersonaEntity personaEntity, EventEntity eventEntity,
                               ArbitrationPacket arbitrationPacket, RewardVO rewardVO) {
-        float baseRep = (float) eventRewardEntity.getBaseRepReward();
-        float baseCash = (float) eventRewardEntity.getBaseCashReward();
+        float baseRep = (float) eventEntity.getBaseRepReward();
+        float baseCash = (float) eventEntity.getBaseCashReward();
         Float playerLevelRepConst = getPlayerLevelConst(personaEntity.getLevel(),
-                eventRewardEntity.getLevelRepRewardMultiplier());
+                eventEntity.getLevelRepRewardMultiplier());
         Float playerLevelCashConst = getPlayerLevelConst(personaEntity.getLevel(),
-                eventRewardEntity.getLevelCashRewardMultiplier());
-        Float timeConst = getTimeConst(eventRewardEntity.getEventEntity().getRewardsTimeLimit(), arbitrationPacket.getEventDurationInMilliseconds());
+                eventEntity.getLevelCashRewardMultiplier());
+        Float timeConst = getTimeConst(eventEntity.getRewardsTimeLimit(), arbitrationPacket.getEventDurationInMilliseconds());
         rewardVO.setBaseRep(getBaseReward(baseRep, playerLevelRepConst, timeConst));
         rewardVO.setBaseCash(getBaseReward(baseCash, playerLevelCashConst, timeConst));
     }
@@ -97,7 +100,7 @@ public class RewardBO {
         boolean hasLevelChanged = false;
 
         if (parameterBO.getBoolParam("ENABLE_REPUTATION") && personaEntity.getLevel() < maxLevel) {
-            Long expToNextLevel = levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
+            Long expToNextLevel = levelRepDao.findByLevel((long) personaEntity.getLevel()).getExpPoint();
             long expMax = personaEntity.getRepAtCurrentLevel() + exp;
             if (expMax >= expToNextLevel) {
                 boolean isLeveledUp = true;
@@ -106,7 +109,7 @@ public class RewardBO {
                     personaEntity.setLevel(personaEntity.getLevel() + 1);
                     personaEntity.setRepAtCurrentLevel((int) (expMax - expToNextLevel));
 
-                    expToNextLevel = levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
+                    expToNextLevel = levelRepDao.findByLevel((long) personaEntity.getLevel()).getExpPoint();
                     expMax = personaEntity.getRepAtCurrentLevel() + exp;
 
                     isLeveledUp = (expMax >= expToNextLevel);
@@ -128,13 +131,13 @@ public class RewardBO {
         }
     }
 
-    public void setTopSpeedReward(EventRewardEntity eventRewardEntity, float topSpeed, RewardVO rewardVO) {
-        float minTopSpeedTrigger = eventRewardEntity.getMinTopSpeedTrigger();
+    public void setTopSpeedReward(EventEntity eventEntity, float topSpeed, RewardVO rewardVO) {
+        float minTopSpeedTrigger = eventEntity.getMinTopSpeedTrigger();
         if (topSpeed >= minTopSpeedTrigger) {
             float baseRep = rewardVO.getBaseRep();
             float baseCash = rewardVO.getBaseCash();
-            float topSpeedCashMultiplier = eventRewardEntity.getTopSpeedCashMultiplier();
-            float topSpeedRepMultiplier = eventRewardEntity.getTopSpeedRepMultiplier();
+            float topSpeedCashMultiplier = eventEntity.getTopSpeedCashMultiplier();
+            float topSpeedRepMultiplier = eventEntity.getTopSpeedRepMultiplier();
             float highSpeedRep = baseRep * topSpeedRepMultiplier;
             float highSpeedCash = baseCash * topSpeedCashMultiplier;
             rewardVO.add((int) highSpeedRep, (int) highSpeedCash, EnumRewardCategory.BONUS, EnumRewardType.NONE);
@@ -144,9 +147,12 @@ public class RewardBO {
     public void setSkillMultiplierReward(PersonaEntity personaEntity, RewardVO rewardVO,
                                          SkillModRewardType skillModRewardType) {
         CarSlotEntity defaultCarEntity = personaBo.getDefaultCarEntity(personaEntity.getPersonaId());
-        List<SkillModPartEntity> skillModParts = defaultCarEntity.getOwnedCar().getCustomCar().getSkillModParts();
+        Set<SkillModPartEntity> skillModParts = defaultCarEntity.getOwnedCar().getCustomCar().getSkillModParts();
         float skillMultiplier = 0f;
-        float maxSkillMultiplier = parameterBO.getFloatParam("SKILL_" + skillModRewardType.toString() + "_MAX_VALUE", 30f);
+        float maxSkillMultiplier = 30f;
+        if (SkillModRewardType.EXPLORER.equals(skillModRewardType)) {
+            maxSkillMultiplier = 50f;
+        }
         for (SkillModPartEntity skillModPartEntity : skillModParts) {
             ProductEntity productEntity = productDAO.findByHash(skillModPartEntity.getSkillModPartAttribHash());
             if (productEntity != null && productEntity.getProductTitle().equals(skillModRewardType.toString())) {
@@ -160,13 +166,13 @@ public class RewardBO {
         rewardVO.add(0, (int) finalCash, EnumRewardCategory.SKILL_MOD, EnumRewardType.TOKEN_AMPLIFIER);
     }
 
-    public Accolades getAccolades(PersonaEntity personaEntity, EventRewardEntity eventRewardEntity,
+    public Accolades getAccolades(PersonaEntity personaEntity, EventEntity eventEntity,
                                   ArbitrationPacket arbitrationPacket, RewardVO rewardVO) {
         Accolades accolades = new Accolades();
         accolades.setFinalRewards(getFinalReward(rewardVO.getRep(), rewardVO.getCash()));
         accolades.setHasLeveledUp(isLeveledUp(personaEntity, rewardVO.getRep()));
         accolades.setLuckyDrawInfo(getEventLuckyDraw(arbitrationPacket.getRank(),
-                personaEntity, eventRewardEntity));
+                personaEntity, eventEntity));
         accolades.setOriginalRewards(getFinalReward(rewardVO.getRep(), rewardVO.getCash()));
         accolades.setRewardInfo(rewardVO.getArrayOfRewardPart());
         return accolades;
@@ -185,23 +191,32 @@ public class RewardBO {
         return accolades;
     }
 
-    public void setMultiplierReward(EventRewardEntity eventRewardEntity, RewardVO rewardVO) {
+    public Float getPlayerCountConst() {
+        OnlineUsersEntity onlineUsersEntity = onlineUsersBO.getOnlineUsersStats();
+
+		float divider = parameterBO.getFloatParam("PLAYERCOUNT_REWARD_DIVIDER", 0f);
+		if (divider == 0) return 1f;
+		long playerCount = onlineUsersEntity.getNumberOfOnline();
+		return 1f + playerCount / divider;
+	}
+
+    public void setMultiplierReward(EventEntity eventEntity, RewardVO rewardVO) {
         float rep = rewardVO.getRep();
         float cash = rewardVO.getCash();
-        float finalRepRewardMultiplier = eventRewardEntity.getFinalRepRewardMultiplier();
-        float finalCashRewardMultiplier = eventRewardEntity.getFinalCashRewardMultiplier();
-        float finalRep = rep * finalRepRewardMultiplier;
-        float finalCash = cash * finalCashRewardMultiplier;
+        float finalRepRewardMultiplier = eventEntity.getFinalRepRewardMultiplier();
+        float finalCashRewardMultiplier = eventEntity.getFinalCashRewardMultiplier();
+        float finalRep = (rep * finalRepRewardMultiplier) * getPlayerCountConst();
+        float finalCash = (cash * finalCashRewardMultiplier) * getPlayerCountConst();
         rewardVO.add((int) finalRep, 0, EnumRewardCategory.AMPLIFIER, EnumRewardType.REP_AMPLIFIER);
         rewardVO.add(0, (int) finalCash, EnumRewardCategory.AMPLIFIER, EnumRewardType.TOKEN_AMPLIFIER);
     }
 
-    public void setPerfectStartReward(EventRewardEntity eventRewardEntity, int perfectStart, RewardVO rewardVO) {
+    public void setPerfectStartReward(EventEntity eventEntity, int perfectStart, RewardVO rewardVO) {
         if (perfectStart == 1) {
             float baseRep = rewardVO.getBaseRep();
             float baseCash = rewardVO.getBaseCash();
-            float perfectStartCashMultiplier = eventRewardEntity.getPerfectStartCashMultiplier();
-            float perfectStartRepMultiplier = eventRewardEntity.getPerfectStartRepMultiplier();
+            float perfectStartCashMultiplier = eventEntity.getPerfectStartCashMultiplier();
+            float perfectStartRepMultiplier = eventEntity.getPerfectStartRepMultiplier();
             float perfectStartRep = baseRep * perfectStartRepMultiplier;
             float perfectStartCash = baseCash * perfectStartCashMultiplier;
             rewardVO.add((int) perfectStartRep, (int) perfectStartCash, EnumRewardCategory.BONUS, EnumRewardType.NONE);
@@ -215,41 +230,41 @@ public class RewardBO {
         }
     }
 
-    public void setRankReward(EventRewardEntity eventRewardEntity, ArbitrationPacket routeArbitrationPacket, RewardVO rewardVO) {
+    public void setRankReward(EventEntity eventEntity, ArbitrationPacket routeArbitrationPacket, RewardVO rewardVO) {
         float rankRepMultiplier = 0f;
         float rankCashMultiplier = 0f;
         switch (routeArbitrationPacket.getRank()) {
             case 1:
-                rankRepMultiplier = eventRewardEntity.getRank1RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank1CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank1RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank1CashMultiplier();
                 break;
             case 2:
-                rankRepMultiplier = eventRewardEntity.getRank2RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank2CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank2RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank2CashMultiplier();
                 break;
             case 3:
-                rankRepMultiplier = eventRewardEntity.getRank3RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank3CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank3RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank3CashMultiplier();
                 break;
             case 4:
-                rankRepMultiplier = eventRewardEntity.getRank4RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank4CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank4RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank4CashMultiplier();
                 break;
             case 5:
-                rankRepMultiplier = eventRewardEntity.getRank5RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank5CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank5RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank5CashMultiplier();
                 break;
             case 6:
-                rankRepMultiplier = eventRewardEntity.getRank6RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank6CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank6RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank6CashMultiplier();
                 break;
             case 7:
-                rankRepMultiplier = eventRewardEntity.getRank7RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank7CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank7RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank7CashMultiplier();
                 break;
             case 8:
-                rankRepMultiplier = eventRewardEntity.getRank8RepMultiplier();
-                rankCashMultiplier = eventRewardEntity.getRank8CashMultiplier();
+                rankRepMultiplier = eventEntity.getRank8RepMultiplier();
+                rankCashMultiplier = eventEntity.getRank8CashMultiplier();
                 break;
             default:
                 break;
@@ -320,8 +335,8 @@ public class RewardBO {
         return luckyDrawInfo;
     }
 
-    private LuckyDrawItem getEventRewardItem(PersonaEntity personaEntity, EventRewardEntity eventRewardEntity, Integer rank) {
-        if (eventRewardEntity == null) {
+    private LuckyDrawItem getEventRewardItem(PersonaEntity personaEntity, EventEntity eventEntity, Integer rank) {
+        if (eventEntity == null) {
             return getRandomRewardItem(personaEntity);
         }
 
@@ -329,28 +344,28 @@ public class RewardBO {
 
         switch (rank) {
             case 1:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank1();
+                rewardTableEntity = eventEntity.getRewardTableRank1();
                 break;
             case 2:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank2();
+                rewardTableEntity = eventEntity.getRewardTableRank2();
                 break;
             case 3:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank3();
+                rewardTableEntity = eventEntity.getRewardTableRank3();
                 break;
             case 4:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank4();
+                rewardTableEntity = eventEntity.getRewardTableRank4();
                 break;
             case 5:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank5();
+                rewardTableEntity = eventEntity.getRewardTableRank5();
                 break;
             case 6:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank6();
+                rewardTableEntity = eventEntity.getRewardTableRank6();
                 break;
             case 7:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank7();
+                rewardTableEntity = eventEntity.getRewardTableRank7();
                 break;
             case 8:
-                rewardTableEntity = eventRewardEntity.getRewardTableRank8();
+                rewardTableEntity = eventEntity.getRewardTableRank8();
                 break;
             default:
                 throw new IllegalArgumentException("cannot handle rank " + rank);
@@ -371,17 +386,17 @@ public class RewardBO {
     }
 
     private Boolean isLeveledUp(PersonaEntity personaEntity, Integer exp) {
-        return (long) (personaEntity.getRepAtCurrentLevel() + exp) >= levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
+        return (long) (personaEntity.getRepAtCurrentLevel() + exp) >= levelRepDao.findByLevel((long) personaEntity.getLevel()).getExpPoint();
     }
 
     private LuckyDrawInfo getEventLuckyDraw(Integer rank, PersonaEntity personaEntity,
-                                            EventRewardEntity eventRewardEntity) {
+                                            EventEntity eventEntity) {
         LuckyDrawInfo luckyDrawInfo = new LuckyDrawInfo();
         if (!parameterBO.getBoolParam("ENABLE_DROP_ITEM")) {
             return luckyDrawInfo;
         }
         ArrayOfLuckyDrawItem arrayOfLuckyDrawItem = new ArrayOfLuckyDrawItem();
-        LuckyDrawItem itemFromProduct = getEventRewardItem(personaEntity, eventRewardEntity, rank);
+        LuckyDrawItem itemFromProduct = getEventRewardItem(personaEntity, eventEntity, rank);
         if (itemFromProduct == null) {
             return luckyDrawInfo;
         }

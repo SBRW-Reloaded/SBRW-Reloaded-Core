@@ -27,6 +27,9 @@ public class PersonaBO {
     private CarSlotDAO carSlotDAO;
 
     @EJB
+    private LevelRepDAO levelRepDAO;
+
+    @EJB
     private OwnedCarDAO ownedCarDAO;
 
     @EJB
@@ -38,11 +41,8 @@ public class PersonaBO {
     @EJB
     private CarDamageBO carDamageBO;
 
-    @EJB
-    private CarSlotBO carSlotBO;
-
     public void updateBadges(Long personaId, BadgeBundle badgeBundle) {
-        PersonaEntity personaEntity = personaDAO.find(personaId);
+        PersonaEntity personaEntity = personaDAO.findById(personaId);
 
         for (BadgeInput badgeInput : badgeBundle.getBadgeInputs()) {
             if (badgeInput.getSlotId() > 3) {
@@ -71,7 +71,7 @@ public class PersonaBO {
     }
 
     public void changeDefaultCar(Long personaId, Long defaultCarId) {
-        PersonaEntity personaEntity = personaDAO.find(personaId);
+        PersonaEntity personaEntity = personaDAO.findById(personaId);
         changeDefaultCar(personaEntity, defaultCarId);
         personaDAO.update(personaEntity);
     }
@@ -89,53 +89,34 @@ public class PersonaBO {
     }
 
     public PersonaEntity getPersonaById(Long personaId) {
-        return personaDAO.find(personaId);
+        return personaDAO.findById(personaId);
     }
 
     public CarSlotEntity getDefaultCarEntity(Long personaId) {
-        int carSlotCount = carSlotBO.countPersonasCar(personaId);
-
-        if (carSlotCount > 0) {
-            PersonaEntity personaEntity = personaDAO.find(personaId);
-            int curCarIndex = personaEntity.getCurCarIndex();
-
-            if (curCarIndex >= carSlotCount) {
-                curCarIndex = carSlotCount - 1;
-                personaEntity.setCurCarIndex(curCarIndex);
-                personaDAO.update(personaEntity);
+        PersonaEntity personaEntity = personaDAO.findById(personaId);
+        List<CarSlotEntity> carSlotList = getPersonasCar(personaId);
+        int curCarIndex = personaEntity.getCurCarIndex();
+        if (!carSlotList.isEmpty()) {
+            if (curCarIndex >= carSlotList.size()) {
+                curCarIndex = carSlotList.size() - 1;
+                CarSlotEntity ownedCarEntity = carSlotList.get(curCarIndex);
+                changeDefaultCar(personaEntity, ownedCarEntity.getId());
             }
-
-            CarSlotEntity carSlotEntity = carSlotDAO.findByPersonaIdEager(personaId, curCarIndex);
-            CustomCarEntity customCarEntity = carSlotEntity.getOwnedCar().getCustomCar();
-            customCarEntity.getPaints().size();
-            customCarEntity.getPerformanceParts().size();
-            customCarEntity.getSkillModParts().size();
-            customCarEntity.getVinyls().size();
-            customCarEntity.getVisualParts().size();
-
-            return carSlotEntity;
+            return carSlotList.get(curCarIndex);
         }
-
         return null;
     }
 
     public OwnedCarTrans getDefaultCar(Long personaId) {
-        Long startTime = System.currentTimeMillis();
         CarSlotEntity carSlotEntity = getDefaultCarEntity(personaId);
         if (carSlotEntity == null) {
             return new OwnedCarTrans();
         }
-        Long endFetchTime = System.currentTimeMillis();
-        OwnedCarTrans ownedCarTrans = OwnedCarConverter.entity2Trans(carSlotEntity.getOwnedCar());
-        Long endTime = System.currentTimeMillis();
-
-        System.out.printf("defaultcar: total time %d ms, fetch time %d ms, xml convert time %d ms%n", endTime - startTime, endFetchTime - startTime, endTime - endFetchTime);
-
-        return ownedCarTrans;
+        return OwnedCarConverter.entity2Trans(carSlotEntity.getOwnedCar());
     }
 
     public void repairAllCars(PersonaEntity personaEntity) {
-        List<CarSlotEntity> carSlotEntities = carSlotBO.getPersonasCar(personaEntity.getPersonaId());
+        List<CarSlotEntity> carSlotEntities = getPersonasCar(personaEntity.getPersonaId());
 
         for (CarSlotEntity carSlotEntity : carSlotEntities) {
             OwnedCarEntity ownedCarEntity = carSlotEntity.getOwnedCar();
@@ -144,9 +125,17 @@ public class PersonaBO {
         }
     }
 
+    public List<CarSlotEntity> getPersonasCar(Long personaId) {
+        return carSlotDAO.findByPersonaId(personaId);
+    }
+
+    public LevelRepEntity getLevelInfoByLevel(Long level) {
+        return levelRepDAO.findByLevel(level);
+    }
+
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public OwnedCarEntity getCarByOwnedCarId(Long ownedCarId) {
-        OwnedCarEntity ownedCarEntity = ownedCarDAO.find(ownedCarId);
+        OwnedCarEntity ownedCarEntity = ownedCarDAO.findById(ownedCarId);
         CustomCarEntity customCar = ownedCarEntity.getCustomCar();
 
         // Load customcar data since we can't do it in the query
