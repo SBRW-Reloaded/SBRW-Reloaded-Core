@@ -6,41 +6,86 @@
 
 package com.soapboxrace.core.bo;
 
-import com.soapboxrace.core.dao.CarClassesDAO;
+import com.google.common.collect.ImmutableRangeMap;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeMap;
+import com.soapboxrace.core.dao.CarClassDAO;
+import com.soapboxrace.core.dao.CarStatsDAO;
 import com.soapboxrace.core.dao.ProductDAO;
-import com.soapboxrace.core.jpa.CarClassesEntity;
-import com.soapboxrace.core.jpa.CustomCarEntity;
-import com.soapboxrace.core.jpa.PerformancePartEntity;
-import com.soapboxrace.core.jpa.ProductEntity;
+import com.soapboxrace.core.jpa.*;
+import org.slf4j.Logger;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
-import javax.ejb.Stateless;
-import java.util.Set;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Singleton;
+import javax.inject.Inject;
+import java.util.List;
 
-@Stateless
+@Singleton
+@Lock(LockType.READ)
 public class PerformanceBO {
 
     @EJB
-    private CarClassesDAO carClassesDAO;
+    private CarClassDAO carClassDAO;
+
+    @EJB
+    private CarStatsDAO carStatsDAO;
 
     @EJB
     private ProductDAO productDAO;
+
+    @Inject
+    private Logger logger;
+
+    /**
+     * {@link RangeMap} is marked as Beta, but it's been that way for quite some time.
+     * It's probably safe to use - certainly the most convenient.
+     */
+    @SuppressWarnings("UnstableApiUsage")
+    private RangeMap<Integer, Integer> carClassRanges;
+
+    private List<CarClassEntity> carClassEntities;
+
+    @PostConstruct
+    @SuppressWarnings("UnstableApiUsage")
+    public void init() {
+        // Load all car class definitions
+        this.carClassEntities = carClassDAO.findAll();
+
+        // We can use a range-based map to facilitate fast rating->class lookups.
+        // This eliminates any possible need to repeatedly poll the database.
+        ImmutableRangeMap.Builder<Integer, Integer> mapBuilder = ImmutableRangeMap.builder();
+
+        for (CarClassEntity carClassEntity : carClassEntities) {
+            // Create an entry over the closed range
+            //      [minRating, maxRating]
+            // that maps to the class hash.
+            mapBuilder.put(Range.closed(carClassEntity.getMinRating(), carClassEntity.getMaxRating()),
+                    carClassEntity.getHash());
+        }
+
+        // Build the map and save it for future use
+        this.carClassRanges = mapBuilder.build();
+    }
 
     public void calcNewCarClass(CustomCarEntity customCarEntity) {
         calcNewCarClass(customCarEntity, customCarEntity.getOwnedCar().getDurability() == 0);
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     public void calcNewCarClass(CustomCarEntity customCarEntity, boolean ignoreParts) {
         int physicsProfileHash = customCarEntity.getPhysicsProfileHash();
-        CarClassesEntity carClassesEntity = carClassesDAO.findByHash(physicsProfileHash);
-        if (carClassesEntity == null) {
+        CarStatsEntity carStatsEntity = carStatsDAO.find(physicsProfileHash);
+        if (carStatsEntity == null) {
             return;
         }
         int topSpeed = 0;
         int accel = 0;
         int handling = 0;
         if (!ignoreParts) {
-            Set<PerformancePartEntity> performanceParts = customCarEntity.getPerformanceParts();
+            List<PerformancePartEntity> performanceParts = customCarEntity.getPerformanceParts();
             for (PerformancePartEntity performancePartEntity : performanceParts) {
                 int perfHash = performancePartEntity.getPerformancePartAttribHash();
                 ProductEntity productEntity = productDAO.findByHash(perfHash);
@@ -58,44 +103,39 @@ public class PerformanceBO {
         th = th * totalChanges;
         float finalConstant = 1 - tt - ta - th;
 
-        float finalTopSpeed1 = carClassesEntity.getTsVar1().floatValue() * th;
-        float finalTopSpeed2 = carClassesEntity.getTsVar2().floatValue() * ta;
-        float finalTopSpeed3 = carClassesEntity.getTsVar3().floatValue() * tt;
+        float finalTopSpeed1 = carStatsEntity.getTsVar1().floatValue() * th;
+        float finalTopSpeed2 = carStatsEntity.getTsVar2().floatValue() * ta;
+        float finalTopSpeed3 = carStatsEntity.getTsVar3().floatValue() * tt;
         float finalTopSpeed =
-                (finalConstant * carClassesEntity.getTsStock().floatValue()) + finalTopSpeed1 + finalTopSpeed2
+                (finalConstant * carStatsEntity.getTsStock().floatValue()) + finalTopSpeed1 + finalTopSpeed2
                         + finalTopSpeed3;
 
-        float finalAccel1 = carClassesEntity.getAcVar1().floatValue() * th;
-        float finalAccel2 = carClassesEntity.getAcVar2().floatValue() * ta;
-        float finalAccel3 = carClassesEntity.getAcVar3().floatValue() * tt;
-        float finalAccel = (finalConstant * carClassesEntity.getAcStock().floatValue()) + finalAccel1 + finalAccel2
+        float finalAccel1 = carStatsEntity.getAcVar1().floatValue() * th;
+        float finalAccel2 = carStatsEntity.getAcVar2().floatValue() * ta;
+        float finalAccel3 = carStatsEntity.getAcVar3().floatValue() * tt;
+        float finalAccel = (finalConstant * carStatsEntity.getAcStock().floatValue()) + finalAccel1 + finalAccel2
                 + finalAccel3;
 
-        float finalHandling1 = carClassesEntity.getHaVar1().floatValue() * th;
-        float finalHandling2 = carClassesEntity.getHaVar2().floatValue() * ta;
-        float finalHandling3 = carClassesEntity.getHaVar3().floatValue() * tt;
+        float finalHandling1 = carStatsEntity.getHaVar1().floatValue() * th;
+        float finalHandling2 = carStatsEntity.getHaVar2().floatValue() * ta;
+        float finalHandling3 = carStatsEntity.getHaVar3().floatValue() * tt;
         float finalHandling =
-                (finalConstant * carClassesEntity.getHaStock().floatValue()) + finalHandling1 + finalHandling2
+                (finalConstant * carStatsEntity.getHaStock().floatValue()) + finalHandling1 + finalHandling2
                         + finalHandling3;
 
         float finalClass = ((int) finalTopSpeed + (int) finalAccel + (int) finalHandling) / 3f;
         int finalClassInt = (int) finalClass;
 
-        // move to new method
-        int carclassHash = 872416321;
-        if (finalClassInt >= 250 && finalClassInt < 400) {
-            carclassHash = 415909161;
-        } else if (finalClassInt >= 400 && finalClassInt < 500) {
-            carclassHash = 1866825865;
-        } else if (finalClassInt >= 500 && finalClassInt < 600) {
-            carclassHash = -406473455;
-        } else if (finalClassInt >= 600 && finalClassInt < 750) {
-            carclassHash = -405837480;
-        } else if (finalClassInt >= 750) {
-            carclassHash = -2142411446;
+        Integer finalClassHash = this.carClassRanges.get(finalClassInt);
+        if (finalClassHash != null) {
+            customCarEntity.setCarClassHash(finalClassHash);
+            customCarEntity.setRating(finalClassInt);
+        } else {
+            this.logger.warn("Could not determine car class for {} (rating: {})", customCarEntity.getName(), finalClassInt);
         }
+    }
 
-        customCarEntity.setCarClassHash(carclassHash);
-        customCarEntity.setRating(finalClassInt);
+    public List<CarClassEntity> getCarClassEntities() {
+        return carClassEntities;
     }
 }

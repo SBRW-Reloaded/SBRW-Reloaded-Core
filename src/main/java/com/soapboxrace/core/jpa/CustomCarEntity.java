@@ -8,11 +8,9 @@ package com.soapboxrace.core.jpa;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 
 import javax.persistence.*;
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "CUSTOMCAR")
@@ -33,40 +31,30 @@ public class CustomCarEntity {
     private int skillModSlotCount;
     private int version;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ownedCarId", referencedColumnName = "ID", foreignKey = @ForeignKey(name =
             "FK_CUSTOMCAR_OWNEDCAR"))
     private OwnedCarEntity ownedCar;
 
-    @OneToMany(mappedBy = "customCar", targetEntity = PaintEntity.class,
-            orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany(mappedBy = "customCar", targetEntity = PaintEntity.class, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SUBSELECT)
-    private Set<PaintEntity> paints;
+    private List<PaintEntity> paints;
 
-    @OneToMany(mappedBy = "customCar", targetEntity = PerformancePartEntity.class,
-            orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany(mappedBy = "customCar", targetEntity = PerformancePartEntity.class, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SUBSELECT)
-    private Set<PerformancePartEntity> performanceParts;
+    private List<PerformancePartEntity> performanceParts;
 
-    @OneToMany(mappedBy = "customCar", targetEntity = SkillModPartEntity.class,
-            orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany(mappedBy = "customCar", targetEntity = SkillModPartEntity.class, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SUBSELECT)
-    private Set<SkillModPartEntity> skillModParts;
+    private List<SkillModPartEntity> skillModParts;
 
-    @OneToMany(mappedBy = "customCar", targetEntity = VinylEntity.class,
-            orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany(mappedBy = "customCar", targetEntity = VinylEntity.class, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SUBSELECT)
-    private Set<VinylEntity> vinyls;
+    private List<VinylEntity> vinyls;
 
-    @OneToMany(mappedBy = "customCar", targetEntity = VisualPartEntity.class,
-            orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany(mappedBy = "customCar", targetEntity = VisualPartEntity.class, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SUBSELECT)
-    private Set<VisualPartEntity> visualParts;
+    private List<VisualPartEntity> visualParts;
 
     public Long getId() {
         return id;
@@ -164,43 +152,43 @@ public class CustomCarEntity {
         this.version = version;
     }
 
-    public Set<PerformancePartEntity> getPerformanceParts() {
+    public List<PerformancePartEntity> getPerformanceParts() {
         return performanceParts;
     }
 
-    public void setPerformanceParts(Set<PerformancePartEntity> performanceParts) {
+    public void setPerformanceParts(List<PerformancePartEntity> performanceParts) {
         this.performanceParts = performanceParts;
     }
 
-    public Set<SkillModPartEntity> getSkillModParts() {
+    public List<SkillModPartEntity> getSkillModParts() {
         return skillModParts;
     }
 
-    public void setSkillModParts(Set<SkillModPartEntity> skillModParts) {
+    public void setSkillModParts(List<SkillModPartEntity> skillModParts) {
         this.skillModParts = skillModParts;
     }
 
-    public Set<VisualPartEntity> getVisualParts() {
+    public List<VisualPartEntity> getVisualParts() {
         return visualParts;
     }
 
-    public void setVisualParts(Set<VisualPartEntity> visualParts) {
+    public void setVisualParts(List<VisualPartEntity> visualParts) {
         this.visualParts = visualParts;
     }
 
-    public Set<PaintEntity> getPaints() {
+    public List<PaintEntity> getPaints() {
         return paints;
     }
 
-    public void setPaints(Set<PaintEntity> paints) {
+    public void setPaints(List<PaintEntity> paints) {
         this.paints = paints;
     }
 
-    public Set<VinylEntity> getVinyls() {
+    public List<VinylEntity> getVinyls() {
         return vinyls;
     }
 
-    public void setVinyls(Set<VinylEntity> vinyls) {
+    public void setVinyls(List<VinylEntity> vinyls) {
         this.vinyls = vinyls;
     }
 
