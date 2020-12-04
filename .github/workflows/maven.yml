@@ -36,6 +36,8 @@ jobs:
     - name: Build with Maven
       run: git fetch --all --tags && mvn clean package -e "-Dnfs.core.stage=production"
     - name: Set tag name
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: echo ::set-env name=TAG::$(git describe --tags $(git rev-list --tags --max-count=1))
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
