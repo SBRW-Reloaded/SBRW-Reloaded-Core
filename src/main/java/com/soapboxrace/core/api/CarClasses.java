@@ -78,6 +78,18 @@ public class CarClasses {
         carClass_E.setMinRating((short) 0);
         arrayOfCarClass.getCarClass().add(carClass_E);
 
+        CarClass carClass_E = new CarClass();
+        carClass_E.setCarClassHash(872416321);
+        carClass_E.setMaxRating((short) 249);
+        carClass_E.setMinRating((short) 100);
+        arrayOfCarClass.getCarClass().add(carClass_E);
+
+        CarClass carClass_F = new CarClass();
+        carClass_F.setCarClassHash(869393278);
+        carClass_F.setMaxRating((short) 99);
+        carClass_F.setMinRating((short) 0);
+        arrayOfCarClass.getCarClass().add(carClass_F);
+
         return arrayOfCarClass;
     }
 }
