@@ -75,12 +75,6 @@ public class CarClasses {
         CarClass carClass_E = new CarClass();
         carClass_E.setCarClassHash(872416321);
         carClass_E.setMaxRating((short) 249);
-        carClass_E.setMinRating((short) 0);
-        arrayOfCarClass.getCarClass().add(carClass_E);
-
-        CarClass carClass_E = new CarClass();
-        carClass_E.setCarClassHash(872416321);
-        carClass_E.setMaxRating((short) 249);
         carClass_E.setMinRating((short) 100);
         arrayOfCarClass.getCarClass().add(carClass_E);
 
