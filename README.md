@@ -14,8 +14,6 @@ World**. Currently, most of the original game functionality is implemented, but 
 The server is an application built to run on the [Wildfly](https://wildfly.org) platform, through [Thorntail](https://thorntail.io). Maven is used as the build
 system. All code is written for Java 8.
 
-## Installation
-Installation documentation is WIP.
 ## Contributing
 Want to make a contribution? It's easy - just follow these steps:
 1. Fork this repository if you haven't done so already
