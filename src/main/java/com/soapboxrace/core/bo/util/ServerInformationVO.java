@@ -26,6 +26,8 @@ public class ServerInformationVO {
     private Long onlineNumber;
     private boolean requireTicket = false;
     private float playerCountRewardMultiplier;
+    private boolean happyHourEnabled;
+    private float happyHourMultipler;
     private String serverVersion;
 
     public String getMessageSrv() {
@@ -186,5 +188,21 @@ public class ServerInformationVO {
 
 	public void setPlayerCountRewardMultiplier(float playerCountRewardMultiplier) {
 		this.playerCountRewardMultiplier = playerCountRewardMultiplier;
+    }
+    
+	public boolean getHappyHourEnabled() {
+		return happyHourEnabled;
+	}
+
+	public void setHappyHourEnabled(boolean happyHourEnabled) {
+		this.happyHourEnabled = happyHourEnabled;
+    }
+    
+	public float getHappyHourMultipler() {
+		return happyHourMultipler;
+	}
+
+	public void setHappyHourMultipler(float happyHourMultipler) {
+		this.happyHourMultipler = happyHourMultipler;
 	}
 }

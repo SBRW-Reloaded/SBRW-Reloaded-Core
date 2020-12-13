@@ -192,6 +192,7 @@ public class OpenFireRestApiCli {
         mucRoomEntity.setPersistent(true);
         mucRoomEntity.setBroadcastPresenceRoles(Arrays.asList("moderator", "participant", "visitor"));
         mucRoomEntity.setLogEnabled(true);
+        mucRoomEntity.setPublicRoom(true);
 
         builder.post(Entity.entity(mucRoomEntity, MediaType.APPLICATION_XML));
     }

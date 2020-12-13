@@ -142,9 +142,7 @@ public class MatchMaking {
 
         //lobbydata
 		LobbyEntity lobbyInformation = lobbyDAO.findById(lobbyInviteId);
-		System.out.println(lobbyInformation.getPersonaId() + " == " + activePersonaId);
 		if(activePersonaId.equals(lobbyInformation.getPersonaId())) {
-            System.out.println("Passed!");
             
 			EventEntity eventInformation = lobbyInformation.getEvent();
 			String eventNameFull = eventInformation.getName();

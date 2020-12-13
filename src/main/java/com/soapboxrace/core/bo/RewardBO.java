@@ -198,15 +198,25 @@ public class RewardBO {
 		if (divider == 0) return 1f;
 		long playerCount = onlineUsersEntity.getNumberOfOnline();
 		return 1f + playerCount / divider;
-	}
+    }
+    
+    public Float getHappyHour() {
+        Boolean happyHourEnabled = parameterBO.getBoolParam("happyHourEnabled");
+
+        if(happyHourEnabled) {
+            return parameterBO.getFloatParam("happyHourMultipler", 1F);
+        } else {
+            return 1f;
+        }
+    }
 
     public void setMultiplierReward(EventEntity eventEntity, RewardVO rewardVO) {
         float rep = rewardVO.getRep();
         float cash = rewardVO.getCash();
         float finalRepRewardMultiplier = eventEntity.getFinalRepRewardMultiplier();
         float finalCashRewardMultiplier = eventEntity.getFinalCashRewardMultiplier();
-        float finalRep = (rep * finalRepRewardMultiplier) * getPlayerCountConst();
-        float finalCash = (cash * finalCashRewardMultiplier) * getPlayerCountConst();
+        float finalRep = (rep * finalRepRewardMultiplier) * getPlayerCountConst() * getHappyHour();
+        float finalCash = (cash * finalCashRewardMultiplier) * getPlayerCountConst() * getHappyHour();
         rewardVO.add((int) finalRep, 0, EnumRewardCategory.AMPLIFIER, EnumRewardType.REP_AMPLIFIER);
         rewardVO.add(0, (int) finalCash, EnumRewardCategory.AMPLIFIER, EnumRewardType.TOKEN_AMPLIFIER);
     }
