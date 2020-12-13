@@ -26,8 +26,8 @@ public class ServerInformationVO {
     private Long onlineNumber;
     private boolean requireTicket = false;
     private float playerCountRewardMultiplier;
-    private boolean happyHourEnabled;
-    private float happyHourMultipler;
+    private boolean happyHourEnabled = false;
+    private float happyHourMultipler = 1f;
     private String serverVersion;
 
     public String getMessageSrv() {

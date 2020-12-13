@@ -204,7 +204,7 @@ public class RewardBO {
         Boolean happyHourEnabled = parameterBO.getBoolParam("happyHourEnabled");
 
         if(happyHourEnabled) {
-            return parameterBO.getFloatParam("happyHourMultipler", 1F);
+            return parameterBO.getFloatParam("happyHourMultipler");
         } else {
             return 1f;
         }
@@ -215,8 +215,8 @@ public class RewardBO {
         float cash = rewardVO.getCash();
         float finalRepRewardMultiplier = eventEntity.getFinalRepRewardMultiplier();
         float finalCashRewardMultiplier = eventEntity.getFinalCashRewardMultiplier();
-        float finalRep = (rep * finalRepRewardMultiplier) * getPlayerCountConst() * getHappyHour();
-        float finalCash = (cash * finalCashRewardMultiplier) * getPlayerCountConst() * getHappyHour();
+        float finalRep = (rep * finalRepRewardMultiplier);
+        float finalCash = (cash * finalCashRewardMultiplier);
         rewardVO.add((int) finalRep, 0, EnumRewardCategory.AMPLIFIER, EnumRewardType.REP_AMPLIFIER);
         rewardVO.add(0, (int) finalCash, EnumRewardCategory.AMPLIFIER, EnumRewardType.TOKEN_AMPLIFIER);
     }
@@ -390,8 +390,8 @@ public class RewardBO {
 
     private Reward getFinalReward(Integer rep, Integer cash) {
         Reward finalReward = new Reward();
-        finalReward.setRep(rep);
-        finalReward.setTokens(cash);
+        finalReward.setRep(rep * Math.round( getPlayerCountConst() * getHappyHour() ));
+        finalReward.setTokens(cash * Math.round( getPlayerCountConst() * getHappyHour() ));
         return finalReward;
     }
 

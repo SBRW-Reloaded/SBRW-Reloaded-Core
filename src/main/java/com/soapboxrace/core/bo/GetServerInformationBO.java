@@ -49,7 +49,7 @@ public class GetServerInformationBO {
         serverInformationVO.setRequireTicket(parameterBO.getStrParam("TICKET_TOKEN") != null);
         serverInformationVO.setPlayerCountRewardMultiplier(rewardBO.getPlayerCountConst());
         serverInformationVO.setHappyHourEnabled(parameterBO.getBoolParam("happyHourEnabled"));
-        serverInformationVO.setHappyHourMultipler(parameterBO.getFloatParam("happyHourMultipler", 1F));
+        serverInformationVO.setHappyHourMultipler(parameterBO.getFloatParam("happyHourMultipler"));
         serverInformationVO.setPlayerCountRewardMultiplier(rewardBO.getPlayerCountConst());
         serverInformationVO.setServerVersion(BuildInfo.getVersion() + " - " + BuildInfo.getCommitID());
 
