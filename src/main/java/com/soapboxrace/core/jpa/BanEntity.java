@@ -6,19 +6,20 @@
 
 package com.soapboxrace.core.jpa;
 
-import com.soapboxrace.core.jpa.convert.LocalDateTimeConverter;
-
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "BAN")
-@NamedQueries({ //
-        @NamedQuery(name = "BanEntity.findAll", query = "SELECT obj FROM BanEntity obj")})
+@NamedQueries({
+        @NamedQuery(name = "BanEntity.findAllExpired",
+                query = "SELECT obj FROM BanEntity obj WHERE obj.endsAt IS NOT NULL AND obj.endsAt <= CURRENT_TIMESTAMP AND obj.active = true"),
+        @NamedQuery(name = "BanEntity.findByUser",
+                query = "SELECT obj FROM BanEntity obj WHERE obj.userEntity = :user AND (obj.endsAt IS NULL OR obj.endsAt > CURRENT_TIMESTAMP) AND obj.active = true")
+})
 public class BanEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column
     private Long id;
 
     @OneToOne(targetEntity = UserEntity.class)
@@ -33,15 +34,13 @@ public class BanEntity {
     private String reason;
 
     @Column
-    @Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime started;
 
-    @Column
-    @Convert(converter = LocalDateTimeConverter.class)
+    @Column(name = "ends_at")
     private LocalDateTime endsAt;
 
     @Column
-    private boolean willEnd;
+    private Boolean active;
 
     public Long getId() {
         return id;
@@ -83,19 +82,19 @@ public class BanEntity {
         this.reason = reason;
     }
 
-    public boolean isWillEnd() {
-        return willEnd;
-    }
-
-    public void setWillEnd(boolean willEnd) {
-        this.willEnd = willEnd;
-    }
-
     public LocalDateTime getStarted() {
         return started;
     }
 
     public void setStarted(LocalDateTime started) {
         this.started = started;
+    }
+
+    public Boolean isActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }

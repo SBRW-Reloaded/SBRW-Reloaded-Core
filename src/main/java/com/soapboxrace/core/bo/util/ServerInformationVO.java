@@ -197,7 +197,7 @@ public class ServerInformationVO {
 	public void setHappyHourEnabled(boolean happyHourEnabled) {
 		this.happyHourEnabled = happyHourEnabled;
     }
-    
+
 	public float getHappyHourMultipler() {
 		return happyHourMultipler;
 	}

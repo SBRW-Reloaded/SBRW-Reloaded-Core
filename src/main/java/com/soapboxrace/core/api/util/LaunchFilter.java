@@ -63,7 +63,6 @@ public class LaunchFilter implements ContainerRequestFilter {
         if (parameterBO.getBoolParam("SIGNED_LAUNCHER")) {
             boolean lock_access = false;
 
-            //Temporarely this works for SBRW Only, starting from 2.1.6.3
             if (requestContext.getHeaderString("X-UserAgent") != null) {
                 String allowedLaunchersHash = parameterBO.getStrParam("SIGNED_LAUNCHER_HASH", "");
                 String allowedLaunchersHwid = parameterBO.getStrParam("SIGNED_LAUNCHER_HWID_WL", "");
@@ -77,8 +76,7 @@ public class LaunchFilter implements ContainerRequestFilter {
 
                 if(lock_access == true) {
                     LoginStatusVO loginStatusVO = new LoginStatusVO(0L, "", false);
-                    loginStatusVO.setDescription("You're using the wrong launcher, please update to the latest one:\n\n" +
-                            "    SBRW Launcher: https://git.io/Download_NFSW");
+                    loginStatusVO.setDescription("Invalid launcher detected, please use official release!");
 
                     requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).entity(loginStatusVO).build());
                 }

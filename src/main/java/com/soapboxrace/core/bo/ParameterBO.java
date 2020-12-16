@@ -7,13 +7,13 @@
 package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.dao.ParameterDAO;
-import com.soapboxrace.core.dao.TokenSessionDAO;
 import com.soapboxrace.core.jpa.ParameterEntity;
-import com.soapboxrace.core.jpa.TokenSessionEntity;
 import com.soapboxrace.core.jpa.UserEntity;
+import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.*;
+import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -28,8 +28,8 @@ public class ParameterBO {
     @EJB
     private ParameterDAO parameterDao;
 
-    @EJB
-    private TokenSessionDAO tokenDAO;
+    @Inject
+    private Logger logger;
 
     private final ConcurrentMap<String, String> parameterMap;
 
@@ -53,22 +53,11 @@ public class ParameterBO {
                 parameterMap.put(parameterEntity.getName(), parameterEntity.getValue());
         }
 
-        System.out.println("Loaded " + parameterMap.size() + " parameters from database");
+        logger.info("Loaded {} parameters from database", parameterMap.size());
     }
 
     private String getParameter(String name) {
         return parameterMap.get(name);
-    }
-
-    public int getCarLimit(String securityToken) {
-        TokenSessionEntity tokenSession = tokenDAO.findById(securityToken);
-        return getCarLimit(tokenSession.getUserEntity());
-    }
-
-    public int getMaxLevel(String securityToken) {
-        TokenSessionEntity tokenSession = tokenDAO.findById(securityToken);
-
-        return getMaxLevel(tokenSession.getUserEntity());
     }
 
     public int getCarLimit(UserEntity userEntity) {

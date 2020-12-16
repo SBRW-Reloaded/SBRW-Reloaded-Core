@@ -7,12 +7,8 @@
 package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.api.util.MiscUtils;
-import com.soapboxrace.core.dao.BanDAO;
-import com.soapboxrace.core.dao.HardwareInfoDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
-import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.BanEntity;
-import com.soapboxrace.core.jpa.HardwareInfoEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
@@ -34,19 +30,13 @@ public class AdminBO {
     private PersonaDAO personaDao;
 
     @EJB
-    private UserDAO userDao;
+    private BanBO banBO;
 
     @EJB
     private DiscordWebhook discord;
     
     @EJB
 	private ParameterBO parameterBO;
-
-    @EJB
-    private BanDAO banDAO;
-
-    @EJB
-    private HardwareInfoDAO hardwareInfoDAO;
 
     @EJB
     private OpenFireSoapBoxCli openFireSoapBoxCli;
@@ -63,28 +53,29 @@ public class AdminBO {
 
     public void sendCommand(Long personaId, Long abuserPersonaId, String command) {
         CommandInfo commandInfo = CommandInfo.parse(command);
-        PersonaEntity personaEntity = personaDao.findById(abuserPersonaId);
-		PersonaEntity personaEntity1 = personaDao.findById(personaId);
+        PersonaEntity personaEntity = personaDao.find(abuserPersonaId);
+        PersonaEntity personaEntity1 = personaDao.find(personaId);
+        
+        String constructMsg = "[ " + personaEntity.getName() + " ] has been %s by [ " + personaEntity1.getName() + " ].";
+        String constructMsg_ds = "**" + personaEntity.getName() + "** has been %s by **" + personaEntity1.getName() + "**";
 
 		if (personaEntity == null && personaEntity1 == null)
 			return;
 
-        String constructMsg = "[ " + personaEntity.getName() + " ] has been %s by [ " + personaEntity1.getName() + " ].";
-        String constructMsg_ds = "**" + personaEntity.getName() + "** has been %s by **" + personaEntity1.getName() + "**";
-
+        UserEntity userEntity = personaEntity.getUser();
         switch (commandInfo.action) {
             case BAN:
-                if (banDAO.findByUser(personaEntity.getUser()) != null) {
+                if (banBO.isBanned(userEntity)) {
                     openFireSoapBoxCli.send(XmppChat.createSystemMessage("Oh no, this user is already banned..."), personaId);
                     break;
                 }
 
                 openFireRestApiCli.sendChatAnnouncement(constructMsg.replace("%s", "banned"));
 
-                sendBan(personaEntity, personaDao.findById(personaId), commandInfo.timeEnd, commandInfo.reason);
+                sendBan(personaEntity, personaDao.find(personaId), commandInfo.timeEnd, commandInfo.reason);
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("Yay, user has been banned."), personaId);
 
-				if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
+                if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
 					discord.sendMessage(constructMsg_ds.replace("%s", "banned") + ". Reason: " + commandInfo.reason, 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL"), 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_NAME", "Botte"),
@@ -104,27 +95,27 @@ public class AdminBO {
             case KICK:
                 openFireRestApiCli.sendChatAnnouncement(constructMsg.replace("%s", "kicked"));
 
-                sendKick(personaEntity.getUser().getId(), personaEntity.getPersonaId());
+                sendKick(userEntity.getId(), personaEntity.getPersonaId());
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("Kicked out the butt of the user."), personaId);
 
-				if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
+                if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
 					discord.sendMessage(constructMsg_ds.replace("%s", "kicked"), 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL"), 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_NAME", "Botte"),
 						0xfff200
 					);
-				}
-
+                }
+                
                 break;
             case UNBAN:
                 BanEntity existingBan;
-                if ((existingBan = banDAO.findByUser(personaEntity.getUser())) == null) {
+                if ((existingBan = banBO.getUserBan(userEntity)) == null) {
                     openFireSoapBoxCli.send(XmppChat.createSystemMessage("Why you wanna unban that user ? Isn't even banned !"), personaId);
                     break;
                 }
 
                 openFireRestApiCli.sendChatAnnouncement(constructMsg.replace("%s", "unbanned"));
-
+                
                 if(parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL") != null) {
 					discord.sendMessage(constructMsg_ds.replace("%s", "unbanned"), 
 						parameterBO.getStrParam("DISCORD_WEBHOOK_BANREPORT_URL"), 
@@ -133,7 +124,7 @@ public class AdminBO {
 					);
 				}
 
-                banDAO.delete(existingBan);
+                banBO.expireBan(existingBan);
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("The user has been unbanned, I hope we will not have to ban it once again."), personaId);
 
                 break;
@@ -144,23 +135,8 @@ public class AdminBO {
 
     private void sendBan(PersonaEntity personaEntity, PersonaEntity bannedBy, LocalDateTime endsOn, String reason) {
         UserEntity userEntity = personaEntity.getUser();
-        BanEntity banEntity = new BanEntity();
-        banEntity.setUserEntity(userEntity);
-        banEntity.setEndsAt(endsOn);
-        banEntity.setStarted(LocalDateTime.now());
-        banEntity.setReason(reason);
-        banEntity.setBannedBy(bannedBy);
-        banEntity.setWillEnd(endsOn != null);
-        banDAO.insert(banEntity);
-        userDao.update(userEntity);
+        banBO.banUser(userEntity, bannedBy, reason, endsOn);
         sendKick(userEntity.getId(), personaEntity.getPersonaId());
-
-        HardwareInfoEntity hardwareInfoEntity = hardwareInfoDAO.findByUserId(userEntity.getId());
-
-        if (hardwareInfoEntity != null) {
-            hardwareInfoEntity.setBanned(true);
-            hardwareInfoDAO.update(hardwareInfoEntity);
-        }
     }
 
     private void sendKick(Long userId, Long personaId) {
@@ -197,28 +173,25 @@ public class AdminBO {
 
             info.action = action;
 
-            switch (action) {
-                case BAN: {
-                    LocalDateTime endTime;
-                    String reason = null;
+            if (action == CmdAction.BAN) {
+                LocalDateTime endTime;
+                String reason = null;
 
-                    if (split.length >= 2) {
-                        long givenTime = MiscUtils.lengthToMiliseconds(split[1]);
-                        if (givenTime != 0) {
-                            endTime = LocalDateTime.now().plusSeconds(givenTime / 1000);
-                            info.timeEnd = endTime;
+                if (split.length >= 2) {
+                    long givenTime = MiscUtils.lengthToMiliseconds(split[1]);
+                    if (givenTime != 0) {
+                        endTime = LocalDateTime.now().plusSeconds(givenTime / 1000);
+                        info.timeEnd = endTime;
 
-                            if (split.length > 2) {
-                                reason = MiscUtils.argsToString(split, 2, split.length);
-                            }
-                        } else {
-                            reason = MiscUtils.argsToString(split, 1, split.length);
+                        if (split.length > 2) {
+                            reason = MiscUtils.argsToString(split, 2, split.length);
                         }
+                    } else {
+                        reason = MiscUtils.argsToString(split, 1, split.length);
                     }
-
-                    info.reason = reason;
-                    break;
                 }
+
+                info.reason = reason;
             }
 
             return info;

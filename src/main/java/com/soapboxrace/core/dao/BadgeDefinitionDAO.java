@@ -6,25 +6,18 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.BadgeDefinitionEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
 @Stateless
-public class BadgeDefinitionDAO extends BaseDAO<BadgeDefinitionEntity> {
+public class BadgeDefinitionDAO extends LongKeyedDAO<BadgeDefinitionEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public BadgeDefinitionEntity find(Long id) {
-        return this.entityManager.find(BadgeDefinitionEntity.class, id);
+    public BadgeDefinitionDAO() {
+        super(BadgeDefinitionEntity.class);
     }
 
     public List<BadgeDefinitionEntity> findAll() {

@@ -64,7 +64,7 @@ public class SendAnnouncement {
         }
 
         if (announcementToken.equals(token)) {
-			PersonaEntity personaEntity = personaDAO.findById(from);
+			PersonaEntity personaEntity = personaDAO.find(from);
 
             sendToAllXMPP.sendMessageToChannel("[" + personaEntity.getName() + "] " + message, channel);
             return "SUCCESS!";

@@ -6,18 +6,16 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.CardPackEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 @Stateless
-public class CardPackDAO extends BaseDAO<CardPackEntity> {
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+public class CardPackDAO extends LongKeyedDAO<CardPackEntity> {
+
+    public CardPackDAO() {
+        super(CardPackEntity.class);
     }
 
     public CardPackEntity findByEntitlementTag(String entitlementTag) {

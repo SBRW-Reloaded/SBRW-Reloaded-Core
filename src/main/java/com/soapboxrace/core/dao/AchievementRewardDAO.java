@@ -6,19 +6,16 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.AchievementRewardEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 @Stateless
-public class AchievementRewardDAO extends BaseDAO<AchievementRewardEntity> {
+public class AchievementRewardDAO extends LongKeyedDAO<AchievementRewardEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public AchievementRewardDAO() {
+        super(AchievementRewardEntity.class);
     }
 
     public AchievementRewardEntity findByDescription(String description) {

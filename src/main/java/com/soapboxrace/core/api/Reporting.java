@@ -8,6 +8,7 @@ package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.HardwareInfoBO;
+import com.soapboxrace.core.bo.RequestSessionInfo;
 import com.soapboxrace.core.bo.TokenSessionBO;
 import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.HardwareInfoEntity;
@@ -16,6 +17,7 @@ import com.soapboxrace.jaxb.http.HardwareInfo;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
 import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
@@ -32,22 +34,23 @@ public class Reporting {
     @EJB
     private UserDAO userDAO;
 
+    @Inject
+    private RequestSessionInfo requestSessionInfo;
+
     @POST
     @Secured
     @Path("/SendHardwareInfo")
     @Produces(MediaType.APPLICATION_XML)
-    public String sendHardwareInfo(InputStream is, @HeaderParam("securityToken") String securityToken, @HeaderParam("userId") Long userId) {
+    public String sendHardwareInfo(InputStream is) {
         HardwareInfo hardwareInfo = JAXBUtility.unMarshal(is, HardwareInfo.class);
-        if(hardwareInfo.getCpuid0().equals("GenuineIntel") || hardwareInfo.getCpuid0().equals("AuthenticAMD") || hardwareInfo.getCpuid0().equals("VIA VIA VIA ")) {
-            HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
-            UserEntity user = tokenBO.getUser(securityToken);
+        if(hardwareInfo.getCpuid0().equals("GenuineIntel") || hardwareInfo.getCpuid0().equals("AuthenticAMD") || hardwareInfo.getCpuid0().equals("VIA VIA VIA ")) {            HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
+            UserEntity user = requestSessionInfo.getUser();
             user.setGameHardwareHash(hardwareInfoEntity.getHardwareHash());
             userDAO.update(user);
-            return "";
         } else {
-            tokenBO.deleteByUserId(userId);
-            return "";
+            tokenBO.deleteByUserId(requestSessionInfo.getUser().getId());
         }
+        return "";
     }
 
     @POST

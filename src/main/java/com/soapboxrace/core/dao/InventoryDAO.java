@@ -6,21 +6,19 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.InventoryEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
 @Stateless
-public class InventoryDAO extends BaseDAO<InventoryEntity> {
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+public class InventoryDAO extends LongKeyedDAO<InventoryEntity> {
+
+    public InventoryDAO() {
+        super(InventoryEntity.class);
     }
 
     public InventoryEntity findByPersonaId(Long personaId) {

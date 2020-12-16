@@ -6,12 +6,13 @@
   -->
 
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>world.soapboxrace</groupId>
     <artifactId>core</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4-SNAPSHOT</version>
     <packaging>war</packaging>
 
     <name>Soapbox Race World Core</name>
@@ -25,7 +26,7 @@
 
         <failOnMissingWebXml>false</failOnMissingWebXml>
 
-        <version.thorntail>2.6.0.Final</version.thorntail>
+        <version.thorntail>2.7.0.Final</version.thorntail>
     </properties>
 
     <repositories>
@@ -93,7 +94,7 @@
                     <format>json</format>
                     <gitDescribe>
                         <skip>false</skip>
-                        <always>true</always>
+                        <always>false</always>
                         <dirty>-dirty</dirty>
                     </gitDescribe>
                     <useNativeGit>true</useNativeGit>
@@ -170,8 +171,12 @@
         </dependency>
         <dependency>
             <groupId>io.thorntail</groupId>
+            <artifactId>microprofile-metrics</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.thorntail</groupId>
             <artifactId>thorntail-runner</artifactId>
-            <version>2.6.0.Final</version>
+            <version>${version.thorntail}</version>
         </dependency>
         <dependency>
             <groupId>org.igniterealtime</groupId>
@@ -197,11 +202,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>28.1-jre</version>
-        </dependency>
-        <dependency>
-            <groupId>com.maxmind.geoip2</groupId>
-            <artifactId>geoip2</artifactId>
-            <version>2.12.0</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -247,6 +247,16 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>1.4.200</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-validator</groupId>
+            <artifactId>commons-validator</artifactId>
+            <version>1.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.12</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

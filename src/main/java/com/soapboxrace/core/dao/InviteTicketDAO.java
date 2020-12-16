@@ -6,25 +6,18 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.InviteTicketEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
 @Stateless
-public class InviteTicketDAO extends BaseDAO<InviteTicketEntity> {
+public class InviteTicketDAO extends LongKeyedDAO<InviteTicketEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public InviteTicketEntity findById(Long id) {
-        return entityManager.find(InviteTicketEntity.class, id);
+    public InviteTicketDAO() {
+        super(InviteTicketEntity.class);
     }
 
     public InviteTicketEntity findByTicket(String ticket) {

@@ -6,40 +6,18 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.EventDataEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
 @Stateless
-public class EventDataDAO extends BaseDAO<EventDataEntity> {
+public class EventDataDAO extends LongKeyedDAO<EventDataEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public EventDataEntity findById(Long id) {
-        return entityManager.find(EventDataEntity.class, id);
-    }
-
-    public List<EventDataEntity> findByPersona(Long personaId) {
-        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.findByPersona",
-                EventDataEntity.class);
-        query.setParameter("personaId", personaId);
-        return query.getResultList();
-    }
-
-    public List<EventDataEntity> findByPersonaAndRaceType(Long personaId, Integer type) {
-        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.findByPersonaAndType",
-                EventDataEntity.class);
-        query.setParameter("personaId", personaId);
-        query.setParameter("eventModeId", type);
-        return query.getResultList();
+    public EventDataDAO() {
+        super(EventDataEntity.class);
     }
 
     public List<EventDataEntity> getRacers(Long eventSessionId) {

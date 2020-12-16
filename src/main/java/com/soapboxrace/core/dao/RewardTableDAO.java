@@ -6,33 +6,21 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.RewardTableEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import java.util.List;
 
 @Stateless
-public class RewardTableDAO extends BaseDAO<RewardTableEntity> {
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
+public class RewardTableDAO extends LongKeyedDAO<RewardTableEntity> {
 
-    public List<RewardTableEntity> findAll() {
-        return this.entityManager.createNamedQuery("RewardTableEntity.findAll", RewardTableEntity.class)
-                .getResultList();
+    public RewardTableDAO() {
+        super(RewardTableEntity.class);
     }
 
     public RewardTableEntity findByName(String name) {
         return this.entityManager.createNamedQuery("RewardTableEntity.findByName", RewardTableEntity.class)
                 .setParameter("name", name)
                 .getSingleResult();
-    }
-
-    public RewardTableEntity findByID(Long id) {
-        return this.entityManager.find(RewardTableEntity.class, id);
     }
 }

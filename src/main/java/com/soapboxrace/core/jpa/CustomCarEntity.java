@@ -33,7 +33,7 @@ public class CustomCarEntity {
     private int skillModSlotCount;
     private int version;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ownedCarId", referencedColumnName = "ID", foreignKey = @ForeignKey(name =
             "FK_CUSTOMCAR_OWNEDCAR"))
     private OwnedCarEntity ownedCar;
@@ -67,6 +67,7 @@ public class CustomCarEntity {
     @LazyCollection(LazyCollectionOption.FALSE)
     @Fetch(FetchMode.SUBSELECT)
     private Set<VisualPartEntity> visualParts;
+
 
     public Long getId() {
         return id;

@@ -345,6 +345,10 @@ public class InventoryBO {
         if (existingItem == null)
             throw new EngineException("Could not find entitlement '" + entitlementTag + "' in IID " + inventoryEntity.getId(), EngineExceptionCode.NoSuchEntitlementExists, true);
 
+        return decreaseItemCount(inventoryEntity, existingItem);
+    }
+
+    public InventoryItemEntity decreaseItemCount(InventoryEntity inventoryEntity, InventoryItemEntity existingItem) {
         existingItem.setRemainingUseCount(existingItem.getRemainingUseCount() - 1);
 
         if (existingItem.getRemainingUseCount() <= 0) {
@@ -386,7 +390,7 @@ public class InventoryBO {
      * @throws EngineException if no item with the given entitlement
      */
     public void removeItem(Long personaId, String entitlementTag) {
-        PersonaEntity personaEntity = personaDAO.findById(personaId);
+        PersonaEntity personaEntity = personaDAO.find(personaId);
         InventoryEntity inventoryEntity = inventoryDAO.findByPersonaId(personaId);
 
         removeItem(personaEntity, inventoryEntity, entitlementTag, -1);
@@ -401,7 +405,7 @@ public class InventoryBO {
      * @throws EngineException if no item with the given entitlement
      */
     public void removeItem(Long personaId, String entitlementTag, Integer quantity) {
-        PersonaEntity personaEntity = personaDAO.findById(personaId);
+        PersonaEntity personaEntity = personaDAO.find(personaId);
         InventoryEntity inventoryEntity = inventoryDAO.findByPersonaId(personaId);
 
         removeItem(personaEntity, inventoryEntity, entitlementTag, quantity);

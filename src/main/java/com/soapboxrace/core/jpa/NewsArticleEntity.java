@@ -12,12 +12,13 @@ import com.soapboxrace.core.jpa.util.NewsArticleFilters;
 import com.soapboxrace.core.jpa.util.NewsArticleType;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "NEWS_ARTICLE")
 @NamedQueries({
         @NamedQuery(name = "NewsArticleEntity.findAllByPersona",
-                query = "SELECT obj FROM NewsArticleEntity obj WHERE obj.persona.personaId = :id"),
+                query = "SELECT obj FROM NewsArticleEntity obj WHERE obj.persona.personaId = :id OR obj.persona IS NULL"),
         @NamedQuery(name = "NewsArticleEntity.deleteAllByPersona",
                 query = "DELETE FROM NewsArticleEntity obj WHERE obj.persona.personaId = :id"),
         @NamedQuery(name = "NewsArticleEntity.findAllByReferencedPersona",
@@ -54,7 +55,7 @@ public class NewsArticleEntity {
     private int sticky;
 
     @Column
-    private long timestamp;
+    private LocalDateTime timestamp;
 
     @Column
     @Convert(converter = NewsArticleTypeConverter.class)
@@ -122,11 +123,11 @@ public class NewsArticleEntity {
         this.sticky = sticky;
     }
 
-    public long getTimestamp() {
+    public LocalDateTime getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
 

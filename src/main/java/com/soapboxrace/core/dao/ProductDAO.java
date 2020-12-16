@@ -6,32 +6,23 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.ProductEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
 @Stateless
-public class ProductDAO extends BaseDAO<ProductEntity> {
-    private final SecureRandom secureRandom = new SecureRandom();
+public class ProductDAO extends LongKeyedDAO<ProductEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public ProductEntity findById(Long id) {
-        return entityManager.find(ProductEntity.class, id);
+    public ProductDAO() {
+        super(ProductEntity.class);
     }
 
     public List<ProductEntity> findByLevelEnabled(String categoryName, String productType, int minLevel,

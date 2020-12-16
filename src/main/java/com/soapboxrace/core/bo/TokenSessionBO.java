@@ -6,31 +6,34 @@
 
 package com.soapboxrace.core.bo;
 
-import com.soapboxrace.core.api.util.GeoIp2;
-import com.soapboxrace.core.api.util.UUIDGen;
-import com.soapboxrace.core.dao.TokenSessionDAO;
 import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.BanEntity;
+import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.TokenSessionEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 import com.soapboxrace.jaxb.login.LoginStatusVO;
 
 import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Singleton;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.NotAuthorizedException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Date;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-@Stateless
+@Singleton
+@Lock(LockType.READ)
 public class TokenSessionBO {
-    @EJB
-    private TokenSessionDAO tokenDAO;
 
     @EJB
     private UserDAO userDAO;
@@ -39,119 +42,120 @@ public class TokenSessionBO {
     private ParameterBO parameterBO;
 
     @EJB
-    private GetServerInformationBO serverInfoBO;
-
-    @EJB
     private AuthenticationBO authenticationBO;
 
-    public boolean verifyToken(Long userId, String securityToken) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
-        if (tokenSessionEntity == null || !tokenSessionEntity.getUserEntity().getId().equals(userId)) {
-            return false;
-        }
-        long time = new Date().getTime();
-        long tokenTime = tokenSessionEntity.getExpirationDate().getTime();
-        return time <= tokenTime;
-    }
+    @EJB
+    private HardwareInfoBO hardwareInfoBO;
 
-    public String createToken(Long userId, String clientHostName) {
-        TokenSessionEntity tokenSessionEntity = new TokenSessionEntity();
+    private final Map<String, TokenSessionEntity> sessionKeyToTokenMap = new ConcurrentHashMap<>();
+    private final Map<Long, String> userIdToSessionKeyMap = new ConcurrentHashMap<>();
+
+    public String createToken(UserEntity userEntity, String clientHostName) {
         Date expirationDate = getMinutes(parameterBO.getIntParam("SESSION_LENGTH_MINUTES", 130));
-        tokenSessionEntity.setExpirationDate(expirationDate);
         String randomUUID = UUID.randomUUID().toString();
+        TokenSessionEntity tokenSessionEntity = new TokenSessionEntity();
+
+        tokenSessionEntity.setExpirationDate(expirationDate);
         tokenSessionEntity.setSecurityToken(randomUUID);
-        UserEntity userEntity = userDAO.findById(userId);
         tokenSessionEntity.setUserEntity(userEntity);
         tokenSessionEntity.setPremium(userEntity.isPremium());
         tokenSessionEntity.setClientHostIp(clientHostName);
         tokenSessionEntity.setActivePersonaId(0L);
         tokenSessionEntity.setEventSessionId(null);
-        tokenDAO.insert(tokenSessionEntity);
+
+        for (PersonaEntity personaEntity : userEntity.getPersonas()) {
+            tokenSessionEntity.getAllowedPersonaIds().add(personaEntity.getPersonaId());
+        }
+
+        this.sessionKeyToTokenMap.put(randomUUID, tokenSessionEntity);
+        this.userIdToSessionKeyMap.put(userEntity.getId(), randomUUID);
+
         return randomUUID;
     }
 
-    public void verifyPersonaOwnership(String securityToken, Long personaId) {
-        TokenSessionEntity tokenSession = tokenDAO.findById(securityToken);
-        if (tokenSession == null) {
-            throw new EngineException(EngineExceptionCode.NoSuchSessionInSessionStore, true);
+    public TokenSessionEntity validateToken(Long userId, String securityToken) {
+        TokenSessionEntity tokenSessionEntity = sessionKeyToTokenMap.get(securityToken);
+        if (tokenSessionEntity == null || !tokenSessionEntity.getUserEntity().getId().equals(userId)) {
+            throw new NotAuthorizedException("Invalid Token");
+        }
+        long time = new Date().getTime();
+        long tokenTime = tokenSessionEntity.getExpirationDate().getTime();
+        if (time > tokenTime) {
+            removeSession(securityToken);
+            throw new NotAuthorizedException("Expired Token as of " + tokenSessionEntity.getExpirationDate().toString());
         }
 
-        if (!tokenSession.getUserEntity().ownsPersona(personaId)) {
-            throw new EngineException(EngineExceptionCode.RemotePersonaDoesNotBelongToUser, true);
+        return tokenSessionEntity;
+    }
+
+    public TokenSessionEntity findByUserId(Long userId) {
+        String sessionKey = this.userIdToSessionKeyMap.get(userId);
+
+        if (sessionKey != null) {
+            return Objects.requireNonNull(this.sessionKeyToTokenMap.get(sessionKey), () -> String.format("User %d has session key, but session is missing!", userId));
+        }
+
+        return null;
+    }
+
+    public void removeSession(String sessionKey) {
+        if (sessionKey != null) {	
+            this.sessionKeyToTokenMap.remove(sessionKey);	
         }
     }
 
     public void deleteByUserId(Long userId) {
-        tokenDAO.deleteByUserId(userId);
+        String sessionKey = this.userIdToSessionKeyMap.remove(userId);
+        removeSession(sessionKey);
     }
 
-    private Date getMinutes(int minutes) {
-        long time = new Date().getTime();
-        time = time + (minutes * 60000);
-        return new Date(time);
-    }
-
-    private LoginStatusVO checkGeoIp(String ip) {
+    public LoginStatusVO login(String email, String password, HttpServletRequest httpRequest) {
         LoginStatusVO loginStatusVO = new LoginStatusVO(0L, "", false);
-        String allowedCountries = serverInfoBO.getServerInformation().getAllowedCountries();
-        if (allowedCountries != null && !allowedCountries.isEmpty()) {
-            String geoip2DbFilePath = parameterBO.getStrParam("GEOIP2_DB_FILE_PATH");
-            GeoIp2 geoIp2 = GeoIp2.getInstance(geoip2DbFilePath);
-            if (geoIp2.isCountryAllowed(ip, allowedCountries)) {
-                return new LoginStatusVO(0L, "", true);
-            } else {
-                loginStatusVO.setDescription("GEOIP BLOCK ACTIVE IN THIS SERVER, ALLOWED COUNTRIES: [" + allowedCountries + "]");
-            }
-        } else {
-            return new LoginStatusVO(0L, "", true);
-        }
-        return loginStatusVO;
-    }
-
-public LoginStatusVO login(String email, String password, HttpServletRequest httpRequest) {
-        LoginStatusVO loginStatusVO = checkGeoIp(httpRequest.getRemoteAddr());
-        if (!loginStatusVO.isLoginOk()) {
-            return loginStatusVO;
-        }
-        loginStatusVO = new LoginStatusVO(0L, "", false);
 
         if (email != null && !email.isEmpty() && password != null && !password.isEmpty()) {
             UserEntity userEntity = userDAO.findByEmail(email);
             if (userEntity != null) {
-                if(userEntity.isAdmin() || parameterBO.getBoolParam("IS_MAINTENANCE") == false) {
-                    if (password.equals(userEntity.getPassword())) {
-                        if (userEntity.isLocked()) {
-                            loginStatusVO.setDescription("Account locked. Contact an administrator.");
-                            return loginStatusVO;
-                        }
-
-                        BanEntity banEntity = authenticationBO.checkUserBan(userEntity);
-
-                        if (banEntity != null) {
-                            LoginStatusVO.Ban ban = new LoginStatusVO.Ban();
-                            ban.setReason(banEntity.getReason());
-                            if (banEntity.getEndsAt() != null)
-                                ban.setExpires(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault()).format(banEntity.getEndsAt()));
-                            loginStatusVO.setBan(ban);
-                            return loginStatusVO;
-                        }
-
-                        userEntity.setLastLogin(LocalDateTime.now());
-                        userEntity.setDiscordId(httpRequest.getHeader("X-DiscordID"));
-						userEntity.setUA(httpRequest.getHeader("X-UserAgent") + httpRequest.getHeader("user-agent"));
-
-                        userDAO.update(userEntity);
-                        Long userId = userEntity.getId();
-                        deleteByUserId(userId);
-                        String randomUUID = createToken(userId, httpRequest.getRemoteHost());
-                        loginStatusVO = new LoginStatusVO(userId, randomUUID, true);
-                        loginStatusVO.setDescription("");
-
+                if (password.equals(userEntity.getPassword())) {
+                    if (userEntity.isLocked()) {
+                        loginStatusVO.setDescription("Account locked. Contact an administrator.");
                         return loginStatusVO;
                     }
-                } else {
-					loginStatusVO.setDescription("Server is in maintenance. Please follow our discord for more info.");
-         			return loginStatusVO;
+
+                    if(userEntity.isAdmin() || parameterBO.getBoolParam("IS_MAINTENANCE") == false) {
+                        loginStatusVO.setDescription("Server is in maintenance. Please follow our discord for more info.");
+                        return loginStatusVO;
+                    }
+
+                    if (userEntity.getGameHardwareHash() != null && hardwareInfoBO.isHardwareHashBanned(userEntity.getGameHardwareHash())) {
+                        LoginStatusVO.Ban ban = new LoginStatusVO.Ban();
+                        ban.setReason("Your computer is banned from this server.");
+                        loginStatusVO.setBan(ban);
+                        return loginStatusVO;
+                    }
+
+                    BanEntity banEntity = authenticationBO.checkUserBan(userEntity);
+
+                    if (banEntity != null) {
+                        LoginStatusVO.Ban ban = new LoginStatusVO.Ban();
+                        ban.setReason(banEntity.getReason());
+                        if (banEntity.getEndsAt() != null)
+                            ban.setExpires(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault()).format(banEntity.getEndsAt()));
+                        loginStatusVO.setBan(ban);
+                        return loginStatusVO;
+                    }
+
+                    userEntity.setLastLogin(LocalDateTime.now());
+                    userEntity.setDiscordId(httpRequest.getHeader("X-DiscordID"));
+                    userEntity.setUA(httpRequest.getHeader("X-UserAgent"));
+
+                    userDAO.update(userEntity);
+                    Long userId = userEntity.getId();
+                    deleteByUserId(userId);
+                    String randomUUID = createToken(userEntity, httpRequest.getRemoteHost());
+                    loginStatusVO = new LoginStatusVO(userId, randomUUID, true);
+                    loginStatusVO.setDescription("");
+
+                    return loginStatusVO;
                 }
             }
         }
@@ -159,55 +163,42 @@ public LoginStatusVO login(String email, String password, HttpServletRequest htt
         return loginStatusVO;
     }
 
-    public Long getActivePersonaId(String securityToken) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
-        return tokenSessionEntity.getActivePersonaId();
+    public void verifyPersonaOwnership(TokenSessionEntity tokenSessionEntity, Long personaId) {
+        Objects.requireNonNull(tokenSessionEntity);
+
+        if (!tokenSessionEntity.getAllowedPersonaIds().contains(personaId)) {
+            throw new EngineException(EngineExceptionCode.RemotePersonaDoesNotBelongToUser, true);
+        }
     }
 
-    public void setActivePersonaId(String securityToken, Long personaId, Boolean isLogout) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
+    public void setActivePersonaId(TokenSessionEntity tokenSessionEntity, Long personaId) {
+        Objects.requireNonNull(tokenSessionEntity);
 
-        if (!isLogout) {
-            if (!tokenSessionEntity.getUserEntity().ownsPersona(personaId)) {
-                throw new EngineException(EngineExceptionCode.RemotePersonaDoesNotBelongToUser, true);
-            }
+        if (!personaId.equals(0L)) {
+            verifyPersonaOwnership(tokenSessionEntity, personaId);
         }
 
         tokenSessionEntity.setActivePersonaId(personaId);
-        tokenDAO.update(tokenSessionEntity);
     }
 
-    public String getActiveRelayCryptoTicket(String securityToken) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
-        return tokenSessionEntity.getRelayCryptoTicket();
-    }
-
-    public Long getActiveLobbyId(String securityToken) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
-        return tokenSessionEntity.getActiveLobbyId();
-    }
-
-    public void setActiveLobbyId(String securityToken, Long lobbyId) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
+    public void setActiveLobbyId(TokenSessionEntity tokenSessionEntity, Long lobbyId) {
+        Objects.requireNonNull(tokenSessionEntity);
         tokenSessionEntity.setActiveLobbyId(lobbyId);
-        tokenDAO.update(tokenSessionEntity);
     }
 
-    public boolean isAdmin(String securityToken) {
-        return getUser(securityToken).isAdmin();
-    }
-
-    public UserEntity getUser(String securityToken) {
-        return tokenDAO.findById(securityToken).getUserEntity();
-    }
-
-    public void setEventSessionId(String securityToken, Long eventSessionId) {
-        TokenSessionEntity tokenSessionEntity = tokenDAO.findById(securityToken);
+    public void setEventSessionId(TokenSessionEntity tokenSessionEntity, Long eventSessionId) {
+        Objects.requireNonNull(tokenSessionEntity);
         tokenSessionEntity.setEventSessionId(eventSessionId);
-        tokenDAO.update(tokenSessionEntity);
     }
 
-    public Long getEventSessionId(String securityToken) {
-        return tokenDAO.findById(securityToken).getEventSessionId();
+    public void setRelayCryptoTicket(TokenSessionEntity tokenSessionEntity, String relayCryptoTicket) {
+        Objects.requireNonNull(tokenSessionEntity);
+        tokenSessionEntity.setRelayCryptoTicket(relayCryptoTicket);
+    }
+
+    private Date getMinutes(int minutes) {
+        long time = new Date().getTime();
+        time = time + (minutes * 60000L);
+        return new Date(time);
     }
 }

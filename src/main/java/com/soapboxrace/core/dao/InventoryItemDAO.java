@@ -6,21 +6,19 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.InventoryItemEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
 @Stateless
-public class InventoryItemDAO extends BaseDAO<InventoryItemEntity> {
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+public class InventoryItemDAO extends LongKeyedDAO<InventoryItemEntity> {
+
+    public InventoryItemDAO() {
+        super(InventoryItemEntity.class);
     }
 
     public List<InventoryItemEntity> findAllByPersonaId(Long personaId) {
@@ -44,21 +42,6 @@ public class InventoryItemDAO extends BaseDAO<InventoryItemEntity> {
                 .getResultList();
     }
 
-    public InventoryItemEntity findByPersonaIdAndHash(Long personaId, Integer hash) {
-        TypedQuery<InventoryItemEntity> query = entityManager.createNamedQuery("InventoryItemEntity" +
-                ".findAllByPersonaIdAndHash", InventoryItemEntity.class);
-        query.setParameter("personaId", personaId);
-        query.setParameter("hash", hash);
-
-        List<InventoryItemEntity> results = query.getResultList();
-
-        if (!results.isEmpty()) {
-            return results.get(0);
-        }
-
-        return null;
-    }
-
     public InventoryItemEntity findByPersonaIdAndEntitlementTag(Long personaId, String entitlementTag) {
         TypedQuery<InventoryItemEntity> query = entityManager.createNamedQuery("InventoryItemEntity" +
                 ".findAllByPersonaIdAndTag", InventoryItemEntity.class);
@@ -79,22 +62,6 @@ public class InventoryItemDAO extends BaseDAO<InventoryItemEntity> {
                 ".findAllByInventoryAndTag", InventoryItemEntity.class);
         query.setParameter("inventoryId", inventoryId);
         query.setParameter("entitlementTag", entitlementTag);
-
-        List<InventoryItemEntity> results = query.getResultList();
-
-        if (!results.isEmpty()) {
-            return results.get(0);
-        }
-
-        return null;
-    }
-
-    public InventoryItemEntity findByInventoryIdAndHash(Long inventoryId, Integer hash) {
-        TypedQuery<InventoryItemEntity> query = entityManager.createNamedQuery("InventoryItemEntity" +
-                        ".findAllByInventoryAndHash",
-                InventoryItemEntity.class);
-        query.setParameter("inventoryId", inventoryId);
-        query.setParameter("hash", hash);
 
         List<InventoryItemEntity> results = query.getResultList();
 

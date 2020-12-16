@@ -6,6 +6,11 @@
 
 package com.soapboxrace.core.jpa;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +18,6 @@ import java.util.List;
 @Entity
 @Table(name = "USER")
 @NamedQueries({ //
-        @NamedQuery(name = "UserEntity.findAll", query = "SELECT obj FROM UserEntity obj"),
         @NamedQuery(name = "UserEntity.findByEmail", query = "SELECT obj FROM UserEntity obj WHERE obj.email = " +
                 ":email"), //
         @NamedQuery(name = "UserEntity.findByIpAddress", query = "SELECT obj FROM UserEntity obj WHERE obj.ipAddress " +
@@ -41,7 +45,9 @@ public class UserEntity {
     @Column(name = "IP_ADDRESS")
     private String ipAddress;
 
-    @OneToMany(mappedBy = "user", targetEntity = PersonaEntity.class)
+    @OneToMany(mappedBy = "user", targetEntity = PersonaEntity.class, fetch = FetchType.EAGER)
+    @LazyCollection(LazyCollectionOption.FALSE)
+    @Fetch(FetchMode.JOIN)
     private List<PersonaEntity> personas;
 
     @Column(name = "premium")
@@ -52,7 +58,7 @@ public class UserEntity {
 
     @Column(name = "isLocked")
     private boolean isLocked;
-        
+
     @Column(name = "isDeveloper")
     private boolean isDeveloper;
 
@@ -60,7 +66,7 @@ public class UserEntity {
 	private String discordid;
 
 	@Column(name = "UserAgent", length = 255)
-	private String ua;
+    private String ua;
 
     @Column(name = "created")
     private LocalDateTime created;
@@ -122,11 +128,16 @@ public class UserEntity {
     public void setPremium(boolean premium) {
         this.premium = premium;
     }
-        
+
+
     public boolean isDeveloper() {
         return isDeveloper;
     }
 
+    public void setIsDeveloper(boolean isDeveloper) {
+        this.isDeveloper = isDeveloper;
+    }
+    
 	public String getDiscordId() {
 		return discordid;
 	}
@@ -142,10 +153,6 @@ public class UserEntity {
 	public void setUA(String ua) {
 		this.ua = ua;
 	}
-
-    public void setIsDeveloper(boolean isDeveloper) {
-        this.isDeveloper = isDeveloper;
-    }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean ownsPersona(Long id) {

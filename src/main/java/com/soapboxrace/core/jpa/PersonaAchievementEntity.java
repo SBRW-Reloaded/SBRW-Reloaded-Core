@@ -6,17 +6,22 @@
 
 package com.soapboxrace.core.jpa;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
+
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "PERSONA_ACHIEVEMENT")
 @NamedQueries({
-        @NamedQuery(name = "PersonaAchievementEntity.findAllByPersonaId", query = "SELECT p FROM " +
-                "PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId"),
-        @NamedQuery(name = "PersonaAchievementEntity.findByPersonaIdAndAchievementId", query = "SELECT p FROM " +
-                "PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId AND p.achievementEntity.id =" +
-                " :achievementId"),
+        @NamedQuery(name = "PersonaAchievementEntity.findAllByPersonaId",
+                query = "SELECT p FROM PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId"),
+        @NamedQuery(name = "PersonaAchievementEntity.findByPersonaIdAndAchievementId",
+                query = "SELECT p FROM PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId AND p.achievementEntity.id = :achievementId"),
 })
 public class PersonaAchievementEntity {
 
@@ -41,7 +46,9 @@ public class PersonaAchievementEntity {
 
     @OneToMany(mappedBy = "personaAchievementEntity", targetEntity = PersonaAchievementRankEntity.class, cascade =
             CascadeType.DETACH, orphanRemoval = true)
-    private List<PersonaAchievementRankEntity> ranks;
+    @LazyCollection(LazyCollectionOption.FALSE)
+    @Fetch(FetchMode.SUBSELECT)
+    private List<PersonaAchievementRankEntity> ranks = new ArrayList<>();
 
     public Long getId() {
         return id;

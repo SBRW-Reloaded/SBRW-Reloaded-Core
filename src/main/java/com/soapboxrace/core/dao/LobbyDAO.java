@@ -6,25 +6,20 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.EventEntity;
 import com.soapboxrace.core.jpa.LobbyEntity;
-import com.soapboxrace.core.jpa.LobbyEntrantEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 @Stateless
-public class LobbyDAO extends BaseDAO<LobbyEntity> {
+public class LobbyDAO extends LongKeyedDAO<LobbyEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public LobbyDAO() {
+        super(LobbyEntity.class);
     }
 
     public LobbyEntity findById(Long id) {
@@ -50,26 +45,7 @@ public class LobbyDAO extends BaseDAO<LobbyEntity> {
         return query.getResultList();
     }
 
-    public List<LobbyEntity> findAllRunning() {
-        Date dateNow = new Date();
-        Date datePast = new Date(dateNow.getTime() - 50000);
-
-        TypedQuery<LobbyEntity> query = entityManager.createNamedQuery("LobbyEntity.findAllOpen", LobbyEntity.class);
-        query.setParameter("dateTime1", datePast);
-        query.setParameter("dateTime2", dateNow);
-        List<LobbyEntity> resultList = query.getResultList();
-        for (LobbyEntity lobbyEntity : resultList) {
-            List<LobbyEntrantEntity> entrants = lobbyEntity.getEntrants();
-            for (LobbyEntrantEntity lobbyEntrantEntity : entrants) {
-                lobbyEntrantEntity.getPersona();
-            }
-        }
-        return resultList;
-    }
-
     public List<LobbyEntity> findByEventStarted(int eventId) {
-//		Date dateNow = new Date();
-//		Date datePast = new Date(dateNow.getTime() - 35000);
         LocalDateTime dateNow = LocalDateTime.now();
         LocalDateTime datePast = LocalDateTime.now().minusSeconds(35);
 

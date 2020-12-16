@@ -6,19 +6,15 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.CustomCarEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 @Stateless
-public class CustomCarDAO extends BaseDAO<CustomCarEntity> {
+public class CustomCarDAO extends LongKeyedDAO<CustomCarEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public CustomCarDAO() {
+        super(CustomCarEntity.class);
     }
-
 }

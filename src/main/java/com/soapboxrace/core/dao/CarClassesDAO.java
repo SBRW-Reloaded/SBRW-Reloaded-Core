@@ -6,36 +6,17 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.StringKeyedDAO;
 import com.soapboxrace.core.jpa.CarClassesEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 @Stateless
-public class CarClassesDAO extends BaseDAO<CarClassesEntity> {
+public class CarClassesDAO extends StringKeyedDAO<CarClassesEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public CarClassesEntity findById(String vltName) {
-        return entityManager.find(CarClassesEntity.class, vltName);
-    }
-
-    public CarClassesEntity findByProductId(String productId) {
-        TypedQuery<CarClassesEntity> query = entityManager.createQuery("SELECT obj FROM CarClassesEntity obj WHERE " +
-                "obj.productId = :productId", CarClassesEntity.class);
-        query.setParameter("productId", productId);
-        try {
-            return query.getSingleResult();
-        } catch (Exception e) {
-            // TODO: handle exception
-        }
-        return null;
+    public CarClassesDAO() {
+        super(CarClassesEntity.class);
     }
 
     public CarClassesEntity findByHash(int hash) {

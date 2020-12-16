@@ -6,26 +6,19 @@
 
 package com.soapboxrace.core.dao;
 
-import com.soapboxrace.core.dao.util.BaseDAO;
+import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.OnlineUsersEntity;
 
 import javax.ejb.Stateless;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.util.Date;
 import java.util.List;
 
 @Stateless
-public class OnlineUsersDAO extends BaseDAO<OnlineUsersEntity> {
+public class OnlineUsersDAO extends LongKeyedDAO<OnlineUsersEntity> {
 
-    @PersistenceContext
-    protected void setEntityManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    public OnlineUsersEntity findById(Long id) {
-        return entityManager.find(OnlineUsersEntity.class, id);
+    public OnlineUsersDAO() {
+        super(OnlineUsersEntity.class);
     }
 
     public OnlineUsersEntity findByTime(Date time) {

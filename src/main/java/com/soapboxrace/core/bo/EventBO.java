@@ -6,14 +6,19 @@
 
 package com.soapboxrace.core.bo;
 
-import com.soapboxrace.core.dao.*;
+import com.soapboxrace.core.dao.EventDAO;
+import com.soapboxrace.core.dao.EventDataDAO;
+import com.soapboxrace.core.dao.EventSessionDAO;
+import com.soapboxrace.core.dao.PersonaDAO;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
+import org.hibernate.Hibernate;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import java.util.List;
+import java.util.Objects;
 
 @Stateless
 public class EventBO {
@@ -31,20 +36,17 @@ public class EventBO {
     private PersonaDAO personaDao;
 
     @EJB
-    private TokenSessionDAO tokenSessionDao;
-
-    @EJB
     private PersonaBO personaBO;
 
     public List<EventEntity> availableAtLevel(Long personaId) {
-        PersonaEntity personaEntity = personaDao.findById(personaId);
+        PersonaEntity personaEntity = personaDao.find(personaId);
         return eventDao.findByLevel(personaEntity.getLevel());
     }
 
     public void createEventDataSession(Long personaId, Long eventSessionId) {
         OwnedCarEntity ownedCarEntity = personaBO.getDefaultCarEntity(personaId).getOwnedCar();
 
-        EventSessionEntity eventSessionEntity = findEventSessionById(eventSessionId);
+        EventSessionEntity eventSessionEntity = eventSessionDao.find(eventSessionId);
         EventDataEntity eventDataEntity = new EventDataEntity();
         eventDataEntity.setPersonaId(personaId);
         eventDataEntity.setEventSessionId(eventSessionId);
@@ -55,15 +57,11 @@ public class EventBO {
         eventDataDao.insert(eventDataEntity);
     }
 
-    public EventSessionEntity createEventSession(String securityToken, int eventId) {
-        EventEntity eventEntity = eventDao.findById(eventId);
+    public EventSessionEntity createEventSession(TokenSessionEntity tokenSessionEntity, int eventId) {
+        Objects.requireNonNull(tokenSessionEntity);
+
+        EventEntity eventEntity = eventDao.find(eventId);
         if (eventEntity == null) {
-            return null;
-        }
-
-        TokenSessionEntity tokenSessionEntity = tokenSessionDao.findById(securityToken);
-
-        if (tokenSessionEntity == null) {
             return null;
         }
 
@@ -93,6 +91,10 @@ public class EventBO {
     }
 
     public EventSessionEntity findEventSessionById(Long id) {
-        return eventSessionDao.findById(id);
+        EventSessionEntity eventSession = eventSessionDao.find(id);
+        Hibernate.initialize(eventSession.getEvent().getSingleplayerRewardConfig());
+        Hibernate.initialize(eventSession.getEvent().getMultiplayerRewardConfig());
+        Hibernate.initialize(eventSession.getEvent().getPrivateRewardConfig());
+        return eventSession;
     }
 }

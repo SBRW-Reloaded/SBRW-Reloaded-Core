@@ -6,10 +6,13 @@
 
 package com.soapboxrace.core.api.util;
 
+import com.soapboxrace.core.bo.RequestSessionInfo;
 import com.soapboxrace.core.bo.TokenSessionBO;
+import com.soapboxrace.core.jpa.TokenSessionEntity;
 
 import javax.annotation.Priority;
 import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -21,6 +24,9 @@ import javax.ws.rs.ext.Provider;
 @Provider
 @Priority(Priorities.AUTHENTICATION)
 public class AuthenticationFilter implements ContainerRequestFilter {
+
+    @Inject
+    private RequestSessionInfo requestSessionInfo;
 
     @EJB
     private TokenSessionBO tokenSessionBO;
@@ -34,15 +40,10 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         }
         Long userId = Long.valueOf(userIdStr);
         try {
-            validateToken(userId, securityToken);
+            TokenSessionEntity tokenSessionEntity = tokenSessionBO.validateToken(userId, securityToken);
+            requestSessionInfo.setTokenSessionEntity(tokenSessionEntity);
         } catch (Exception e) {
             requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-    }
-
-    private void validateToken(Long userId, String securityToken) {
-        if (!tokenSessionBO.verifyToken(userId, securityToken)) {
-            throw new NotAuthorizedException("Invalid Token");
         }
     }
 }

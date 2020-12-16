@@ -27,7 +27,7 @@ public class SocialBO {
 
 	@EJB
     private PersonaDAO personaDao;
-    
+
     @EJB
 	private DiscordWebhook discord;
 
@@ -44,8 +44,8 @@ public class SocialBO {
         reportDao.insert(reportEntity);
 
         if(parameterBO.getStrParam("DISCORD_WEBHOOK_REPORT_URL") != null) {
-			PersonaEntity personaEntity = personaDao.findById(abuserPersonaId);
-			PersonaEntity personaEntity1 = personaDao.findById(personaId);
+			PersonaEntity personaEntity = personaDao.find(abuserPersonaId);
+			PersonaEntity personaEntity1 = personaDao.find(personaId);
 
 			discord.sendMessage("**" + personaEntity.getName() + "** has been reported by **" + personaEntity1.getName() + "**." + "\n Reason: **" + description + "**", 
 				parameterBO.getStrParam("DISCORD_WEBHOOK_REPORT_URL"), 

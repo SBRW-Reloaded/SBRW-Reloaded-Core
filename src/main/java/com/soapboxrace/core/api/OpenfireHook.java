@@ -25,16 +25,19 @@ public class OpenfireHook {
     private AdminBO adminBO;
 
     @POST
-    public Response openfireHook(@HeaderParam("Authorization") String token, @QueryParam("cmd") String command,
-                                 @QueryParam("pid") long persona) {
+    public Response openfireHook(@HeaderParam("Authorization") String token, @QueryParam("cmd") String command, @QueryParam("pid") long persona) {
         String correctToken = parameterBO.getStrParam("OPENFIRE_TOKEN");
+
         if (token == null || !MessageDigest.isEqual(token.getBytes(), correctToken.getBytes())) {
             return Response.status(Response.Status.BAD_REQUEST).entity("invalid token").build();
         }
-        PersonaEntity personaEntity = personaDAO.findById(persona);
+
+        PersonaEntity personaEntity = personaDAO.find(persona);
+
         if (personaEntity != null && personaEntity.getUser().isAdmin()) {
             adminBO.sendChatCommand(persona, command, personaEntity.getName());
         }
+        
         return Response.noContent().build();
     }
 }

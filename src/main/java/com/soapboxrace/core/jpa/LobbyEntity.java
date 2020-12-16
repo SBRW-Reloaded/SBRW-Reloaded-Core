@@ -6,6 +6,11 @@
 
 package com.soapboxrace.core.jpa;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -15,7 +20,6 @@ import java.util.List;
 @Entity
 @Table(name = "LOBBY")
 @NamedQueries({ //
-        @NamedQuery(name = "LobbyEntity.findAll", query = "SELECT obj FROM LobbyEntity obj JOIN FETCH obj.event e"), //
         @NamedQuery(name = "LobbyEntity.findAllOpen", //
                 query = "SELECT obj FROM LobbyEntity obj JOIN FETCH obj.event e WHERE obj.startedTime between :dateTime1 and :dateTime2 and size(obj.entrants) < obj.event.maxPlayers"), //
         @NamedQuery(name = "LobbyEntity.findAllOpenByCarClass", //
@@ -40,6 +44,8 @@ public class LobbyEntity {
     private EventEntity event;
 
     @OneToMany(mappedBy = "lobby", targetEntity = LobbyEntrantEntity.class, cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
+    @LazyCollection(LazyCollectionOption.FALSE)
+    @Fetch(FetchMode.JOIN)
     private List<LobbyEntrantEntity> entrants = new ArrayList<>();
 
     private LocalDateTime startedTime;
@@ -96,19 +102,8 @@ public class LobbyEntity {
         this.personaId = personaId;
     }
 
-    public boolean add(LobbyEntrantEntity e) {
-        if (entrants == null) {
-            entrants = new ArrayList<>();
-        }
-        return entrants.add(e);
-    }
-
     public int getLobbyCountdownInMilliseconds(int baseTime) {
         if (startedTime != null) {
-//			Long time = System.currentTimeMillis() - lobbyDateTimeStart.getTime();
-//			time = baseTime - time;
-//			return time.intValue();
-//			return System.currentTimeMillis() - startedTime.toEpochSecond()
             return (int) (baseTime - (System.currentTimeMillis() - (startedTime.toEpochSecond(OffsetDateTime.now().getOffset()) * 1000)));
         }
 

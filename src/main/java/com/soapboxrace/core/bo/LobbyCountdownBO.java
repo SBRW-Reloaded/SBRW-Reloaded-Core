@@ -2,7 +2,6 @@ package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.dao.EventSessionDAO;
 import com.soapboxrace.core.dao.LobbyDAO;
-import com.soapboxrace.core.dao.TokenSessionDAO;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.LobbyEntity;
 import com.soapboxrace.core.jpa.LobbyEntrantEntity;
@@ -31,7 +30,7 @@ public class LobbyCountdownBO {
     private EventSessionDAO eventSessionDAO;
 
     @EJB
-    private TokenSessionDAO tokenDAO;
+    private TokenSessionBO tokenSessionBO;
 
     @EJB
     private ParameterBO parameterBO;
@@ -48,7 +47,7 @@ public class LobbyCountdownBO {
     @Timeout
     public void onTimeout(Timer timer) {
         Long lobbyId = (Long) timer.getInfo();
-        LobbyEntity lobbyEntity = lobbyDAO.findById(lobbyId);
+        LobbyEntity lobbyEntity = lobbyDAO.find(lobbyId);
         List<LobbyEntrantEntity> entrants = lobbyEntity.getEntrants();
         if (entrants.size() < 2) {
             return;
@@ -80,8 +79,8 @@ public class LobbyCountdownBO {
             byteBuffer.put(numOfRacers);
             byteBuffer.putInt(personaId.intValue());
             byte[] cryptoTicketBytes = byteBuffer.array();
-            String relayCrypotTicket = Base64.getEncoder().encodeToString(cryptoTicketBytes);
-            tokenDAO.updateRelayCrytoTicketByPersonaId(personaId, relayCrypotTicket);
+            String relayCryptoTicket = Base64.getEncoder().encodeToString(cryptoTicketBytes);
+            tokenSessionBO.setRelayCryptoTicket(tokenSessionBO.findByUserId(lobbyEntrantEntity.getPersona().getUser().getId()), relayCryptoTicket);
 
             XMPP_P2PCryptoTicketType p2pCryptoTicketType = new XMPP_P2PCryptoTicketType();
             p2pCryptoTicketType.setPersonaId(personaId);

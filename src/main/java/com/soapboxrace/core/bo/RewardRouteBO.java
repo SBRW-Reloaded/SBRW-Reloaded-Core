@@ -32,20 +32,20 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
         if (!legit || finishReason != 22) {
             return new Accolades();
         }
-        EventEntity eventEntity = eventSessionEntity.getEvent();
-        PersonaEntity personaEntity = personaDao.findById(activePersonaId);
+        PersonaEntity personaEntity = personaDao.find(activePersonaId);
         RewardVO rewardVO = getRewardVO(personaEntity);
+        EventRewardEntity eventRewardEntity = getRewardConfiguration(eventSessionEntity);
 
-        setBaseReward(personaEntity, eventEntity, routeArbitrationPacket, rewardVO);
-        setRankReward(eventEntity, routeArbitrationPacket, rewardVO);
-        setPerfectStartReward(eventEntity, routeArbitrationPacket.getPerfectStart(), rewardVO);
-        setTopSpeedReward(eventEntity, routeArbitrationPacket.getTopSpeed(), rewardVO);
+        setBaseReward(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, routeArbitrationPacket, rewardVO);
+        setRankReward(eventRewardEntity, routeArbitrationPacket, rewardVO);
+        setPerfectStartReward(eventRewardEntity, routeArbitrationPacket.getPerfectStart(), rewardVO);
+        setTopSpeedReward(eventRewardEntity, routeArbitrationPacket.getTopSpeed(), rewardVO);
         setSkillMultiplierReward(personaEntity, rewardVO, SkillModRewardType.SOCIALITE);
-        setMultiplierReward(eventEntity, rewardVO);
+        setMultiplierReward(eventRewardEntity, rewardVO);
         setAmplifierReward(personaEntity, rewardVO);
 
         applyRaceReward(rewardVO.getRep(), rewardVO.getCash(), personaEntity, true, achievementTransaction);
-        return getAccolades(personaEntity, eventEntity, routeArbitrationPacket, rewardVO);
+        return getAccolades(personaEntity, eventRewardEntity, routeArbitrationPacket, rewardVO);
     }
 
 }

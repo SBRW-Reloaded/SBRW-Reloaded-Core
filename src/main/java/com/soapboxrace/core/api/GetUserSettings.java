@@ -9,15 +9,16 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.GetServerInformationBO;
 import com.soapboxrace.core.bo.ParameterBO;
-import com.soapboxrace.core.bo.SceneryBO;
+import com.soapboxrace.core.bo.RequestSessionInfo;
+import com.soapboxrace.core.bo.SceneryUtil;
 import com.soapboxrace.core.bo.util.ServerInformationVO;
 import com.soapboxrace.jaxb.http.ArrayOfLong;
 import com.soapboxrace.jaxb.http.ArrayOfString;
 import com.soapboxrace.jaxb.http.UserSettings;
 
 import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -30,21 +31,20 @@ public class GetUserSettings {
     private GetServerInformationBO serverInformationBO;
 
     @EJB
-    private SceneryBO sceneryBO;
-
-    @EJB
     private ParameterBO parameterBO;
+
+    @Inject
+    private RequestSessionInfo requestSessionInfo;
 
     @GET
     @Secured
     @Produces(MediaType.APPLICATION_XML)
-    public UserSettings getUserSettingsGet(@HeaderParam("userId") Long userId,
-                                           @HeaderParam("securityToken") String securityToken) {
+    public UserSettings getUserSettingsGet() {
         ServerInformationVO serverInformation = serverInformationBO.getServerInformation();
         List<String> activatedSceneryGroups = serverInformation.getActivatedHolidaySceneryGroups();
         List<String> disactivatedSceneryGroups = serverInformation.getDisactivatedHolidaySceneryGroups();
         List<Long> sceneryIds = activatedSceneryGroups.stream()
-                .map(sceneryBO::getSceneryId)
+                .map(SceneryUtil::getSceneryId)
                 .collect(Collectors.toList());
 
         UserSettings userSettings = new UserSettings();
@@ -56,7 +56,7 @@ public class GetUserSettings {
         ArrayOfString arrayOfString = new ArrayOfString();
         arrayOfString.getString().addAll(
                 activatedSceneryGroups.stream()
-                        .filter(sceneryBO::isValid)
+                        .filter(SceneryUtil::isValid)
                         .collect(Collectors.toList()));
         userSettings.setActivatedHolidaySceneryGroups(arrayOfString);
         ArrayOfLong arrayOfLong = new ArrayOfLong();
@@ -65,13 +65,13 @@ public class GetUserSettings {
         ArrayOfString arrayOfString2 = new ArrayOfString();
         arrayOfString2.getString().addAll(
                 disactivatedSceneryGroups.stream()
-                        .filter(s -> sceneryBO.isValid(s.replace("_DISABLE", "")))
+                        .filter(s -> SceneryUtil.isValid(s.replace("_DISABLE", "")))
                         .collect(Collectors.toList()));
         userSettings.setDisactivatedHolidaySceneryGroups(arrayOfString2);
         userSettings.setFirstTimeLogin(false);
-        userSettings.setMaxLevel(parameterBO.getMaxLevel(securityToken));
+        userSettings.setMaxLevel(parameterBO.getMaxLevel(requestSessionInfo.getUser()));
         userSettings.setStarterPackApplied(false);
-        userSettings.setUserId(userId);
+        userSettings.setUserId(requestSessionInfo.getUser().getId());
         return userSettings;
     }
 }

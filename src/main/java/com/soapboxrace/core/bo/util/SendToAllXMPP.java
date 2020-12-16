@@ -29,7 +29,7 @@ public class SendToAllXMPP {
         	System.out.println(channel.getRoomName());
         	if(channel.getRoomName().equals(channelname)) {
 	            List<Long> members = restApiCli.getAllOccupantsInRoom(channel.getRoomName());
-	                
+
 	            for (Long member : members) {
 	                openFireSoapBoxCli.send(msg, member);
 	            }
@@ -46,10 +46,10 @@ public class SendToAllXMPP {
 
         for (MUCRoomEntity channel : channels) {
             List<Long> members = restApiCli.getAllOccupantsInRoom(channel.getRoomName());
-                
+
             for (Long member : members) {
                 openFireSoapBoxCli.send(msg, member);
             }
    	    }
    	}
-}
+} 

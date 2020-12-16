@@ -6,6 +6,8 @@
 
 package com.soapboxrace.core.bo;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import com.soapboxrace.core.bo.util.AchievementCustomizationContext;
 import com.soapboxrace.core.bo.util.ListDifferences;
 import com.soapboxrace.core.bo.util.OwnedCarConverter;
@@ -16,7 +18,6 @@ import com.soapboxrace.jaxb.http.*;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,7 +57,7 @@ public class CommerceBO {
 
     public CommerceSessionResultTrans doCommerce(CommerceSessionTrans commerceSessionTrans, Long personaId) {
         List<BasketItemTrans> basketItems = commerceSessionTrans.getBasket().getItems().getBasketItemTrans();
-        PersonaEntity personaEntity = personaDAO.findById(personaId);
+        PersonaEntity personaEntity = personaDAO.find(personaId);
         OwnedCarEntity ownedCarEntity = personaBO.getDefaultCarEntity(personaId).getOwnedCar();
         OwnedCarTrans ownedCarTrans = personaBO.getDefaultCar(personaId);
         CustomCarTrans customCarTrans = ownedCarTrans.getCustomCar();
@@ -88,8 +89,8 @@ public class CommerceBO {
                 customCarTrans.getSkillModParts().getSkillModPartTrans(),
                 commerceCustomCar.getSkillModParts().getSkillModPartTrans());
 
-        Map<Integer, Object> addedItems = new HashMap<>();
-        Map<Integer, Object> removedItems = new HashMap<>();
+        Multimap<Integer, Object> addedItems = ArrayListMultimap.create();
+        Multimap<Integer, Object> removedItems = ArrayListMultimap.create();
 
         Collection<CustomPaintTrans> paintsAdded = paintDifferences.getAdded();
         paintsAdded.forEach(p -> addedItems.put(p.getGroup(), p));
@@ -115,7 +116,7 @@ public class CommerceBO {
 
         InventoryEntity inventoryEntity = inventoryBO.getInventory(personaEntity);
 
-        for (Map.Entry<Integer, Object> addedItem : addedItems.entrySet()) {
+        for (Map.Entry<Integer, Object> addedItem : addedItems.entries()) {
             if (addedItem.getValue() instanceof CustomVinylTrans) {
                 VinylProductEntity vinylProductEntity = vinylProductDAO.findByHash(addedItem.getKey());
 
@@ -132,13 +133,16 @@ public class CommerceBO {
                 ProductEntity productEntity = productDAO.findByHash(addedItem.getKey());
 
                 if (productEntity != null) {
-                    if (basketItems.stream().anyMatch(p -> p.getProductId().equalsIgnoreCase(productEntity.getProductId()))) {
+                    InventoryItemEntity inventoryItemEntity = inventoryItemDAO.findByInventoryIdAndEntitlementTag(inventoryEntity.getId(), productEntity.getEntitlementTag());
+                    boolean itemInBasket = basketItems.stream().anyMatch(p -> p.getProductId().equalsIgnoreCase(productEntity.getProductId()));
+
+                    if (inventoryItemEntity != null && !itemInBasket) {
+                        inventoryBO.decreaseItemCount(inventoryEntity, inventoryItemEntity);
+                    } else {
                         if (productEntity.getCurrency().equals("CASH"))
                             removeCash += (int) productEntity.getPrice();
                         else
                             removeBoost += (int) productEntity.getPrice();
-                    } else {
-                        inventoryBO.decreaseItemCount(inventoryEntity, productEntity.getEntitlementTag());
                     }
                 } else {
                     commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_INVALID_BASKET);
@@ -147,7 +151,7 @@ public class CommerceBO {
             }
         }
 
-        for (Map.Entry<Integer, Object> removedItem : removedItems.entrySet()) {
+        for (Map.Entry<Integer, Object> removedItem : removedItems.entries()) {
             if (!(removedItem.getValue() instanceof CustomVinylTrans)) {
                 ProductEntity productEntity = productDAO.findByHash(removedItem.getKey());
 
