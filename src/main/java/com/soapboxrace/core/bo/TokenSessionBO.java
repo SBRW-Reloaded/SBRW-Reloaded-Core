@@ -121,7 +121,7 @@ public class TokenSessionBO {
                         return loginStatusVO;
                     }
 
-                    if(userEntity.isAdmin() || parameterBO.getBoolParam("IS_MAINTENANCE") == false) {
+                    if(!userEntity.isAdmin() || parameterBO.getBoolParam("IS_MAINTENANCE") == true) {
                         loginStatusVO.setDescription("Server is in maintenance. Please follow our discord for more info.");
                         return loginStatusVO;
                     }
