@@ -59,12 +59,7 @@ public class AdminBO {
         CommandInfo commandInfo = CommandInfo.parse(command);
         PersonaEntity personaEntity = personaDao.find(abuserPersonaId);
         PersonaEntity personaEntity1 = personaDao.find(personaId);
-
-        System.out.println("----------------------");
-        System.out.println(command);
-        System.out.println(commandInfo);
-        System.out.println("----------------------");
-
+        
         String constructMsg = "[" + personaEntity.getName() + "] has been %s by [" + personaEntity1.getName() + "].";
         String constructMsg_ds = "**" + personaEntity.getName() + "** has been %s by **" + personaEntity1.getName() + "**";
 
