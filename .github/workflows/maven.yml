@@ -6,14 +6,14 @@ name: Java CI with Maven
 on:
   push:
     branches:
-      - develop
+      - wopl_branch
     paths:
       - src/**
       - xsd/**
       - xsd-final/**
   pull_request:
     branches:
-      - develop
+      - wopl_branch
     paths:
       - src/**
       - xsd/**
