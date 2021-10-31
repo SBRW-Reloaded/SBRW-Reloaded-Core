@@ -88,7 +88,7 @@ public class ItemRewardBO {
 
             if (useCount != -1) {
                 if(parameterBO.getBoolParam("SBRWR_TRANSLATABLE")) {
-                    commerceItemTrans.setTitle(commerceItemTrans.getTitle() + "," + useCount);
+                    commerceItemTrans.setTitle("REWARD_LABEL," + commerceItemTrans.getTitle() + "," + useCount);
                 } else {
                     commerceItemTrans.setTitle(commerceItemTrans.getTitle() + " x" + useCount);
                 }

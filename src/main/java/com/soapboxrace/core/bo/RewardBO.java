@@ -523,7 +523,7 @@ public class RewardBO {
             luckyDrawItem.setRemainingUseCount(quantity == -1 ? productEntity.getUseCount() : quantity);
 
             if(parameterBO.getBoolParam("SBRWR_TRANSLATABLE")) {
-                luckyDrawItem.setDescription(luckyDrawItem.getDescription() + "," + luckyDrawItem.getRemainingUseCount());
+                luckyDrawItem.setDescription("REWARD_LABEL," + luckyDrawItem.getDescription() + "," + luckyDrawItem.getRemainingUseCount());
             } else {
                 luckyDrawItem.setDescription(luckyDrawItem.getDescription() + " x" + luckyDrawItem.getRemainingUseCount());
             }
