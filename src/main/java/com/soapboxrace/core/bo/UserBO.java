@@ -138,15 +138,17 @@ public class UserBO {
         ArrayOfProfileData arrayOfProfileData = new ArrayOfProfileData();
         List<PersonaEntity> listOfProfile = userEntity.getPersonas();
         for (PersonaEntity personaEntity : listOfProfile) {
-            // switch to apache beanutils copy
-            ProfileData profileData = new ProfileData();
-            profileData.setName(personaEntity.getName());
-            profileData.setCash(personaEntity.getCash());
-            profileData.setIconIndex(personaEntity.getIconIndex());
-            profileData.setPersonaId(personaEntity.getPersonaId());
-            profileData.setLevel(personaEntity.getLevel());
-            profileData.setBoost(personaEntity.getBoost());
-            arrayOfProfileData.getProfileData().add(profileData);
+            if(personaEntity.getDeletedAt() == null) {
+                // switch to apache beanutils copy
+                ProfileData profileData = new ProfileData();
+                profileData.setName(personaEntity.getName());
+                profileData.setCash(personaEntity.getCash());
+                profileData.setIconIndex(personaEntity.getIconIndex());
+                profileData.setPersonaId(personaEntity.getPersonaId());
+                profileData.setLevel(personaEntity.getLevel());
+                profileData.setBoost(personaEntity.getBoost());
+                arrayOfProfileData.getProfileData().add(profileData);
+            }
         }
         userInfo.setPersonas(arrayOfProfileData);
         User user = new User();
