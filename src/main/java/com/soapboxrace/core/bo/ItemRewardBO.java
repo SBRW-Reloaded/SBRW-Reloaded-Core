@@ -106,7 +106,11 @@ public class ItemRewardBO {
                             default:                    commerceItemTrans.setTitle(commerceItemTrans.getTitle() + "," + useCount); break;
                         }
                     } else {
-                        commerceItemTrans.setTitle(commerceItemTrans.getTitle() + "," + useCount);
+                        if(useCount == 1) {
+                            commerceItemTrans.setTitle(commerceItemTrans.getTitle());
+                        } else {
+                            commerceItemTrans.setTitle(commerceItemTrans.getTitle() + "," + useCount);
+                        }
                     }
                 } else {
                     commerceItemTrans.setTitle(commerceItemTrans.getTitle() + " x" + useCount);

@@ -546,7 +546,11 @@ public class RewardBO {
                         default:                    luckyDrawItem.setDescription(luckyDrawItem.getDescription() + "," + luckyDrawItem.getRemainingUseCount()); break;
                     }
                 } else {
-                    luckyDrawItem.setDescription(luckyDrawItem.getDescription() + "," + luckyDrawItem.getRemainingUseCount());
+                    if(luckyDrawItem.getRemainingUseCount() == 1) {
+                        luckyDrawItem.setDescription(luckyDrawItem.getDescription());
+                    } else {
+                        luckyDrawItem.setDescription(luckyDrawItem.getDescription() + "," + luckyDrawItem.getRemainingUseCount());
+                    }
                 }
             } else {
                 luckyDrawItem.setDescription(luckyDrawItem.getDescription() + " x" + luckyDrawItem.getRemainingUseCount());
