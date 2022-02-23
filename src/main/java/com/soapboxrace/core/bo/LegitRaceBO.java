@@ -6,6 +6,7 @@
 
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.bo.util.TimeConverter;
 import com.soapboxrace.core.dao.CarDAO;
 import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.EventDataEntity;
@@ -26,6 +27,9 @@ public class LegitRaceBO {
     @EJB
     private CarDAO carDAO;
 
+    @EJB
+    private ParameterBO parameterBO;
+
     public boolean isLegit(Long activePersonaId, ArbitrationPacket arbitrationPacket,
                            EventSessionEntity sessionEntity,
                            EventDataEntity dataEntity) {
@@ -34,16 +38,35 @@ public class LegitRaceBO {
 
         if (!legit) {
             socialBo.sendReport(0L, activePersonaId, 4,
-                    String.format("Abnormal event time: %d (below minimum of %d on event %d; session %d)",
-                            dataEntity.getServerTimeInMilliseconds(), minimumTime, sessionEntity.getEvent().getId(), sessionEntity.getId()),
-                    (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
+                String.format("Abnormal event time: %d (below minimum of %d on event %d; session %d)",
+                    dataEntity.getServerTimeInMilliseconds(), minimumTime, sessionEntity.getEvent().getId(), sessionEntity.getId()),
+                (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
+            return false;
+        }
+
+        //Calculate globaltime
+        if((arbitrationPacket.getAlternateEventDurationInMilliseconds()-dataEntity.getServerTimeInMilliseconds()) >= parameterBO.getIntParam("SBRWR_TIME_THRESHOLD", 10000)) {
+            int timediff = (int)(arbitrationPacket.getAlternateEventDurationInMilliseconds()-dataEntity.getServerTimeInMilliseconds())/1000;
+
+            socialBo.sendReport(0L, activePersonaId, 4,
+                String.format("Autofinish detected: timediff is %s (on event %s; session %d)", 
+                    TimeConverter.secToTime(timediff), sessionEntity.getEvent().getName().split("\\(")[0].trim(), sessionEntity.getId()),
+                (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
             return false;
         }
 
         if (arbitrationPacket.getHacksDetected() > 0) {
             socialBo.sendReport(0L, activePersonaId, 4,
-                    String.format("hacksDetected=%d (event %d; session %d)",
-                            arbitrationPacket.getHacksDetected(), sessionEntity.getEvent().getId(), sessionEntity.getId()),
+                    String.format("hacksDetected=%d (event %s; session %d)",
+                            arbitrationPacket.getHacksDetected(), sessionEntity.getEvent().getName().split("\\(")[0].trim(), sessionEntity.getId()),
+                    (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
+            return false;
+        }
+
+        if (arbitrationPacket.getKonami() > 0) {
+            socialBo.sendReport(0L, activePersonaId, 4,
+                    String.format("konami=%d (event %s; session %d)",
+                            arbitrationPacket.getKonami(), sessionEntity.getEvent().getName().split("\\(")[0].trim(), sessionEntity.getId()),
                     (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
             return false;
         }
@@ -74,6 +97,16 @@ public class LegitRaceBO {
                     (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
 
                     return false;                    
+                }
+
+                //Calc, wow
+                if ((pursuitArbitrationPacket.getAlternateEventDurationInMilliseconds()/1000)/pursuitArbitrationPacket.getCopsDeployed() >= parameterBO.getIntParam("SBRWR_COPS_THRESHOLD", 25)) {
+                    socialBo.sendReport(0L, activePersonaId, 4,
+                    String.format("Invalid data received from pursuit outrun, over %d cops in %d seconds",
+                            pursuitArbitrationPacket.getCopsDeployed(), pursuitArbitrationPacket.getAlternateEventDurationInMilliseconds()/1000),
+                    (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
+
+                    return false;       
                 }
 
                 return pursuitArbitrationPacket.getTopSpeed() != 0 || pursuitArbitrationPacket.getInfractions() == 0;
