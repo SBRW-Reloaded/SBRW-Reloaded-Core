@@ -52,6 +52,7 @@ public class Reporting {
             HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
             UserEntity user = requestSessionInfo.getUser();
             user.setGameHardwareHash(hardwareInfoEntity.getHardwareHash());
+            user.setState("ONLINE");
             userDAO.update(user);
 
             HardwareInfoEntity checkBannedHWID = hardwareInfoDAO.findBannedByHardwareHash(hardwareInfoEntity.getHardwareHash());

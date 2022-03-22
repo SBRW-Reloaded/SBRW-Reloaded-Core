@@ -75,6 +75,9 @@ public class UserEntity {
     @Column(name = "lastLogin")
     private LocalDateTime lastLogin;
 
+    @Column(name = "state")
+    private String state;
+
     @Column(columnDefinition = "integer default 0")
     private Integer selectedPersonaIndex = 0;
 
@@ -214,4 +217,12 @@ public class UserEntity {
     public void setSelectedPersonaIndex(Integer selectedPersonaIndex) {
         this.selectedPersonaIndex = selectedPersonaIndex;
     }
+
+	public String getState() {
+		return state;
+	}
+
+	public void setState(String state) {
+		this.state = state;
+	}
 }
