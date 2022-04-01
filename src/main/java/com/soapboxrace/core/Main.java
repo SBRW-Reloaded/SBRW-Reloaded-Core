@@ -8,8 +8,6 @@ import javax.annotation.PreDestroy;
 import com.soapboxrace.core.bo.ParameterBO;
 import com.soapboxrace.core.dao.UserDAO;
 
-
-
 @Startup
 @Singleton
 public class Main {
