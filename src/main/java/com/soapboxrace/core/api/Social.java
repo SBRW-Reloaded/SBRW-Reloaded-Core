@@ -41,10 +41,8 @@ public class Social {
         if (requestSessionInfo.isAdmin() && description.startsWith("/")) {
             adminBo.sendCommand(requestSessionInfo.getActivePersonaId(), abuserPersonaId, description);
         } else {
-            Long activePersonaId = requestSessionInfo.getActivePersonaId();
-
-            if(activePersonaId == personaId && abuserPersonaId != personaId) {
-                bo.sendReport(personaId, abuserPersonaId, petitionType, description, customCarID, chatMinutes, 0L);
+            if(abuserPersonaId != requestSessionInfo.getActivePersonaId()) {
+                bo.sendReport(requestSessionInfo.getActivePersonaId(), abuserPersonaId, petitionType, description, customCarID, chatMinutes, 0L);
             }
         }
         return "";
