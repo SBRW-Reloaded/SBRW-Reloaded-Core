@@ -77,6 +77,7 @@ public class UserBO {
         userEntity.setMaxCarSlots(parameterBO.getIntParam("SBRWR_MAXCARSLOTS", 300));
         userEntity.setCreated(LocalDateTime.now());
         userEntity.setLastLogin(LocalDateTime.now());
+        userEntity.setState("OFFLINE");
         userDao.insert(userEntity);
         return userEntity;
     }
