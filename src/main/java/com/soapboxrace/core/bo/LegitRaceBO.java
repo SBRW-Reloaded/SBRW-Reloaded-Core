@@ -35,7 +35,7 @@ public class LegitRaceBO {
     private Boolean isLegit = true;
 
     private void sendReport(String reportType, String message, Long activePersonaId, ArbitrationPacket arbitrationPacket) {
-        if(!parameterBO.getBoolParam("DISABLE_" + reportType + "_REPORTS")) {
+        if(parameterBO.getBoolParam("DISABLE_" + reportType + "_REPORTS")) {
             socialBo.sendReport(0L, activePersonaId, 4, message, (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
             isLegit = false;
         }
