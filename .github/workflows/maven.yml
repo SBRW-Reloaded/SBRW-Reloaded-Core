@@ -30,7 +30,10 @@ jobs:
 
     - name: get-commit-version
       id: get-commit-version
-      run: version=$(git log --format="%h" -n 1)
+      run: | 
+        version=$(git log --format="%h" -n 1)
+        echo $version > version.txt
+        echo "::set-output name=version::$version"
 
     - name: Cache Maven packages
       uses: actions/cache@v2
@@ -63,7 +66,9 @@ jobs:
     - name: Create upload URL file
       env:
         UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
-      run: echo $UPLOAD_URL > upload-url.txt
+      run: | 
+        echo $UPLOAD_URL > upload-url.txt
+        echo "::set-output name=upload-url::$upload_url"
 
     - name: Upload release's upload URL
       uses: actions/upload-artifact@v2
@@ -100,7 +105,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.set_upload_url.outputs.upload-url }}
-        asset_path: SBRWReloaded-${{ steps.get-commit-version.outputs.version }}.jar
+        asset_path: ${{ github.workspace }}/target/core-thorntail.jar
         asset_name: SBRWReloaded-${{ steps.get-commit-version.outputs.version }}.jar
         asset_content_type: application/octet-stream
     
