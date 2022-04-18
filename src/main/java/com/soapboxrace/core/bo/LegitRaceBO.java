@@ -125,7 +125,7 @@ public class LegitRaceBO {
             sendReport("User drove a Traffic (or nonexistent) Car", activePersonaId, arbitrationPacket);
         }
 
-        if(sessionEntity.getEvent().getCarClassHash() == 607077938) {
+        if(sessionEntity.getEvent().getCarClassHash() != 607077938) {
             if(carEntity.getCarClassHash() != sessionEntity.getEvent().getCarClassHash()) {
                 reportMessage = String.format("User drove a car that doesn't meet the class restriction of the event (class %s => &s, eventname %s).", 
                     HelpingTools.getClass(carEntity.getCarClassHash()), HelpingTools.getClass(sessionEntity.getEvent().getCarClassHash()), eventName);
