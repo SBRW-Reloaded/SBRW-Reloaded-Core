@@ -10,6 +10,7 @@ import com.soapboxrace.core.dao.EventDAO;
 import com.soapboxrace.core.dao.LobbyDAO;
 import com.soapboxrace.core.dao.LobbyEntrantDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
+import com.soapboxrace.core.dao.CarDAO;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
@@ -42,6 +43,9 @@ public class LobbyBO {
 
     @EJB
     private LobbyDAO lobbyDao;
+
+    @EJB
+    private CarDAO carDAO;
 
     @EJB
     private LobbyEntrantDAO lobbyEntrantDao;
@@ -98,7 +102,10 @@ public class LobbyBO {
                     if (!recipientPersonaId.equals(creatorPersonaId)) {
                         PersonaEntity recipientPersonaEntity = personaDao.find(recipientPersonaId);
 
-                        lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, recipientPersonaEntity, eventEntity.getLobbyCountdownTime());
+                        CarEntity carEntity = personaBO.getDefaultCarEntity(recipientPersonaEntity.getPersonaId());
+                        if(eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
+                            lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, recipientPersonaEntity, eventEntity.getLobbyCountdownTime());
+                        }
                     }
                 }
             }
@@ -117,7 +124,11 @@ public class LobbyBO {
         lobbyDao.insert(lobbyEntity);
 
         PersonaEntity personaEntity = personaDao.find(personaId);
-        lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
+
+        CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
+        if(eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
+            lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
+        }
 
         if (!isPrivate) {
             for (int i = 1; i <= lobbyEntity.getEvent().getMaxPlayers() - 1; i++) {

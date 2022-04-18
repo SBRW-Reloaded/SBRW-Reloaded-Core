@@ -59,9 +59,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ steps.get-commit-version.outputs.version }}
-        release_name: SBRWReloaded — v${{ steps.get-commit-version.outputs.version }}
-        draft: true
-        prerelease: true
+        release_name: SBRWReloaded — v ${{ steps.get-commit-version.outputs.version }}
+        draft: false
+        prerelease: false
 
     - name: Create upload URL file
       env:
