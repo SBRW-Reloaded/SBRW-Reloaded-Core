@@ -110,7 +110,7 @@ public class LegitRaceBO {
                     sendReport("User hasn't moved from place", activePersonaId, arbitrationPacket);
                 }
 
-                if(pursuitArbitrationPacket.getInfractions() != 0) {
+                if(pursuitArbitrationPacket.getInfractions() == 0) {
                     sendReport("User didn't made any infraction", activePersonaId, arbitrationPacket);
                 }
             }
