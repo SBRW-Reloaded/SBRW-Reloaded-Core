@@ -23,11 +23,13 @@ public class CarClassesDAO extends StringKeyedDAO<CarClassesEntity> {
         TypedQuery<CarClassesEntity> query = entityManager.createQuery("SELECT obj FROM CarClassesEntity obj WHERE " +
                 "obj.hash = :hash", CarClassesEntity.class);
         query.setParameter("hash", hash);
-        try {
-            return query.getSingleResult();
-        } catch (Exception e) {
-            // TODO: handle exception
-        }
-        return null;
+        return query.getSingleResult();
+    }
+
+    public CarClassesEntity findByName(String name) {
+        TypedQuery<CarClassesEntity> query = entityManager.createQuery("SELECT obj FROM CarClassesEntity obj WHERE " +
+            "obj.storeName = :name", CarClassesEntity.class);
+        query.setParameter("name", name);
+        return query.getSingleResult();
     }
 }

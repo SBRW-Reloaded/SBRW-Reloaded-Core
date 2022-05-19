@@ -17,6 +17,8 @@ import com.soapboxrace.jaxb.http.LobbyInfo;
 import com.soapboxrace.jaxb.http.OwnedCarTrans;
 import com.soapboxrace.jaxb.http.SecurityChallenge;
 import com.soapboxrace.jaxb.http.SessionInfo;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppChat;
 
 import javax.ejb.EJB;
 import javax.inject.Inject;
@@ -61,6 +63,9 @@ public class MatchMaking {
     @EJB
     private OpenFireRestApiCli openFireRestApiCli;
 
+    @EJB
+    private OpenFireSoapBoxCli openFireSoapBoxCli;
+
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
@@ -90,6 +95,8 @@ public class MatchMaking {
     @Produces(MediaType.APPLICATION_XML)
     public String leaveQueue() {
         matchmakingBO.removePlayerFromQueue(requestSessionInfo.getActivePersonaId());
+        tokenSessionBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
+        tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         return "";
     }
 
@@ -102,6 +109,8 @@ public class MatchMaking {
         Long activeLobbyId = requestSessionInfo.getActiveLobbyId();
         if (activeLobbyId != null && !activeLobbyId.equals(0L)) {
             lobbyBO.removeEntrantFromLobby(activePersonaId, activeLobbyId);
+            tokenSessionBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
+            tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         }
         return "";
     }
@@ -145,6 +154,11 @@ public class MatchMaking {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
 
         LobbyEntity lobbyInformation = lobbyDAO.findById(lobbyInviteId);
+
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22)) {
+            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_JOIN_MSG," + parameterBO.getStrParam("SBRWR_NOPU_REQUIREDPERCENT")), activePersonaId);
+        }
+
 		if(activePersonaId.equals(lobbyInformation.getPersonaId()) && lobbyInformation.getIsPrivate() == false) {
             
 			EventEntity eventInformation = lobbyInformation.getEvent();

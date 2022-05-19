@@ -10,11 +10,12 @@ import com.soapboxrace.core.dao.EventDAO;
 import com.soapboxrace.core.dao.LobbyDAO;
 import com.soapboxrace.core.dao.LobbyEntrantDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
-import com.soapboxrace.core.dao.CarDAO;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.ArrayOfLobbyEntrantInfo;
 import com.soapboxrace.jaxb.http.LobbyCountdown;
 import com.soapboxrace.jaxb.http.LobbyEntrantInfo;
@@ -22,6 +23,7 @@ import com.soapboxrace.jaxb.http.LobbyInfo;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -45,19 +47,22 @@ public class LobbyBO {
     private LobbyDAO lobbyDao;
 
     @EJB
-    private CarDAO carDAO;
-
-    @EJB
     private LobbyEntrantDAO lobbyEntrantDao;
 
     @EJB
     private OpenFireRestApiCli openFireRestApiCli;
 
     @EJB
+    private OpenFireSoapBoxCli openFireSoapBoxCli;
+
+    @EJB
     private LobbyCountdownBO lobbyCountdownBO;
 
     @EJB
     private LobbyMessagingBO lobbyMessagingBO;
+
+    @EJB
+    private ParameterBO parameterBO;
 
     public void joinFastLobby(Long personaId, int carClassHash) {
         PersonaEntity personaEntity = personaDao.find(personaId);
@@ -103,7 +108,7 @@ public class LobbyBO {
                         PersonaEntity recipientPersonaEntity = personaDao.find(recipientPersonaId);
 
                         CarEntity carEntity = personaBO.getDefaultCarEntity(recipientPersonaEntity.getPersonaId());
-                        if(eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
+                        if(eventEntity.getCarClassHash() == 607077938 || carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
                             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, recipientPersonaEntity, eventEntity.getLobbyCountdownTime());
                         }
                     }
@@ -124,12 +129,11 @@ public class LobbyBO {
         lobbyDao.insert(lobbyEntity);
 
         PersonaEntity personaEntity = personaDao.find(personaId);
-
         CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
-        if(eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
+        if(eventEntity.getCarClassHash() == 607077938 || carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
         }
-
+        
         if (!isPrivate) {
             for (int i = 1; i <= lobbyEntity.getEvent().getMaxPlayers() - 1; i++) {
                 if (lobbyEntity.getEntrants().size() >= lobbyEntity.getEvent().getMaxPlayers()) break;
@@ -270,6 +274,34 @@ public class LobbyBO {
         lobbyInfoType.setEventId(eventId);
         lobbyInfoType.setLobbyInviteId(lobbyInviteId);
         lobbyInfoType.setLobbyId(lobbyInviteId);
+
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
+            new java.util.Timer().schedule( 
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("LOBBYID: " + lobbyInviteId), personaEntity.getPersonaId());
+                        LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
+                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("EVENTNAME: " + lobbyEntity.getEvent().getName()), personaEntity.getPersonaId());
+                        LobbyEntrantEntity userCheck = lobbyEntrantDao.getVoteStatus(personaEntity, lobbyEntity);
+
+                        if(userCheck != null) {
+                            List<LobbyEntrantEntity> lobbyEntrants = lobbyEntity.getEntrants();
+
+                            Integer totalVotes = lobbyEntrantDao.getVotes(lobbyEntity);
+                            Integer totalUsersInLobby = lobbyEntrants.size();
+                            Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
+                            
+                            if(totalVotesPercentage >= parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
+                            } else {
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_SUCCESS"), personaEntity.getPersonaId());
+                            }
+                        }
+                    }
+                }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-5000)
+            );
+        }
 
         return lobbyInfoType;
     }

@@ -1,0 +1,1 @@
+ALTER TABLE `REPORT` CHANGE COLUMN `description` `description` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci' AFTER `customCarID`;

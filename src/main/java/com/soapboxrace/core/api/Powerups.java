@@ -9,11 +9,14 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.*;
 import com.soapboxrace.core.bo.util.AchievementInventoryContext;
+import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.InventoryItemEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.jaxb.xmpp.XMPP_PowerupActivatedType;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypePowerupActivated;
+
+import com.soapboxrace.core.xmpp.XmppChat;
 
 import javax.ejb.EJB;
 import javax.inject.Inject;
@@ -42,6 +45,9 @@ public class Powerups {
     @EJB
     private PowerupTrackingBO usedPowerupBO;
 
+    @EJB
+    private EventBO eventBO;
+
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
@@ -49,12 +55,29 @@ public class Powerups {
     @Secured
     @Path("/activated/{powerupHash}")
     @Produces(MediaType.APPLICATION_XML)
-    public String activated(@PathParam(value = "powerupHash") Integer powerupHash,
-                            @QueryParam("targetId") Long targetId,
-                            @QueryParam("receivers") String receivers,
-                            @QueryParam("eventSessionId") Long eventSessionId) {
+    public String activated(@PathParam(value = "powerupHash") Integer powerupHash, @QueryParam("targetId") Long targetId, @QueryParam("receivers") String receivers, @QueryParam("eventSessionId") Integer eventSessionId) {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
 
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && requestSessionInfo.getEventSessionId() != null) {
+            EventSessionEntity eventSession = eventBO.findEventSessionById(requestSessionInfo.getEventSessionId());
+
+            if(eventSession != null) {
+                if(eventSession.getNopuMode() == true) {
+                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_MODE_ENABLED"), activePersonaId);
+                } else {
+                    sendPowerup(powerupHash, targetId, receivers, activePersonaId);
+                }
+            } else {
+                sendPowerup(powerupHash, targetId, receivers, activePersonaId);
+            }
+        } else {
+            sendPowerup(powerupHash, targetId, receivers, activePersonaId);
+        }
+
+        return "";
+    }
+
+    public void sendPowerup(Integer powerupHash, Long targetId, String receivers, Long activePersonaId) {
         XMPP_ResponseTypePowerupActivated powerupActivatedResponse = new XMPP_ResponseTypePowerupActivated();
         XMPP_PowerupActivatedType powerupActivated = new XMPP_PowerupActivatedType();
         powerupActivated.setId(Long.valueOf(powerupHash));
@@ -76,7 +99,5 @@ public class Powerups {
         }
 
         usedPowerupBO.createPowerupRecord(requestSessionInfo.getEventSessionId(), activePersonaId, powerupHash);
-
-        return "";
     }
 }

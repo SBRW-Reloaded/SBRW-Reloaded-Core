@@ -17,7 +17,11 @@ public class ReportEntity {
 
     private Long personaId;
     private Long abuserPersonaId;
-    private String description;
+
+    @Lob
+    @Column(length = 65535)
+    private String description;    
+
     private Integer petitionType;
     private Integer customCarID;
     private Integer chatMinutes;

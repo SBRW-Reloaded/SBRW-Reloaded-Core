@@ -35,6 +35,9 @@ public class EventSessionEntity {
     @Column(name = "ENDED")
     private Long ended;
 
+    @Column(name = "NOPU")
+    private boolean nopuMode;
+
     public Long getId() {
         return id;
     }
@@ -81,5 +84,13 @@ public class EventSessionEntity {
 
     public void setStarted(Long started) {
         this.started = started;
+    }
+
+    public boolean getNopuMode() { 
+        return nopuMode;
+    }
+
+    public void setNopuMode(boolean nopuMode) { 
+        this.nopuMode = nopuMode;
     }
 }

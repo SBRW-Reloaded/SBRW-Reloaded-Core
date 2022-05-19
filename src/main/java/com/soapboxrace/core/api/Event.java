@@ -53,6 +53,7 @@ public class Event {
     @Produces(MediaType.APPLICATION_XML)
     public String abort(@QueryParam("eventSessionId") Long eventSessionId) {
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
+        tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         return "";
     }
 
@@ -111,6 +112,7 @@ public class Event {
         }
 
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
+        tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
 
         if (eventResult == null) {
             return "";

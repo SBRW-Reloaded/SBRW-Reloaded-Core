@@ -13,6 +13,8 @@ import com.soapboxrace.core.jpa.PersonaEntity;
 
 import javax.ejb.Stateless;
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
+import java.util.List;
 
 @Stateless
 public class LobbyEntrantDAO extends LongKeyedDAO<LobbyEntrantEntity> {
@@ -32,5 +34,28 @@ public class LobbyEntrantDAO extends LongKeyedDAO<LobbyEntrantEntity> {
         query.setParameter("persona", personaEntity);
         query.setParameter("lobby", lobbyEntity);
         query.executeUpdate();
+    }
+
+    public void updateVoteByPersonaAndLobby(PersonaEntity personaEntity, LobbyEntity lobbyEntity) {
+        Query query = entityManager.createNamedQuery("LobbyEntrantEntity.updateVoteByPersonaAndLobby");
+        query.setParameter("persona", personaEntity);
+        query.setParameter("lobby", lobbyEntity);
+        query.executeUpdate();
+    }
+
+    public LobbyEntrantEntity getVoteStatus(PersonaEntity personaEntity, LobbyEntity lobbyEntity) {
+        TypedQuery<LobbyEntrantEntity> query = entityManager.createNamedQuery("LobbyEntrantEntity.getVoteStatus", LobbyEntrantEntity.class);
+        query.setParameter("persona", personaEntity);
+        query.setParameter("lobby", lobbyEntity);
+
+        List<LobbyEntrantEntity> resultList = query.getResultList();
+        return !resultList.isEmpty() ? resultList.get(0) : null;
+    }
+
+    public int getVotes(LobbyEntity lobby) {
+        TypedQuery<Long> query = entityManager.createNamedQuery("LobbyEntrantEntity.getVotes", Long.class);
+        query.setParameter("lobby", lobby);
+
+        return query.getSingleResult().intValue();
     }
 }

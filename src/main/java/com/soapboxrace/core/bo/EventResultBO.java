@@ -43,7 +43,12 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
      * @return new {@link TR} instance
      */
     public TR handle(EventSessionEntity eventSessionEntity, Long activePersonaId, TA packet) {
-        packet.setHacksDetected(packet.getHacksDetected() & ~32); // remove ModifiedFiles flag
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_1_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~1);
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_2_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~2);
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_4_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~4);
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_8_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~8);
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_16_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~16);
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_32_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~32);
 
         //TODO: Database script to accept certain cheat types.
         if(packet.getKonami() != 0) {
@@ -120,7 +125,7 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
                         oldLobby.getIsPrivate());
                 eventSessionEntity.setNextLobby(nextLobbyEntity);
             }
-            
+
             int inviteLifetime = 0;
 
             if(parameterBo.getIntParam("SBRWR_MINIMUMLOBBYTIME") == 0) {
@@ -128,7 +133,7 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
             } else {
                 inviteLifetime = parameterBo.getIntParam("SBRWR_MINIMUMLOBBYTIME");
             }
-
+            
             // lobby must have more than 6 seconds left
             if (inviteLifetime > 6000) {
                 result.setLobbyInviteId(nextLobbyEntity.getId());

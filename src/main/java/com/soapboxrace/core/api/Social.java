@@ -43,6 +43,8 @@ public class Social {
         } else {
             if(abuserPersonaId != requestSessionInfo.getActivePersonaId()) {
                 bo.sendReport(requestSessionInfo.getActivePersonaId(), abuserPersonaId, petitionType, description, customCarID, chatMinutes, 0L);
+            } else {
+                return "You can't report yourself! UFAK!";
             }
         }
         return "";

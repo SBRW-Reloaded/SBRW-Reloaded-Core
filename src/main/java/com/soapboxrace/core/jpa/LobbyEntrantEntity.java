@@ -12,10 +12,11 @@ import javax.xml.bind.annotation.XmlTransient;
 @Entity
 @Table(name = "LOBBY_ENTRANT")
 @NamedQueries({ //
-        @NamedQuery(name = "LobbyEntrantEntity.deleteByPersona", query = "DELETE FROM LobbyEntrantEntity obj WHERE " +
-                "obj.persona = :persona"), //
-        @NamedQuery(name = "LobbyEntrantEntity.deleteByPersonaAndLobby", query = "DELETE FROM LobbyEntrantEntity obj WHERE " +
-                "obj.persona = :persona and obj.lobby = :lobby") //
+        @NamedQuery(name = "LobbyEntrantEntity.deleteByPersona", query = "DELETE FROM LobbyEntrantEntity obj WHERE obj.persona = :persona"), //
+        @NamedQuery(name = "LobbyEntrantEntity.deleteByPersonaAndLobby", query = "DELETE FROM LobbyEntrantEntity obj WHERE obj.persona = :persona and obj.lobby = :lobby"),
+        @NamedQuery(name = "LobbyEntrantEntity.updateVoteByPersonaAndLobby",  query = "UPDATE LobbyEntrantEntity obj SET obj.nopuMode=1 WHERE obj.persona=:persona and obj.lobby=:lobby"), //
+        @NamedQuery(name = "LobbyEntrantEntity.getVotes", query = "SELECT COUNT(obj) FROM LobbyEntrantEntity obj WHERE obj.nopuMode = 1 and obj.lobby = :lobby"),
+        @NamedQuery(name = "LobbyEntrantEntity.getVoteStatus", query = "SELECT obj FROM LobbyEntrantEntity obj WHERE obj.persona=:persona and obj.lobby=:lobby")
 })
 public class LobbyEntrantEntity implements Comparable<LobbyEntrantEntity> {
 
@@ -35,6 +36,9 @@ public class LobbyEntrantEntity implements Comparable<LobbyEntrantEntity> {
     private LobbyEntity lobby;
 
     private int gridIndex;
+
+    @Column(name = "NOPU")
+    private boolean nopuMode;
 
     public Long getId() {
         return id;
@@ -71,6 +75,14 @@ public class LobbyEntrantEntity implements Comparable<LobbyEntrantEntity> {
 
     public void setGridIndex(int gridIndex) {
         this.gridIndex = gridIndex;
+    }
+
+    public boolean getNopuMode() { 
+        return nopuMode;
+    }
+
+    public void setNopuMode(boolean nopuMode) { 
+        this.nopuMode = nopuMode;
     }
 
 }

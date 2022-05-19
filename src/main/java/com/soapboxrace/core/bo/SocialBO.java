@@ -40,7 +40,7 @@ public class SocialBO {
         reportEntity.setAbuserPersonaId(abuserPersonaId);
         reportEntity.setChatMinutes(chatMinutes);
         reportEntity.setCustomCarID(customCarID);
-        reportEntity.setDescription(description);
+        reportEntity.setDescription(description); 
         reportEntity.setPersonaId(personaId);
         reportEntity.setPetitionType(petitionType);
         reportEntity.setHacksDetected(hacksDetected);
