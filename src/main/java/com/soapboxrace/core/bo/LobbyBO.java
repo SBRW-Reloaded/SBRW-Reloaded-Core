@@ -162,12 +162,17 @@ public class LobbyBO {
         LobbyEntity lobbyEntity = null;
         for (LobbyEntity lobbyEntityTmp : lobbys) {
             if (lobbyEntityTmp.getIsPrivate()) continue;
+
             EventEntity event = lobbyEntityTmp.getEvent();
             if (checkIgnoredEvents && matchmakingBO.isEventIgnored(personaEntity.getPersonaId(), event.getId()))
                 continue;
+
             int maxEntrants = event.getMaxPlayers();
             List<LobbyEntrantEntity> lobbyEntrants = lobbyEntityTmp.getEntrants();
             int entrantsSize = lobbyEntrants.size();
+
+            if(entrantsSize == maxEntrants) continue;
+
             if (entrantsSize < maxEntrants) {
                 lobbyEntity = lobbyEntityTmp;
                 if (!isPersonaInside(personaEntity.getPersonaId(), lobbyEntrants)) {
@@ -179,8 +184,12 @@ public class LobbyBO {
                 break;
             }
         }
+
         if (lobbyEntity != null) {
             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
+        } else {
+            //requeue whole lobbies again.
+            joinLobby(personaEntity, lobbys);
         }
     }
 
@@ -280,9 +289,7 @@ public class LobbyBO {
                 new java.util.TimerTask() {
                     @Override
                     public void run() {
-                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("LOBBYID: " + lobbyInviteId), personaEntity.getPersonaId());
                         LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
-                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("EVENTNAME: " + lobbyEntity.getEvent().getName()), personaEntity.getPersonaId());
                         LobbyEntrantEntity userCheck = lobbyEntrantDao.getVoteStatus(personaEntity, lobbyEntity);
 
                         if(userCheck != null) {
@@ -292,7 +299,7 @@ public class LobbyBO {
                             Integer totalUsersInLobby = lobbyEntrants.size();
                             Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
                             
-                            if(totalVotesPercentage >= parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
+                            if(totalVotesPercentage < parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
                             } else {
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_SUCCESS"), personaEntity.getPersonaId());
