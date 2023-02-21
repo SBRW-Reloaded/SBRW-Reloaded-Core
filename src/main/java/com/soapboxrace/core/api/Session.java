@@ -49,7 +49,7 @@ public class Session {
         if(parameterBO.getBoolParam("SBRWR_ENABLE_GEO_CHAT")) {
             chatServer.setRooms(bo.getChatRoomBasedOnCountry(httpRequest.getRemoteHost()));
         } else {
-            chatServer.setRooms(bo.getAllChatRoom());
+            chatServer.setRooms(bo.getAllChatRoom(httpRequest.getHeader("userId")));
         }
         
         return chatServer;

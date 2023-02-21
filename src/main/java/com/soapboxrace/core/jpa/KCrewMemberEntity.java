@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "K_CREW_MEMBER")
 @NamedQueries({
-    @NamedQuery(name = "KCrewMemberEntity.findCrewMembershipByPersonaId", query = "SELECT obj FROM KCrewMemberEntity obj WHERE obj.persona.personaId = :personaid")
+    @NamedQuery(name = "KCrewMemberEntity.findCrewMembershipByPersonaId", query = "SELECT obj FROM KCrewMemberEntity obj WHERE obj.persona.personaId = :personaid"),
+    @NamedQuery(name = "KCrewMemberEntity.findCrewMembershipByUserId",    query = "SELECT obj FROM KCrewMemberEntity obj WHERE obj.persona.user.id = :userid")
 })
 public class KCrewMemberEntity {
     @Id

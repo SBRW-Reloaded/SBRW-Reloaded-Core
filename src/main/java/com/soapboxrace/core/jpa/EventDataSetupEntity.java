@@ -25,10 +25,4 @@ public class EventDataSetupEntity {
     @Getter @Setter private String performanceParts;
     @Getter @Setter private String skillmodParts;
     @Getter @Setter private String visualParts;
-
-    @Lob
-    @Column(length = 65535)
-    @Getter @Setter private String carSetup;
-
-
 }

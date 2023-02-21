@@ -9,7 +9,10 @@ package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.api.util.GeoIp2;
 import com.soapboxrace.core.dao.ChatRoomDAO;
+import com.soapboxrace.core.dao.KCrewMemberDAO;
 import com.soapboxrace.core.jpa.ChatRoomEntity;
+import com.soapboxrace.core.jpa.KCrewEntity;
+import com.soapboxrace.core.jpa.KCrewMemberEntity;
 import com.soapboxrace.jaxb.http.ArrayOfChatRoom;
 import com.soapboxrace.jaxb.http.ChatRoom;
 
@@ -27,16 +30,35 @@ public class SessionBO {
 
     @EJB
     private ParameterBO parameterBO;
+        
+    @EJB
+    private KCrewMemberDAO kCrewMemberDAO;
 
-    public ArrayOfChatRoom getAllChatRoom() {
+    public ArrayOfChatRoom getAllChatRoom(String userId) {
         List<ChatRoomEntity> chatRoomList = chatRoomDao.findAll();
         ArrayOfChatRoom arrayOfChatRoom = new ArrayOfChatRoom();
         for (ChatRoomEntity entity : chatRoomList) {
-            ChatRoom chatRoom = new ChatRoom();
-            chatRoom.setChannelCount(entity.getAmount());
-            chatRoom.setLongName(entity.getLongName());
-            chatRoom.setShortName(entity.getShortName());
-            arrayOfChatRoom.getChatRoom().add(chatRoom);
+            if(entity.getShortName().equals("CREW")) {
+                if(!userId.isEmpty()) {
+                    KCrewMemberEntity kCrewMemberEntity = kCrewMemberDAO.findCrewMembershipByUserId(Long.parseLong(userId));
+                    if(kCrewMemberEntity != null) {
+                        KCrewEntity kCrewEntity = kCrewMemberEntity.getCrew();
+                        if(kCrewEntity != null) {
+                            ChatRoom chatRoom = new ChatRoom();
+                            chatRoom.setChannelCount(entity.getAmount());
+                            chatRoom.setLongName(entity.getLongName());
+                            chatRoom.setShortName(kCrewEntity.getTag());
+                            arrayOfChatRoom.getChatRoom().add(chatRoom);
+                        }
+                    }
+                }
+            } else {
+                ChatRoom chatRoom = new ChatRoom();
+                chatRoom.setChannelCount(entity.getAmount());
+                chatRoom.setLongName(entity.getLongName());
+                chatRoom.setShortName(entity.getShortName());
+                arrayOfChatRoom.getChatRoom().add(chatRoom);
+            }
         }
 
         return arrayOfChatRoom;
