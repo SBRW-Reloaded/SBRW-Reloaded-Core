@@ -19,8 +19,16 @@ public class EventDataSetupEntity {
     @Getter @Setter private String hash;
     @Getter @Setter private Long personaId;
     @Getter @Setter private Long carId;
-    
+    @Getter @Setter private String carName;
+    @Getter @Setter private Integer carClassHash;
+    @Getter @Setter private Integer carRating;
+    @Getter @Setter private String performanceParts;
+    @Getter @Setter private String skillmodParts;
+    @Getter @Setter private String visualParts;
+
     @Lob
     @Column(length = 65535)
     @Getter @Setter private String carSetup;
+
+
 }

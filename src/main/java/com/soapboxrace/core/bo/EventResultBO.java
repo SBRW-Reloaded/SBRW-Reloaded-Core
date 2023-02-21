@@ -103,7 +103,9 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         }
 
         //EVENT_DATA_SETUPS
-        String carData = JAXBUtility.marshal(OwnedCarConverter.makeCarSetupTrans(carDAO.find(packet.getCarId())));
+        CarEntity carInfo = carDAO.find(packet.getCarId());
+
+        String carData = JAXBUtility.marshal(OwnedCarConverter.makeCarSetupTrans(carInfo));
         String carHash = HelpingTools.calcHash(carData);
         EventDataSetupEntity carSetup = eventDataSetupDAO.findByHash(carHash);
         if(carSetup == null) {
@@ -112,6 +114,12 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
             carSetupTmp.setHash(carHash);
             carSetupTmp.setCarSetup(carData);
             carSetupTmp.setPersonaId(activePersonaId);
+            carSetupTmp.setCarName(carInfo.getName());
+            carSetupTmp.setCarClassHash(carInfo.getCarClassHash());
+            carSetupTmp.setCarRating(carInfo.getRating());
+            carSetupTmp.setPerformanceParts(OwnedCarConverter.getPerformanceParts(carInfo));
+            carSetupTmp.setSkillmodParts(OwnedCarConverter.getSkillModParts(carInfo));
+            carSetupTmp.setVisualParts(OwnedCarConverter.getVisualParts(carInfo));
             eventDataSetupDAO.insert(carSetupTmp);
         }
         
