@@ -57,10 +57,6 @@ public class SocialRelationshipBO {
     @Asynchronous
     public void handlePersonaPresenceUpdated(@Observes PersonaPresenceUpdated personaPresenceUpdated) {
         Long personaPresence = personaPresenceUpdated.getPresence();
-        if(personaPresence >= 3L) {
-            personaPresence = 2L;
-        }
-
         sendPresencePackets(personaDAO.find(personaPresenceUpdated.getPersonaId()), personaPresence);
     }
 

@@ -79,9 +79,7 @@ public class Event {
         eventBO.createEventDataSession(activePersonaId, eventSessionId);
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), eventSessionId);
 
-        presenceBO.updatePresence(activePersonaId, 3L);
-
-        //NOPU SET
+        //NOPU SETH
         if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
             Boolean nopuMode = false;
 
