@@ -19,7 +19,6 @@ import com.soapboxrace.jaxb.http.ChatRoom;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Stateless
@@ -34,7 +33,7 @@ public class SessionBO {
     @EJB
     private KCrewMemberDAO kCrewMemberDAO;
 
-    public ArrayOfChatRoom getAllChatRoom(String userId) {
+    public ArrayOfChatRoom getAllChatRoom(String userId, String ip) {
         List<ChatRoomEntity> chatRoomList = chatRoomDao.findAll();
         ArrayOfChatRoom arrayOfChatRoom = new ArrayOfChatRoom();
         for (ChatRoomEntity entity : chatRoomList) {
@@ -52,6 +51,14 @@ public class SessionBO {
                         }
                     }
                 }
+            } else if(entity.getShortName().equals("GEOCHAT")) {
+                GeoIp2 geoIp2 = GeoIp2.getInstance(parameterBO.getStrParam("GEOIP2_DB_FILE_PATH"));
+                
+                ChatRoom chatRoomCountry = new ChatRoom();
+                chatRoomCountry.setChannelCount(entity.getAmount());
+                chatRoomCountry.setLongName(entity.getLongName());
+                chatRoomCountry.setShortName(geoIp2.getCountryIso(ip));
+                arrayOfChatRoom.getChatRoom().add(chatRoomCountry);
             } else {
                 ChatRoom chatRoom = new ChatRoom();
                 chatRoom.setChannelCount(entity.getAmount());
@@ -63,44 +70,4 @@ public class SessionBO {
 
         return arrayOfChatRoom;
     }
-
-    public ArrayOfChatRoom getChatRoomBasedOnCountry(String ip) {
-        ArrayOfChatRoom arrayOfChatRoom = new ArrayOfChatRoom();
-
-        GeoIp2 geoIp2 = GeoIp2.getInstance(parameterBO.getStrParam("GEOIP2_DB_FILE_PATH"));
-        List<String> extraChannels = parameterBO.getStrListParam("SBRWR_GEO_EXTRACHANNELS", Arrays.asList("DEFAULT"));
-        String countryIso = geoIp2.getCountryIso(ip);
-
-        //Let's add extra channels:
-        if(extraChannels.contains("DEFAULT")) {
-            List<ChatRoomEntity> chatRoomList = chatRoomDao.findAll();
-            for (ChatRoomEntity entity : chatRoomList) {
-                ChatRoom chatRoom = new ChatRoom();
-                chatRoom.setChannelCount(entity.getAmount());
-                chatRoom.setLongName(entity.getLongName());
-                chatRoom.setShortName(entity.getShortName());
-                arrayOfChatRoom.getChatRoom().add(chatRoom);
-            }
-        } else {
-            for (String extraChannelsSingle : extraChannels) {
-                ChatRoom chatRoom = new ChatRoom();
-                chatRoom.setChannelCount(parameterBO.getIntParam("SBRWR_GEO_MAX_CHANNELS", 2));
-                chatRoom.setLongName("TXT_CHAT_LANG_" + extraChannelsSingle);
-                chatRoom.setShortName(extraChannelsSingle);
-                arrayOfChatRoom.getChatRoom().add(chatRoom);
-            }
-        }
-
-        //Let's add first the country specific:
-        if(!extraChannels.contains(countryIso)) {
-            ChatRoom chatRoomCountry = new ChatRoom();
-            chatRoomCountry.setChannelCount(parameterBO.getIntParam("SBRWR_GEO_MAX_CHANNELS", 2));
-            chatRoomCountry.setLongName(geoIp2.getCountryIso(ip));
-            chatRoomCountry.setShortName(geoIp2.getCountryIso(ip));
-            arrayOfChatRoom.getChatRoom().add(chatRoomCountry);
-        }
-
-        return arrayOfChatRoom;
-    }
-
 }
