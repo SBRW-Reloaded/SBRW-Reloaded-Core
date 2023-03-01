@@ -9,21 +9,22 @@ package com.soapboxrace.core.bo;
 import com.soapboxrace.core.bo.util.TimeConverter;
 import com.soapboxrace.core.bo.util.HelpingTools;
 import com.soapboxrace.core.bo.util.KonamiDecode;
-import com.soapboxrace.core.dao.CarClassesDAO;
-import com.soapboxrace.core.dao.CarDAO;
-import com.soapboxrace.core.jpa.CarClassesEntity;
-import com.soapboxrace.core.jpa.CarEntity;
-import com.soapboxrace.core.jpa.EventDataEntity;
-import com.soapboxrace.core.jpa.EventSessionEntity;
+import com.soapboxrace.core.dao.*;
+import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
 import com.soapboxrace.jaxb.http.PursuitArbitrationPacket;
 import com.soapboxrace.jaxb.http.TeamEscapeArbitrationPacket;
+
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppChat;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+
+import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import java.io.IOException;
 import java.net.URL;
@@ -43,6 +44,15 @@ public class LegitRaceBO {
 
     @EJB
     private ParameterBO parameterBO;
+
+    @EJB 
+    private PersonaDAO personaDAO;
+
+    @EJB 
+    private LeaderboardDAO leaderboardDAO;
+
+    @EJB
+    private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     private Boolean isLegit = true;
     private List<String> listOfReports = new ArrayList<>();
@@ -176,6 +186,27 @@ public class LegitRaceBO {
                             new String(url.getInputStream().readAllBytes());
                     } catch (IOException e) { }
             }
+        }
+
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_LEADERBOARD")) {
+            new java.util.Timer().schedule( 
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        //Get the query for stats
+                        PersonaEntity personaEntity = personaDAO.find(activePersonaId);
+                        if(personaEntity != null) {
+                            LeaderboardEntity lbEntity = leaderboardDAO.getResultByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
+                            String timeFormatted = DurationFormatUtils.formatDurationHMS(lbEntity.getTimes());
+                            //Compare both stats
+
+                            //inform about potential PB or WR
+                            //openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_LEADERBOARD_RESULT_PB," + personaEntity.getName() + "," + lbEntity.getRanking()), activePersonaId);
+                            openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", lbEntity.getRanking(), timeFormatted)), activePersonaId);
+                        }
+                    }
+                }, (1000)
+            );
         }
 
         return isLegit;
