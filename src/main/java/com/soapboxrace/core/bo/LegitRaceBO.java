@@ -197,12 +197,16 @@ public class LegitRaceBO {
                         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
                         if(personaEntity != null) {
                             LeaderboardEntity lbEntity = leaderboardDAO.getResultByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
-                            String timeFormatted = DurationFormatUtils.formatDurationHMS(lbEntity.getTimes());
-                            //Compare both stats
+                            if(lbEntity != null) {
+                                String timeFormatted = DurationFormatUtils.formatDurationHMS(lbEntity.getTimes());
+                                //Compare both stats
 
-                            //inform about potential PB or WR
-                            //openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_LEADERBOARD_RESULT_PB," + personaEntity.getName() + "," + lbEntity.getRanking()), activePersonaId);
-                            openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", lbEntity.getRanking(), timeFormatted)), activePersonaId);
+                                //inform about potential PB or WR
+                                //openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_LEADERBOARD_RESULT_PB," + personaEntity.getName() + "," + lbEntity.getRanking()), activePersonaId);
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", lbEntity.getRanking(), timeFormatted)), activePersonaId);
+                            } else {
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] There was an issue loading stats for ranking. Please contact an administrator"), activePersonaId);
+                            }
                         }
                     }
                 }, (1000)
