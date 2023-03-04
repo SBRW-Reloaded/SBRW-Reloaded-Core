@@ -5,8 +5,6 @@ import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-
-import com.soapboxrace.core.jpa.LeaderboardEntity;
  
 @Stateless
 public class LeaderboardDAO {

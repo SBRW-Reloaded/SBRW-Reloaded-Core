@@ -207,9 +207,9 @@ public class LegitRaceBO {
 
                             if(Long.valueOf(RANKING_TIME) > arbitrationPacket.getEventDurationInMilliseconds()) {
                                 if(Long.valueOf(RANKING_TIME_WR) > arbitrationPacket.getEventDurationInMilliseconds()) {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] NEW WORLD RECORD!!", RANKING_PLACE, timeFormatted)), activePersonaId);
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] NEW WORLD RECORD!!"), activePersonaId);
                                 } else {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] NEW PERSONAL BEST!!", RANKING_PLACE, timeFormatted)), activePersonaId);
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] NEW PERSONAL BEST!!"), activePersonaId);
                                 }
                             }
 
