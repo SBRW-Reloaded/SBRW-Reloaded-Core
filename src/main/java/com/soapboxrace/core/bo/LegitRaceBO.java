@@ -198,7 +198,8 @@ public class LegitRaceBO {
                         if(personaEntity != null) {
                             Object[] lbEntity = leaderboardDAO.getResultByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
                             if(lbEntity != null) {
-                                String timeFormatted = DurationFormatUtils.formatDurationHMS(Long.valueOf(lbEntity[1].toString()));
+                                System.out.println(lbEntity[0]);
+                                String timeFormatted = DurationFormatUtils.formatDurationHMS(Long.valueOf(lbEntity.length));
                                 //Compare both stats
 
                                 //inform about potential PB or WR
