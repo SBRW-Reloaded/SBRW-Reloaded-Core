@@ -14,22 +14,33 @@ public class LeaderboardDAO {
     private EntityManager entityManager;
 
     //Some leaderboard stuff, hardcoded
-    public LeaderboardEntity getResultByNameAndEventId(int eventId, String personaName, Boolean isPowerup) {
+    public String getDataByNameAndEventId(String entryName, int eventId, String personaName, Boolean isPowerup) {
         String appendPuCommand = isPowerup == true ? "AND (SELECT USED_POWERUP.eventSessionId FROM USED_POWERUP WHERE USED_POWERUP.personaId = PERSONA.ID AND USED_POWERUP.eventSessionId = EVENT_DATA.eventSessionId LIMIT 1) IS NULL " : "";
-        String queries = "SELECT RANKING, TIMES, PERSONANAME FROM (SELECT ROW_NUMBER() OVER (ORDER BY EVENT_DATA.eventDurationInMilliseconds ASC) AS RANKING, PERSONA.name AS PERSONANAME, COUNT(BAN.active) AS BANNED, EVENT_DATA.eventDurationInMilliseconds AS TIMES FROM EVENT_DATA INNER JOIN PERSONA ON PERSONA.ID = EVENT_DATA.personaId LEFT JOIN BAN ON BAN.user_id = PERSONA.USERID WHERE EVENT_DATA.EVENTID = '"+eventId+"' AND EVENT_DATA.finishReason = 22 AND EVENT_DATA.hacksDetected IN(0,22,32) "+appendPuCommand+"GROUP BY PERSONA.name HAVING 1 AND BANNED = 0) x WHERE PERSONANAME = '"+personaName+"'";
-        Query query = entityManager.createNativeQuery(queries, LeaderboardEntity.class);
-        
-        List<LeaderboardEntity> resultList = query.getResultList();
-        return !resultList.isEmpty() ? resultList.get(0) : null;
+        String queries = "SELECT " + entryName + " FROM (SELECT ROW_NUMBER() OVER (ORDER BY EVENT_DATA.eventDurationInMilliseconds ASC) AS RANKING, PERSONA.name AS PERSONANAME, COUNT(BAN.active) AS BANNED, EVENT_DATA.eventDurationInMilliseconds AS TIMES FROM EVENT_DATA INNER JOIN PERSONA ON PERSONA.ID = EVENT_DATA.personaId LEFT JOIN BAN ON BAN.user_id = PERSONA.USERID WHERE EVENT_DATA.EVENTID = '"+eventId+"' AND EVENT_DATA.finishReason = 22 AND EVENT_DATA.hacksDetected IN(0,22,32) "+appendPuCommand+"GROUP BY PERSONA.name HAVING 1 AND BANNED = 0) x WHERE PERSONANAME = '"+personaName+"'";
+        return (String)entityManager.createNativeQuery(queries).getSingleResult();
+        //RANKING, , 
     }
 
-    public LeaderboardEntity getBestPlayerByEventId(int eventId, Boolean isPowerup) {
-        String appendPuCommand = isPowerup == true ? "AND (SELECT USED_POWERUP.eventSessionId FROM USED_POWERUP WHERE USED_POWERUP.personaId = PERSONA.ID AND USED_POWERUP.eventSessionId = EVENT_DATA.eventSessionId LIMIT 1) IS NULL " : "";
-        String queries = "SELECT RANKING, TIMES, PERSONANAME FROM (SELECT ROW_NUMBER() OVER (ORDER BY EVENT_DATA.eventDurationInMilliseconds ASC) AS RANKING, PERSONA.name AS PERSONANAME, COUNT(BAN.active) AS BANNED, EVENT_DATA.eventDurationInMilliseconds AS TIMES FROM EVENT_DATA INNER JOIN PERSONA ON PERSONA.ID = EVENT_DATA.personaId LEFT JOIN BAN ON BAN.user_id = PERSONA.USERID WHERE EVENT_DATA.EVENTID = '"+eventId+"' AND EVENT_DATA.finishReason = 22 AND EVENT_DATA.hacksDetected IN(0,22,32) "+appendPuCommand+" GROUP BY PERSONA.name HAVING 1 AND BANNED = 0) x WHERE RANKING = 1";
-        Query query = entityManager.createNativeQuery(queries, LeaderboardEntity.class);
+    public String getRankingByNameAndEventId(int eventId, String personaName, Boolean isPowerup) {
+        return getDataByNameAndEventId("RANKING", eventId, personaName, isPowerup);
+    }
 
-        List<LeaderboardEntity> resultList = query.getResultList();
-        return !resultList.isEmpty() ? resultList.get(0) : null;
+    public String getTimeByNameAndEventId(int eventId, String personaName, Boolean isPowerup) {
+        return getDataByNameAndEventId("TIMES", eventId, personaName, isPowerup);
+    }
+
+    public String getBestPlayerByEventId(String entryName, int eventId, Boolean isPowerup) {
+        String appendPuCommand = isPowerup == true ? "AND (SELECT USED_POWERUP.eventSessionId FROM USED_POWERUP WHERE USED_POWERUP.personaId = PERSONA.ID AND USED_POWERUP.eventSessionId = EVENT_DATA.eventSessionId LIMIT 1) IS NULL " : "";
+        String queries = "SELECT " + entryName + " FROM (SELECT ROW_NUMBER() OVER (ORDER BY EVENT_DATA.eventDurationInMilliseconds ASC) AS RANKING, PERSONA.name AS PERSONANAME, COUNT(BAN.active) AS BANNED, EVENT_DATA.eventDurationInMilliseconds AS TIMES FROM EVENT_DATA INNER JOIN PERSONA ON PERSONA.ID = EVENT_DATA.personaId LEFT JOIN BAN ON BAN.user_id = PERSONA.USERID WHERE EVENT_DATA.EVENTID = '"+eventId+"' AND EVENT_DATA.finishReason = 22 AND EVENT_DATA.hacksDetected IN(0,22,32) "+appendPuCommand+" GROUP BY PERSONA.name HAVING 1 AND BANNED = 0) x WHERE RANKING = 1";
+        return (String)entityManager.createNativeQuery(queries).getSingleResult();
+    }
+
+    public String getBestPlayerTimeByEventId(int eventId, Boolean isPowerup) {
+        return getBestPlayerByEventId("RANKING", eventId, isPowerup);
+    }
+
+    public String getBestPlayerNameByEventId(int eventId, Boolean isPowerup) {
+        return getBestPlayerByEventId("PERSONANAME", eventId, isPowerup);
     }
 }
  
