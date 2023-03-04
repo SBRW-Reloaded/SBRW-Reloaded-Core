@@ -198,19 +198,21 @@ public class LegitRaceBO {
                         if(personaEntity != null) {
                             Object[] lbEntity = leaderboardDAO.getResultByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
                             if(lbEntity != null) {
-                                System.out.println(lbEntity[0]);
-                                String timeFormatted = DurationFormatUtils.formatDurationHMS(Long.valueOf(lbEntity.length));
+                                System.out.println(lbEntity.toString());
+                                System.out.println(lbEntity['0']);
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] Testing!!"), activePersonaId);
+                                //String timeFormatted = DurationFormatUtils.formatDurationHMS(Long.valueOf(lbEntity.length));
                                 //Compare both stats
 
                                 //inform about potential PB or WR
                                 //openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_LEADERBOARD_RESULT_PB," + personaEntity.getName() + "," + lbEntity.getRanking()), activePersonaId);
-                                openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", lbEntity[0], timeFormatted)), activePersonaId);
+                                //openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", lbEntity[0], timeFormatted)), activePersonaId);
                             } else {
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] There was an issue loading stats for ranking. Please contact an administrator"), activePersonaId);
                             }
                         }
                     }
-                }, (1000)
+                }, (5000)
             );
         }
 
