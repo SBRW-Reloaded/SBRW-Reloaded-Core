@@ -196,10 +196,9 @@ public class LegitRaceBO {
                         //Get the query for stats
                         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
                         if(personaEntity != null) {
-                            Object[] lbEntity = leaderboardDAO.getResultByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
+                            LeaderboardEntity lbEntity = leaderboardDAO.getResultByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
                             if(lbEntity != null) {
-                                System.out.println(lbEntity.toString());
-                                System.out.println(lbEntity['0']);
+                                System.out.println(lbEntity.getRANKING());
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] Testing!!"), activePersonaId);
                                 //String timeFormatted = DurationFormatUtils.formatDurationHMS(Long.valueOf(lbEntity.length));
                                 //Compare both stats
