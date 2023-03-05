@@ -196,17 +196,17 @@ public class LegitRaceBO {
                         // Get the query for stats
                         int current_ranking = 1;
                         Long top_player_id = 0L;
-                        String top_player_time = "";
+                        String top_player_time = null;
 
                         List<EventDataEntity> unsorted = eventDataDAO.getRankings(sessionEntity.getEvent().getId());
                         for (EventDataEntity entity : unsorted) {
                             //First result is always the top1 player
-                            if(top_player_id == 0 || top_player_time == "") {
+                            if(top_player_id.equals(0L)) {
                                 top_player_id = entity.getPersonaId();
                                 top_player_time = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
                             }
 
-                            if(activePersonaId == entity.getPersonaId()) {   
+                            if(entity.getPersonaId().equals(activePersonaId)) {   
                                 String time_formatted = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", current_ranking, time_formatted)), activePersonaId);
                                 
