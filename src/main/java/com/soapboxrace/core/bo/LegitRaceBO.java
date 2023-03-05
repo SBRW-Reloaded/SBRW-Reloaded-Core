@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -206,6 +205,10 @@ public class LegitRaceBO {
                         Map<Long, Long> map = new HashMap<>();
 
                         for (EventDataEntity entity : unsorted_ranking) {
+                            if(!map.containsKey(entity.getPersonaId())) {
+                                map.put(entity.getPersonaId(), 999999999999999L);
+                            }
+                            
                             if(map.get(entity.getPersonaId()) >= entity.getEventDurationInMilliseconds()) {
                                 map.put(entity.getPersonaId(), entity.getEventDurationInMilliseconds());
                             }
