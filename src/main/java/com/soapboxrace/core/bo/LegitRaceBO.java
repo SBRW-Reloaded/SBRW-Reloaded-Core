@@ -198,7 +198,7 @@ public class LegitRaceBO {
                         Long top_player_id = 0L;
                         String top_player_time = null;
 
-                        List<EventDataEntity> unsorted = eventDataDAO.getRankings(sessionEntity.getEvent().getId());
+                        List<EventDataEntity> unsorted = eventDataDAO.getRankings(dataEntity.getEvent().getId());
                         for (EventDataEntity entity : unsorted) {
                             //First result is always the top1 player
                             if(top_player_id.equals(0L)) {

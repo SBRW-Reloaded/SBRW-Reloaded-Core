@@ -36,7 +36,7 @@ public class EventDataDAO extends LongKeyedDAO<EventDataEntity> {
     }
 
     public List<EventDataEntity> getRankings(int eventid) {
-        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.getRacers", EventDataEntity.class);
+        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.getRankings", EventDataEntity.class);
         query.setParameter("eventid", eventid);
         return query.getResultList();
     }
