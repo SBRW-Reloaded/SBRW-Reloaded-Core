@@ -223,17 +223,28 @@ public class LegitRaceBO {
                             continue;
                         }
 
+                        System.out.println(map);
+
                         Map<Long, Long> sorted_ranking = HelpingTools.sortByValue(map);
 
                         for(Entry<Long, Long> pair : sorted_ranking.entrySet()) {
                             if(activePersonaId.equals(pair.getKey())) {   
                                 String time_formatted = DurationFormatUtils.formatDurationHMS(pair.getValue());
-                                openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now %s with time %s", current_ranking, time_formatted)), activePersonaId);
-                                
+
+                                if(parameterBO.getBoolParam("SBRWR_TRANSLATABLE")) {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_LEADERBOARD_INFO,%s,%s", current_ranking, time_formatted)), activePersonaId);
+                                } else {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now %s with time %s", current_ranking, time_formatted)), activePersonaId);
+                                }
+
                                 //Top stat
                                 PersonaEntity topPersonaEntity = personaDAO.find(top_player_id);
                                 if(topPersonaEntity != null) {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is %s with time %s", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                    if(parameterBO.getBoolParam("SBRWR_TRANSLATABLE")) {
+                                        openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_LEADERBOARD_TOP_INFO,%s,%s", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                    } else {
+                                        openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is %s with time %s", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                    }
                                 }
                                 
                                 continue;
