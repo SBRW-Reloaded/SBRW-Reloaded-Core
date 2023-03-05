@@ -228,12 +228,12 @@ public class LegitRaceBO {
                         for(Entry<Long, Long> pair : sorted_ranking.entrySet()) {
                             if(activePersonaId.equals(pair.getKey())) {   
                                 String time_formatted = DurationFormatUtils.formatDurationHMS(pair.getValue());
-                                openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", current_ranking, time_formatted)), activePersonaId);
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now %s with time %s", current_ranking, time_formatted)), activePersonaId);
                                 
                                 //Top stat
                                 PersonaEntity topPersonaEntity = personaDAO.find(top_player_id);
                                 if(topPersonaEntity != null) {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is {} with time {}", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is %s with time %s", topPersonaEntity.getName(), top_player_time)), activePersonaId);
                                 }
                                 
                                 continue;
