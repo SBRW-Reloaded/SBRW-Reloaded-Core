@@ -11,14 +11,11 @@ import javax.persistence.*;
 @Entity
 @Table(name = "EVENT_DATA")
 @NamedQueries({ //
-        @NamedQuery(name = "EventDataEntity.findByPersona", query = "SELECT obj FROM EventDataEntity obj WHERE obj" +
-                ".personaId = :personaId"), //
-        @NamedQuery(name = "EventDataEntity.getRacers", query = "SELECT obj FROM EventDataEntity obj WHERE obj" +
-                ".eventSessionId = :eventSessionId"), //
-        @NamedQuery(name = "EventDataEntity.findByPersonaAndType", query = "SELECT obj FROM EventDataEntity obj WHERE" +
-                " obj.personaId = :personaId AND obj.eventModeId = :eventModeId"), //
-        @NamedQuery(name = "EventDataEntity.findByPersonaAndEventSessionId", query = "SELECT obj FROM EventDataEntity" +
-                " obj WHERE obj.personaId = :personaId AND obj.eventSessionId = :eventSessionId") //
+        @NamedQuery(name = "EventDataEntity.findByPersona", query = "SELECT obj FROM EventDataEntity obj WHERE obj.personaId = :personaId"),
+        @NamedQuery(name = "EventDataEntity.getRacers", query = "SELECT obj FROM EventDataEntity obj WHERE obj.eventSessionId = :eventSessionId"),
+        @NamedQuery(name = "EventDataEntity.findByPersonaAndType", query = "SELECT obj FROM EventDataEntity obj WHERE obj.personaId = :personaId AND obj.eventModeId = :eventModeId"),
+        @NamedQuery(name = "EventDataEntity.findByPersonaAndEventSessionId", query = "SELECT obj FROM EventDataEntity obj WHERE obj.personaId = :personaId AND obj.eventSessionId = :eventSessionId"),
+        @NamedQuery(name = "EventDataEntity.getRankings", query = "SELECT obj, MIN(obj.eventDurationInMilliseconds) as obj.eventDurationInMilliseconds FROM EventDataEntity obj WHERE obj.event.id = :eventid AND obj.isLegit = true AND obj.hacksDetected IN (0,22,32) AND obj.finishReason = 22 GROUP BY obj.personaId HAVING 1 ORDER BY obj.eventDurationInMilliseconds DESC")
 })
 public class EventDataEntity {
 

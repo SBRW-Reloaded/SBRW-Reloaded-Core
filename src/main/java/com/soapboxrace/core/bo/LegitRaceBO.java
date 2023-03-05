@@ -48,8 +48,8 @@ public class LegitRaceBO {
     @EJB 
     private PersonaDAO personaDAO;
 
-    @EJB 
-    private LeaderboardDAO leaderboardDAO;
+    @EJB
+    private EventDataDAO eventDataDAO;
 
     @EJB
     private OpenFireSoapBoxCli openFireSoapBoxCli;
@@ -193,34 +193,35 @@ public class LegitRaceBO {
                 new java.util.TimerTask() {
                     @Override
                     public void run() {
-                        //Get the query for stats
-                        PersonaEntity personaEntity = personaDAO.find(activePersonaId);
-                        if(personaEntity != null) {
-                            String RANKING_TIME     = leaderboardDAO.getTimeByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
-                            String RANKING_PLACE    = leaderboardDAO.getRankingByNameAndEventId(sessionEntity.getEvent().getId(), personaEntity.getName(), true);
-                            String timeFormatted    = DurationFormatUtils.formatDurationHMS(Long.valueOf(RANKING_TIME));
+                        // Get the query for stats
+                        int current_ranking = 1;
+                        Long top_player_id = 0L;
+                        String top_player_time = "";
 
-                            String RANKING_TIME_WR  = leaderboardDAO.getBestPlayerTimeByEventId(sessionEntity.getEvent().getId(), true);
-                            String RANKING_PLACE_WR = leaderboardDAO.getBestPlayerNameByEventId(sessionEntity.getEvent().getId(), true);
-                            String timeFormatted_wr = DurationFormatUtils.formatDurationHMS(Long.valueOf(RANKING_TIME_WR));
-                            //Compare both stats
-
-                            if(Long.valueOf(RANKING_TIME) > arbitrationPacket.getEventDurationInMilliseconds()) {
-                                if(Long.valueOf(RANKING_TIME_WR) > arbitrationPacket.getEventDurationInMilliseconds()) {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] NEW WORLD RECORD!!"), activePersonaId);
-                                } else {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] NEW PERSONAL BEST!!"), activePersonaId);
-                                }
+                        List<EventDataEntity> unsorted = eventDataDAO.getRankings(sessionEntity.getEvent().getId());
+                        for (EventDataEntity entity : unsorted) {
+                            //First result is always the top1 player
+                            if(top_player_id == 0 || top_player_time == "") {
+                                top_player_id = entity.getPersonaId();
+                                top_player_time = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
                             }
 
-                            //inform about potential PB or WR
-                            openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", RANKING_PLACE, timeFormatted)), activePersonaId);
-                            openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is {} with time {}", RANKING_PLACE_WR, timeFormatted_wr)), activePersonaId);
-                        } else {
-                            openFireSoapBoxCli.send(XmppChat.createSystemMessage("[LEADERBOARD] There was an issue loading stats for ranking. Please contact an administrator"), activePersonaId);
+                            if(activePersonaId == entity.getPersonaId()) {   
+                                String time_formatted = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", current_ranking, time_formatted)), activePersonaId);
+                                
+                                //Top stat
+                                PersonaEntity topPersonaEntity = personaDAO.find(top_player_id);
+                                if(topPersonaEntity != null) {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is {} with time {}", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                }
+                                
+                                continue;
+                            }
+                            current_ranking++;
                         }
                     }
-                }, (5000)
+                }, (2000)
             );
         }
 
