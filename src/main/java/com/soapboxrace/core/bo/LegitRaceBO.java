@@ -19,7 +19,11 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.core.xmpp.XmppChat;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -198,16 +202,29 @@ public class LegitRaceBO {
                         Long top_player_id = 0L;
                         String top_player_time = null;
 
-                        List<EventDataEntity> unsorted = eventDataDAO.getRankings(dataEntity.getEvent().getId());
-                        for (EventDataEntity entity : unsorted) {
+                        List<EventDataEntity> unsorted_ranking = eventDataDAO.getRankings(dataEntity.getEvent().getId());
+                        Map<Long, Long> map = new HashMap<>();
+
+                        for (EventDataEntity entity : unsorted_ranking) {
+                            if(map.get(entity.getPersonaId()) >= entity.getEventDurationInMilliseconds()) {
+                                map.put(entity.getPersonaId(), entity.getEventDurationInMilliseconds());
+                            }
+                        }
+
+                        for (EventDataEntity entity : unsorted_ranking) {
                             //First result is always the top1 player
                             if(top_player_id.equals(0L)) {
                                 top_player_id = entity.getPersonaId();
                                 top_player_time = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
                             }
+                            continue;
+                        }
 
-                            if(entity.getPersonaId().equals(activePersonaId)) {   
-                                String time_formatted = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
+                        Map<Long, Long> sorted_ranking = HelpingTools.sortByValue(map);
+
+                        for(Entry<Long, Long> pair : sorted_ranking.entrySet()) {
+                            if(activePersonaId.equals(pair.getKey())) {   
+                                String time_formatted = DurationFormatUtils.formatDurationHMS(pair.getValue());
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now {} with time {}", current_ranking, time_formatted)), activePersonaId);
                                 
                                 //Top stat
