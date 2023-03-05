@@ -204,6 +204,8 @@ public class LegitRaceBO {
                         List<EventDataEntity> unsorted_ranking = eventDataDAO.getRankings(dataEntity.getEvent().getId());
                         Map<Long, Long> map = new HashMap<>();
 
+                        map.put(activePersonaId, dataEntity.getEventDurationInMilliseconds());
+
                         for (EventDataEntity entity : unsorted_ranking) {
                             if(!map.containsKey(entity.getPersonaId())) {
                                 map.put(entity.getPersonaId(), 999999999999999L);
@@ -222,8 +224,6 @@ public class LegitRaceBO {
                             }
                             continue;
                         }
-
-                        System.out.println(map);
 
                         Map<Long, Long> sorted_ranking = HelpingTools.sortByValue(map);
 
