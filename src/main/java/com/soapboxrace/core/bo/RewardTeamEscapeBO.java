@@ -25,6 +25,9 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
 
     @EJB
     private LegitRaceBO legitRaceBO;
+    
+    @EJB
+    private LeaderboardBO leaderboardBO;
 
     public Accolades getAccolades(Long activePersonaId,
                                   TeamEscapeArbitrationPacket teamEscapeArbitrationPacket,
@@ -72,6 +75,10 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
 
         teamEscapeArbitrationPacket.setRank(RandomUtils.nextInt(1, 5));
         applyRaceReward(rewardVO.getRep(), rewardVO.getCash(), personaEntity, true, achievementTransaction);
+
+        //Set leaderboard things
+        leaderboardBO.setupLeaderboard(activePersonaId, teamEscapeArbitrationPacket, eventSessionEntity, eventDataEntity); 
+
         return getAccolades(personaEntity, eventRewardEntity, teamEscapeArbitrationPacket, rewardVO);
     }
 }

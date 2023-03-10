@@ -24,6 +24,9 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
     @EJB
     private LegitRaceBO legitRaceBO;
 
+    @EJB
+    private LeaderboardBO leaderboardBO;
+
     public Accolades getAccolades(Long activePersonaId, RouteArbitrationPacket routeArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity, AchievementTransaction achievementTransaction) {
         int finishReason = routeArbitrationPacket.getFinishReason();
@@ -45,6 +48,10 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
         setAmplifierReward(personaEntity, rewardVO);
 
         applyRaceReward(rewardVO.getRep(), rewardVO.getCash(), personaEntity, true, achievementTransaction);
+
+        //Set leaderboard things
+        leaderboardBO.setupLeaderboard(activePersonaId, routeArbitrationPacket, eventSessionEntity, eventDataEntity);        
+
         return getAccolades(personaEntity, eventRewardEntity, routeArbitrationPacket, rewardVO);
     }
 
