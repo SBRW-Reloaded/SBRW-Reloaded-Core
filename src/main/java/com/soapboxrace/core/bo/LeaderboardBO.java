@@ -1,6 +1,7 @@
 package com.soapboxrace.core.bo;
 
 import javax.ejb.EJB;
+import javax.ejb.Stateless;
 
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
@@ -21,6 +22,7 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.*;
 
+@Stateless
 public class LeaderboardBO {
     @EJB
     private OpenFireSoapBoxCli openFireSoapBoxCli;
