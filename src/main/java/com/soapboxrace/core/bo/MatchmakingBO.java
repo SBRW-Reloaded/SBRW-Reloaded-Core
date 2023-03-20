@@ -18,6 +18,11 @@ import javax.ejb.*;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
+import com.soapboxrace.core.jpa.EventEntity;
+import com.soapboxrace.core.xmpp.XmppChat;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+
+
 /**
  * Responsible for managing the multiplayer matchmaking system.
  * This deals with 2 classes of events: restricted and open.
@@ -38,6 +43,9 @@ public class MatchmakingBO {
 
     @EJB
     private ParameterBO parameterBO;
+
+    @EJB
+	private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @Inject
     private Logger logger;
