@@ -205,7 +205,8 @@ public class LobbyBO {
             return;
         }
 
-        matchmakingBO.ignoreEvent(activePersonaId, lobbyEntity.getEvent().getId());
+        matchmakingBO.ignoreEvent(activePersonaId, lobbyEntity.getEvent());
+
     }
 
     public LobbyInfo acceptinvite(Long personaId, Long lobbyInviteId) {

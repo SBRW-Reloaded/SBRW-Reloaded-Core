@@ -113,12 +113,15 @@ public class MatchmakingBO {
     /**
      * Add the given event ID to the list of ignored events for the given persona ID.
      *
-     * @param personaId the persona ID
-     * @param eventId   the event ID
+     * @param personaId     the persona ID
+     * @param EventEntity   the eventEntity
      */
-    public void ignoreEvent(long personaId, long eventId) {
+    public void ignoreEvent(long personaId, EventEntity EventEntity) {
         if (this.redisConnection != null) {
-            this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(eventId));
+        	if (this.redisConnection.sync().hexists("matchmaking_queue", Long.toString(personaId))) {
+        		this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
+                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
+        	}
         }
     }
 
