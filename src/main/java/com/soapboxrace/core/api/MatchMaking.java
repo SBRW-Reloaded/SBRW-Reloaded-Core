@@ -155,12 +155,7 @@ public class MatchMaking {
 
         LobbyEntity lobbyInformation = lobbyDAO.findById(lobbyInviteId);
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22)) {
-            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_JOIN_MSG," + parameterBO.getStrParam("SBRWR_NOPU_REQUIREDPERCENT")), activePersonaId);
-        }
-
 		if(activePersonaId.equals(lobbyInformation.getPersonaId()) && lobbyInformation.getIsPrivate() == false) {
-            
 			EventEntity eventInformation = lobbyInformation.getEvent();
 			String eventNameFull = eventInformation.getName();
 			String eventName = eventNameFull.split("\\(")[0];
@@ -181,6 +176,10 @@ public class MatchMaking {
             if(parameterBO.getBoolParam("SBRWR_INFORM_EVENT") == true && parameterBO.getIntParam("SBRWR_INFORM_EVENT_USERCOUNT", 30) >= openFireRestApiCli.getTotalOnlineUsers()) {
                 openFireRestApiCli.sendChatAnnouncement(msg);
             } 
+        }
+
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22)) {
+            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_JOIN_MSG," + parameterBO.getStrParam("SBRWR_NOPU_REQUIREDPERCENT")), activePersonaId);
         }
 
         return lobbyBO.acceptinvite(requestSessionInfo.getActivePersonaId(), lobbyInviteId);

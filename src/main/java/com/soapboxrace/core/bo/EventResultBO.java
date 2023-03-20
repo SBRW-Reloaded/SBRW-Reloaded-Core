@@ -1,12 +1,15 @@
 package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.bo.util.AchievementEventContext;
-import com.soapboxrace.core.dao.PersonaDAO;
+import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
 import com.soapboxrace.jaxb.http.ClientPhysicsMetrics;
 import com.soapboxrace.jaxb.http.EventResult;
 import com.soapboxrace.jaxb.http.ExitPath;
+import com.soapboxrace.core.bo.util.OwnedCarConverter;
+import com.soapboxrace.jaxb.util.JAXBUtility;
+import com.soapboxrace.core.bo.util.HelpingTools;
 
 import javax.ejb.EJB;
 import java.util.Map;
@@ -34,6 +37,12 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
     @EJB
     protected PersonaDAO personaDAO;
 
+    @EJB
+    private CarDAO carDAO;
+
+    @EJB
+    private EventDataSetupDAO eventDataSetupDAO;
+
     /**
      * Converts the given {@link TA} instance to a new {@link TR} instance.
      *
@@ -49,13 +58,6 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         if(parameterBo.getBoolParam("SBRWR_DISABLE_8_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~8);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_16_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~16);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_32_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~32);
-
-        //TODO: Database script to accept certain cheat types.
-        if(packet.getKonami() != 0) {
-            if(parameterBo.getStrListParam("SBRWR_ACCEPT_KONAMI").isEmpty() != true) {
-                
-            }
-        }
 
         return handleInternal(eventSessionEntity, activePersonaId, packet);
     }
@@ -99,6 +101,26 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
             eventDataEntity.setSpeedMaximum(clientPhysicsMetrics.getSpeedMaximum());
             eventDataEntity.setSpeedMedian(clientPhysicsMetrics.getSpeedMedian());
         }
+
+        //EVENT_DATA_SETUPS
+        CarEntity carInfo = carDAO.find(packet.getCarId());
+        String carHash = HelpingTools.calcHash(JAXBUtility.marshal(OwnedCarConverter.makeCarSetupTrans(carInfo)));
+        EventDataSetupEntity carSetup = eventDataSetupDAO.findByHash(carHash);
+        if(carSetup == null) {
+            EventDataSetupEntity carSetupTmp = new EventDataSetupEntity();
+            carSetupTmp.setCarId(packet.getCarId());
+            carSetupTmp.setHash(carHash);
+            carSetupTmp.setPersonaId(activePersonaId);
+            carSetupTmp.setCarName(carInfo.getName());
+            carSetupTmp.setCarClassHash(carInfo.getCarClassHash());
+            carSetupTmp.setCarRating(carInfo.getRating());
+            carSetupTmp.setPerformanceParts(OwnedCarConverter.getPerformanceParts(carInfo));
+            carSetupTmp.setSkillmodParts(OwnedCarConverter.getSkillModParts(carInfo));
+            carSetupTmp.setVisualParts(OwnedCarConverter.getVisualParts(carInfo));
+            eventDataSetupDAO.insert(carSetupTmp);
+        }
+        
+        eventDataEntity.setEventDataSetupHash(carHash);
     }
 
     /**

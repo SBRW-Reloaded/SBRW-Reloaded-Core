@@ -18,6 +18,7 @@ public class BuildInfo {
     private static String longCommitID;
     private static String time;
     private static String version;
+    private static String commitMessage;
 
     static {
         try (InputStream gitPropertiesJson = getGitPropertiesStream();
@@ -28,8 +29,9 @@ public class BuildInfo {
             longCommitID = gitStateInfo.commitId;
             time = gitStateInfo.commitTime;
             version = gitStateInfo.buildVersion;
+            commitMessage = gitStateInfo.commitShortMessage;
         } catch (IOException | RuntimeException exception) {
-            branch = commitID = longCommitID = time = version = "unknown";
+            branch = commitID = longCommitID = time = version = commitMessage = "unknown";
         }
     }
 
@@ -62,5 +64,9 @@ public class BuildInfo {
 
     public static String getVersion() {
         return version.trim();
+    }
+
+    public static String getCommitMessage() {
+        return commitMessage.trim();
     }
 }

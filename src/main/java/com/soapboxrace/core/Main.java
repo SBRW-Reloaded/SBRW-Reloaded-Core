@@ -24,7 +24,7 @@ public class Main {
         System.setProperty("user.timezone", parameterBO.getStrParam("SBRWR_TIMEZONE", "Europe/Paris"));
         System.out.println("Using timezone: " + parameterBO.getStrParam("SBRWR_TIMEZONE", "Europe/Paris"));
 
-        userDao.updateOnlineState("OFFLINE");
+        userDao.updateOnlineState("OFFLINE"); 
     }
 
     @PreDestroy

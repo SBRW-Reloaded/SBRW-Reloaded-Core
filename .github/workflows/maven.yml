@@ -1,7 +1,7 @@
 # This workflow will build a Java project with Maven
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
 
-name: Main Release
+name: TheLab Release
 
 on:
   push:
@@ -28,12 +28,19 @@ jobs:
       with:
         java-version: 1.11
 
+    - name: get-time
+      id: get-time
+      run: | 
+        version=$(date +'%Y%d%m-%H%M%S')
+        echo $version > version.txt
+        echo "::set-output name=version::$version"
+
     - name: get-commit-version
       id: get-commit-version
       run: | 
-        version=$(git log --format="%h" -n 1)
-        echo $version > version.txt
-        echo "::set-output name=version::$version"
+        commit=$(git log --format="%h" -n 1)
+        echo $commit > commit.txt
+        echo "::set-output name=commit::$commit"
 
     - name: Cache Maven packages
       uses: actions/cache@v2
@@ -58,8 +65,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.get-commit-version.outputs.version }}
-        release_name: SBRWReloaded
+        tag_name: v${{ steps.get-time.outputs.version }}
+        release_name: SBRWReloaded — v ${{ steps.get-time.outputs.version }}
         draft: false
         prerelease: false
 
@@ -106,5 +113,5 @@ jobs:
       with:
         upload_url: ${{ steps.set_upload_url.outputs.upload-url }}
         asset_path: ${{ github.workspace }}/target/core-thorntail.jar
-        asset_name: SBRWReloaded-${{ steps.get-commit-version.outputs.version }}.jar
+        asset_name: TheLab-${{ steps.get-commit-version.outputs.commit }}.jar
         asset_content_type: application/octet-stream

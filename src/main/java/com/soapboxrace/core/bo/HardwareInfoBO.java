@@ -6,11 +6,11 @@
 
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.bo.util.HelpingTools;
 import com.soapboxrace.core.dao.HardwareInfoDAO;
 import com.soapboxrace.core.jpa.HardwareInfoEntity;
 import com.soapboxrace.jaxb.http.HardwareInfo;
 import com.soapboxrace.jaxb.util.JAXBUtility;
-import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -19,13 +19,6 @@ import javax.ejb.Stateless;
 public class HardwareInfoBO {
     @EJB
     private HardwareInfoDAO hardwareInfoDAO;
-
-    public String calcHardwareInfoHash(String hardwareInfoXml) {
-        if (hardwareInfoXml != null && !hardwareInfoXml.isEmpty()) {
-            return DigestUtils.sha1Hex(hardwareInfoXml);
-        }
-        return "empty";
-    }
 
     public HardwareInfoEntity save(HardwareInfo hardwareInfo) {
         long userId = hardwareInfo.getUserID();
@@ -37,7 +30,7 @@ public class HardwareInfoBO {
         hardwareInfo.setCpuid13(0);
         hardwareInfo.setUserID(0);
         String hardwareInfoXml = JAXBUtility.marshal(hardwareInfo);
-        String calcHardwareInfoHash = calcHardwareInfoHash(hardwareInfoXml);
+        String calcHardwareInfoHash = HelpingTools.calcHash(hardwareInfoXml);
         HardwareInfoEntity hardwareInfoEntityTmp = hardwareInfoDAO.findByHardwareHash(calcHardwareInfoHash);
         if (hardwareInfoEntityTmp == null) {
             hardwareInfoEntityTmp = new HardwareInfoEntity();

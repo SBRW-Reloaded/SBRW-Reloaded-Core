@@ -9,3 +9,4 @@ project-*.yml
 /.thorntail-runner-cache/
 src/main/java/com/soapboxrace/core/bo/BenchmarkingBO.java
 *.patch
+.vscode/settings.json

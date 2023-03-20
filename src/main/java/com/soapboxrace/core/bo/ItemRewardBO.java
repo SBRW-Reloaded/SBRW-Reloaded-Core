@@ -7,9 +7,7 @@
 package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.bo.util.*;
-import com.soapboxrace.core.dao.CardPackDAO;
-import com.soapboxrace.core.dao.ProductDAO;
-import com.soapboxrace.core.dao.RewardTableDAO;
+import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
@@ -51,6 +49,9 @@ public class ItemRewardBO {
     @EJB
     private CardPackDAO cardPackDAO;
 
+    @EJB
+    private CarClassesDAO carClassesDAO;
+
     public RewardedItemsContainer getRewards(PersonaEntity personaEntity, String rewardScript) {
         try {
             if (rewardScript != null) {
@@ -61,6 +62,11 @@ public class ItemRewardBO {
         } catch (Exception e) {
             throw new EngineException("Failed to generate rewards with script: " + rewardScript, e, EngineExceptionCode.LuckyDrawCouldNotDrawProduct, true);
         }
+    }
+
+    private String getCarProductTitle(CarEntity carEntity) {
+        CarClassesEntity carClass = carClassesDAO.findByHash(carEntity.getPhysicsProfileHash());
+        return carClass != null ? carClass.getFullName() : "UNKNOWN";
     }
 
     public void convertRewards(RewardedItemsContainer rewardedItemsContainer, GenericCommerceResult commerceResult) {
@@ -127,7 +133,7 @@ public class ItemRewardBO {
 
             CommerceItemTrans commerceItemTrans = new CommerceItemTrans();
             commerceItemTrans.setHash(productEntity.getHash());
-            commerceItemTrans.setTitle(productEntity.getProductTitle());
+            commerceItemTrans.setTitle(getCarProductTitle(carReward.getOwnedCarEntity()));
 
             commerceResult.getCommerceItems().getCommerceItemTrans().add(commerceItemTrans);
         }
@@ -303,7 +309,6 @@ public class ItemRewardBO {
     /**
      * Exposes access to builder objects for rewards.
      */
-    @SuppressWarnings("unused")
     public class RewardGenerator {
         /**
          * Creates a cash reward builder
@@ -625,7 +630,6 @@ public class ItemRewardBO {
     /**
      * Reward builder for random selections
      */
-    @SuppressWarnings("unused")
     public class RandomSelectionBuilder extends RewardBuilder<ItemRewardBase> {
 
         private List<ItemRewardBase> choices;

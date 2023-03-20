@@ -9,21 +9,29 @@ package com.soapboxrace.core.bo;
 import com.soapboxrace.core.bo.util.TimeConverter;
 import com.soapboxrace.core.bo.util.HelpingTools;
 import com.soapboxrace.core.bo.util.KonamiDecode;
-import com.soapboxrace.core.dao.CarClassesDAO;
-import com.soapboxrace.core.dao.CarDAO;
-import com.soapboxrace.core.jpa.CarClassesEntity;
-import com.soapboxrace.core.jpa.CarEntity;
-import com.soapboxrace.core.jpa.EventDataEntity;
-import com.soapboxrace.core.jpa.EventSessionEntity;
+import com.soapboxrace.core.dao.*;
+import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
 import com.soapboxrace.jaxb.http.PursuitArbitrationPacket;
 import com.soapboxrace.jaxb.http.TeamEscapeArbitrationPacket;
 
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppChat;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+
+import org.apache.commons.lang3.time.DurationFormatUtils;
+
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
 
 @Stateless
 public class LegitRaceBO {
@@ -40,6 +48,15 @@ public class LegitRaceBO {
     @EJB
     private ParameterBO parameterBO;
 
+    @EJB 
+    private PersonaDAO personaDAO;
+
+    @EJB
+    private EventDataDAO eventDataDAO;
+
+    @EJB
+    private OpenFireSoapBoxCli openFireSoapBoxCli;
+
     private Boolean isLegit = true;
     private List<String> listOfReports = new ArrayList<>();
 
@@ -51,9 +68,11 @@ public class LegitRaceBO {
     }
 
     public boolean isLegit(Long activePersonaId, ArbitrationPacket arbitrationPacket, EventSessionEntity sessionEntity, EventDataEntity dataEntity) {
+        isLegit = true; //resetme
+
         long minimumTime = sessionEntity.getEvent().getLegitTime();
         boolean legit = dataEntity.getServerTimeInMilliseconds() >= minimumTime;
-        String eventName = HelpingTools.upperFirst(sessionEntity.getEvent().getName().split("\\(")[0].trim());
+        String eventName = HelpingTools.upperFirstSingle(sessionEntity.getEvent().getName().split("\\(")[0].trim());
         String reportMessage = "";
         String carName = "";
 
@@ -152,9 +171,89 @@ public class LegitRaceBO {
         }
 
         if(!listOfReports.isEmpty()) {
-            listOfReports.add(String.format("\non event %s; session %d; car %s", eventName, sessionEntity.getId(), carName));
+            listOfReports.add(String.format("\non event %s; session %d using %s", eventName, sessionEntity.getId(), carName));
             socialBo.sendReport(0L, activePersonaId, 4, String.join("\n", listOfReports), (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
             listOfReports.clear();
+        }
+
+        if(arbitrationPacket.getFinishReason() == 22) {
+            String valid22result = parameterBO.getStrParam("SBRWR_POST_VALID_22", "N/A");
+            valid22result = valid22result.replace("{$SESSIONID$}", sessionEntity.getId().toString());
+            valid22result = valid22result.replace("{$PERSONAID$}", activePersonaId.toString());
+    
+            if(!valid22result.equals("N/A")) {
+                    try {
+                            URLConnection url = new URL(valid22result).openConnection();
+                            url.setConnectTimeout(2000);
+                            url.setRequestProperty("User-Agent", parameterBO.getStrParam("SBRWR_DEFAULT_UA", "SBRWR-Core/NRZ-Branch"));
+                            new String(url.getInputStream().readAllBytes());
+                    } catch (IOException e) { }
+            }
+        }
+
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_LEADERBOARD")) {
+            new java.util.Timer().schedule( 
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        // Get the query for stats
+                        int current_ranking = 1;
+                        Long top_player_id = 0L;
+                        String top_player_time = null;
+
+                        List<EventDataEntity> unsorted_ranking = eventDataDAO.getRankings(dataEntity.getEvent().getId());
+                        Map<Long, Long> map = new HashMap<>();
+
+                        map.put(activePersonaId, dataEntity.getEventDurationInMilliseconds());
+
+                        for (EventDataEntity entity : unsorted_ranking) {
+                            if(!map.containsKey(entity.getPersonaId())) {
+                                map.put(entity.getPersonaId(), 999999999999999L);
+                            }
+                            
+                            if(map.get(entity.getPersonaId()) >= entity.getEventDurationInMilliseconds()) {
+                                map.put(entity.getPersonaId(), entity.getEventDurationInMilliseconds());
+                            }
+                        }
+
+                        for (EventDataEntity entity : unsorted_ranking) {
+                            //First result is always the top1 player
+                            if(top_player_id.equals(0L)) {
+                                top_player_id = entity.getPersonaId();
+                                top_player_time = DurationFormatUtils.formatDurationHMS(entity.getEventDurationInMilliseconds());
+                            }
+                            continue;
+                        }
+
+                        Map<Long, Long> sorted_ranking = HelpingTools.sortByValue(map);
+
+                        for(Entry<Long, Long> pair : sorted_ranking.entrySet()) {
+                            if(activePersonaId.equals(pair.getKey())) {   
+                                String time_formatted = DurationFormatUtils.formatDurationHMS(pair.getValue());
+
+                                if(parameterBO.getBoolParam("SBRWR_TRANSLATABLE")) {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_LEADERBOARD_INFO,%s,%s", current_ranking, time_formatted)), activePersonaId);
+                                } else {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Your leaderboard ranking is now %s with time %s", current_ranking, time_formatted)), activePersonaId);
+                                }
+
+                                //Top stat
+                                PersonaEntity topPersonaEntity = personaDAO.find(top_player_id);
+                                if(topPersonaEntity != null) {
+                                    if(parameterBO.getBoolParam("SBRWR_TRANSLATABLE")) {
+                                        openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_LEADERBOARD_TOP_INFO,%s,%s", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                    } else {
+                                        openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("[LEADERBOARD] Top #1 Player is %s with time %s", topPersonaEntity.getName(), top_player_time)), activePersonaId);
+                                    }
+                                }
+                                
+                                continue;
+                            }
+                            current_ranking++;
+                        }
+                    }
+                }, (2000)
+            );
         }
 
         return isLegit;

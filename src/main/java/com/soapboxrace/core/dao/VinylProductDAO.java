@@ -41,4 +41,13 @@ public class VinylProductDAO extends LongKeyedDAO<VinylProductEntity> {
         return query.getResultList();
     }
 
+    public List<VinylProductEntity> getAllByLevelEnabled(int minLevel, Boolean enabled, Boolean premium) {
+        TypedQuery<VinylProductEntity> query = entityManager.createNamedQuery("VinylProductEntity" +
+                ".getAllByLevelEnabled", VinylProductEntity.class);
+        query.setParameter("enabled", enabled);
+        query.setParameter("minLevel", minLevel);
+        query.setParameter("premium", premium);
+        return query.getResultList();
+    }
+
 }

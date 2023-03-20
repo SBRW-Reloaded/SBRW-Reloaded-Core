@@ -26,6 +26,9 @@ public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
     @EJB
     private LegitRaceBO legitRaceBO;
 
+    @EJB
+    private LeaderboardBO leaderboardBO;
+
     public Accolades getAccolades(Long activePersonaId, PursuitArbitrationPacket pursuitArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity,
                                   AchievementTransaction achievementTransaction) {
@@ -43,9 +46,11 @@ public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
 
         setPursuitRewards(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, pursuitArbitrationPacket, rewardVO);
 
-        Random random = new Random();
-        pursuitArbitrationPacket.setRank(random.nextInt(4 - 1) + 1);
         applyRaceReward(rewardVO.getRep(), rewardVO.getCash(), personaEntity, true, achievementTransaction);
+
+        //Set leaderboard things
+        leaderboardBO.setupLeaderboard(activePersonaId, pursuitArbitrationPacket, eventSessionEntity, eventDataEntity);
+
         return getAccolades(personaEntity, eventRewardEntity, pursuitArbitrationPacket, rewardVO);
     }
 

@@ -8,7 +8,6 @@ package com.soapboxrace.core.jpa;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "K_CREW")
@@ -19,9 +18,6 @@ public class KCrewEntity {
     private int crewId;
 
     private String tag;
-    private String name;
-    private String motto;
-    private String color;
 
     @Column(name = "cover_version")
     private Long coverVersion;
@@ -35,20 +31,11 @@ public class KCrewEntity {
     @Column(name = "create_date")
     private LocalDateTime createDate;
 
-    private boolean open;
-
     @Column(name = "nb_member")
     private Long nbMember;
 
     @Column(name = "nb_points")
     private Long nbPoints;
-
-    private Long level;
-    private Long ownerUserId;
-    private Long maxPoints;
-    private String invite;
-    private int dropSB;
-    private String discord;
 
     public String getTag() { 
         return tag; 

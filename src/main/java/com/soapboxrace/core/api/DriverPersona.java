@@ -19,6 +19,7 @@ import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 @Path("/DriverPersona")
@@ -133,8 +134,12 @@ public class DriverPersona {
     @Produces(MediaType.APPLICATION_XML)
     public String updatePersonaPresence(@QueryParam("personaId") Long personaId,
                                         @QueryParam("presence") Long presence) {
-        tokenSessionBo.verifyPersonaOwnership(requestSessionInfo.getTokenSessionEntity(), personaId);
-        presenceBO.updatePresence(personaId, presence);
+        // For some reason the game calls UpdatePersonaPresence AFTER SecureLogoutPersona - that messes up the presence
+        // tracking system. So we update presence only if the persona matches the logged in persona.
+        Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        if (!Objects.isNull(activePersonaId) && !activePersonaId.equals(0L) && activePersonaId.equals(personaId)) {
+            presenceBO.updatePresence(personaId, presence);
+        }
 
         return "";
     }

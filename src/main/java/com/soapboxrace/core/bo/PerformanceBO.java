@@ -8,10 +8,8 @@ package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.dao.CarClassesDAO;
 import com.soapboxrace.core.dao.ProductDAO;
-import com.soapboxrace.core.jpa.CarClassesEntity;
-import com.soapboxrace.core.jpa.CarEntity;
-import com.soapboxrace.core.jpa.PerformancePartEntity;
-import com.soapboxrace.core.jpa.ProductEntity;
+import com.soapboxrace.core.dao.CarClassListDAO;
+import com.soapboxrace.core.jpa.*;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -25,6 +23,9 @@ public class PerformanceBO {
 
     @EJB
     private ProductDAO productDAO;
+
+    @EJB
+    private CarClassListDAO carClassListDAO;
 
     public CarClassesEntity calcNewCarClass(CarEntity carEntity) {
         return calcNewCarClass(carEntity, carEntity.getDurability() == 0);
@@ -81,21 +82,8 @@ public class PerformanceBO {
         double finalClass = ((int) finalTopSpeed + (int) finalAccel + (int) finalHandling) / 3d;
         int finalClassInt = (int) finalClass;
 
-        // move to new method
-        int carclassHash = 872416321;
-        if (finalClassInt >= 250 && finalClassInt < 400) {
-            carclassHash = 415909161;
-        } else if (finalClassInt >= 400 && finalClassInt < 500) {
-            carclassHash = 1866825865;
-        } else if (finalClassInt >= 500 && finalClassInt < 600) {
-            carclassHash = -406473455;
-        } else if (finalClassInt >= 600 && finalClassInt < 750) {
-            carclassHash = -405837480;
-        } else if (finalClassInt >= 750) {
-            carclassHash = -2142411446;
-        }
-
-        carEntity.setCarClassHash(carclassHash);
+        CarClassListEntity carClassList = carClassListDAO.findByRating(finalClassInt);
+        carEntity.setCarClassHash(carClassList.getHash());
         carEntity.setRating(finalClassInt);
 
         return carClassesEntity;

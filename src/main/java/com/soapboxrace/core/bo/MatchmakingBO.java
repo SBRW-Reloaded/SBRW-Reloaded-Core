@@ -18,6 +18,11 @@ import javax.ejb.*;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
+import com.soapboxrace.core.jpa.EventEntity;
+import com.soapboxrace.core.xmpp.XmppChat;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+
+
 /**
  * Responsible for managing the multiplayer matchmaking system.
  * This deals with 2 classes of events: restricted and open.
@@ -38,6 +43,9 @@ public class MatchmakingBO {
 
     @EJB
     private ParameterBO parameterBO;
+
+    @EJB
+	private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @Inject
     private Logger logger;
@@ -113,12 +121,15 @@ public class MatchmakingBO {
     /**
      * Add the given event ID to the list of ignored events for the given persona ID.
      *
-     * @param personaId the persona ID
-     * @param eventId   the event ID
+     * @param personaId     the persona ID
+     * @param EventEntity   the eventEntity
      */
-    public void ignoreEvent(long personaId, long eventId) {
+    public void ignoreEvent(long personaId, EventEntity EventEntity) {
         if (this.redisConnection != null) {
-            this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(eventId));
+        	if (this.redisConnection.sync().hexists("matchmaking_queue", Long.toString(personaId))) {
+        		this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
+                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
+        	}
         }
     }
 

@@ -3,7 +3,6 @@ package com.soapboxrace.core.bo.util;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 
-import java.text.SimpleDateFormat;
 import java.util.*; 
 
 import com.soapboxrace.core.bo.ParameterBO;

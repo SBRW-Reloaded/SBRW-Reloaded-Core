@@ -1,2 +1,1 @@
-<h1>Soapbox Race World server</h1>
-<p>There is nothing to see here.</p>
+<meta http-equiv="refresh" content="1;url=https://nightriderz.world/" />

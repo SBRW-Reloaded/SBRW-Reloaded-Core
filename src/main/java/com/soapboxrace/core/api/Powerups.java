@@ -58,22 +58,32 @@ public class Powerups {
     public String activated(@PathParam(value = "powerupHash") Integer powerupHash, @QueryParam("targetId") Long targetId, @QueryParam("receivers") String receivers, @QueryParam("eventSessionId") Integer eventSessionId) {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && requestSessionInfo.getEventSessionId() != null) {
+        if(requestSessionInfo.getEventSessionId() != null) {
             EventSessionEntity eventSession = eventBO.findEventSessionById(requestSessionInfo.getEventSessionId());
 
-            if(eventSession != null) {
-                if(eventSession.getNopuMode() == true) {
-                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_MODE_ENABLED"), activePersonaId);
+            if (eventSession.getLobby() != null) {
+                //Is Team/Multiplayer!
+                if(parameterBO.getStrParam("SBRWR_BANNED_MP_POWERUPS", "").contains(powerupHash.toString())) {
+                    sendInformation("SBRWR_DISABLEDPOWERUP", activePersonaId);
+                } else if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && eventSession.getNopuMode() == true) {
+                    sendInformation("SBRWR_NOPU_MODE_ENABLED", activePersonaId);
                 } else {
                     sendPowerup(powerupHash, targetId, receivers, activePersonaId);
                 }
             } else {
+                //Is Singleplayer!
                 sendPowerup(powerupHash, targetId, receivers, activePersonaId);
             }
         } else {
+            // Is Freeroam
             sendPowerup(powerupHash, targetId, receivers, activePersonaId);
         }
 
+        return "";
+    }
+
+    public String sendInformation(String message, Long activePersonaId) {
+        openFireSoapBoxCli.send(XmppChat.createSystemMessage(message), activePersonaId);
         return "";
     }
 
@@ -84,12 +94,14 @@ public class Powerups {
         powerupActivated.setTargetPersonaId(targetId);
         powerupActivated.setPersonaId(activePersonaId);
         powerupActivatedResponse.setPowerupActivated(powerupActivated);
+
         for (String receiver : receivers.split("-")) {
             long receiverPersonaId = Long.parseLong(receiver);
             if (receiverPersonaId > 10) {
                 openFireSoapBoxCli.send(powerupActivatedResponse, receiverPersonaId);
             }
         }
+
         if (parameterBO.getBoolParam("ENABLE_POWERUP_DECREASE")) {
             PersonaEntity personaEntity = personaBO.getPersonaById(activePersonaId);
             InventoryItemEntity inventoryItemEntity = inventoryBO.decreaseItemCount(inventoryBO.getInventory(personaEntity), powerupHash);

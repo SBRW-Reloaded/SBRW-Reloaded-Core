@@ -10,8 +10,9 @@ import javax.persistence.*;
 
 @Entity
 @Table(name = "VINYL")
-@NamedQueries({@NamedQuery(name = "VinylEntity.deleteByCar", //
-        query = "DELETE FROM VinylEntity obj WHERE obj.car = :customCar") //
+@NamedQueries({
+    @NamedQuery(name = "VinylEntity.deleteByCar",  query = "DELETE FROM VinylEntity obj WHERE obj.car = :customCar"),
+    @NamedQuery(name = "VinylEntity.findByCarId",  query = "SELECT obj FROM VinylEntity obj WHERE obj.car.id = :carid")
 })
 public class VinylEntity {
 

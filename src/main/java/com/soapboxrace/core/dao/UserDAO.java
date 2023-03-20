@@ -11,7 +11,6 @@ import com.soapboxrace.core.jpa.UserEntity;
 
 import javax.ejb.Stateless;
 import javax.persistence.TypedQuery;
-import javax.persistence.Query;
 import java.util.List;
 
 @Stateless

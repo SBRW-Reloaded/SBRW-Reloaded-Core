@@ -11,14 +11,11 @@ import javax.persistence.*;
 @Entity
 @Table(name = "EVENT_DATA")
 @NamedQueries({ //
-        @NamedQuery(name = "EventDataEntity.findByPersona", query = "SELECT obj FROM EventDataEntity obj WHERE obj" +
-                ".personaId = :personaId"), //
-        @NamedQuery(name = "EventDataEntity.getRacers", query = "SELECT obj FROM EventDataEntity obj WHERE obj" +
-                ".eventSessionId = :eventSessionId"), //
-        @NamedQuery(name = "EventDataEntity.findByPersonaAndType", query = "SELECT obj FROM EventDataEntity obj WHERE" +
-                " obj.personaId = :personaId AND obj.eventModeId = :eventModeId"), //
-        @NamedQuery(name = "EventDataEntity.findByPersonaAndEventSessionId", query = "SELECT obj FROM EventDataEntity" +
-                " obj WHERE obj.personaId = :personaId AND obj.eventSessionId = :eventSessionId") //
+        @NamedQuery(name = "EventDataEntity.findByPersona", query = "SELECT obj FROM EventDataEntity obj WHERE obj.personaId = :personaId"),
+        @NamedQuery(name = "EventDataEntity.getRacers", query = "SELECT obj FROM EventDataEntity obj WHERE obj.eventSessionId = :eventSessionId"),
+        @NamedQuery(name = "EventDataEntity.findByPersonaAndType", query = "SELECT obj FROM EventDataEntity obj WHERE obj.personaId = :personaId AND obj.eventModeId = :eventModeId"),
+        @NamedQuery(name = "EventDataEntity.findByPersonaAndEventSessionId", query = "SELECT obj FROM EventDataEntity obj WHERE obj.personaId = :personaId AND obj.eventSessionId = :eventSessionId"),
+        @NamedQuery(name = "EventDataEntity.getRankings", query = "SELECT obj FROM EventDataEntity obj WHERE obj.event.id = :eventid AND obj.isLegit = true AND obj.hacksDetected IN (0,22,32) AND obj.finishReason = 22 ORDER BY obj.eventDurationInMilliseconds ASC")
 })
 public class EventDataEntity {
 
@@ -76,6 +73,8 @@ public class EventDataEntity {
     private Float speedAverage;
     private Float speedMaximum;
     private Float speedMedian;
+
+    private String eventDataSetupHash;
 
     public Long getId() {
         return id;
@@ -401,5 +400,13 @@ public class EventDataEntity {
 
     public void setSpeedMedian(Float speedMedian) {
         this.speedMedian = speedMedian;
+    }
+
+    public String getEventDataSetupHash() {
+        return eventDataSetupHash;
+    }
+
+    public void setEventDataSetupHash(String eventDataSetupHash) {
+        this.eventDataSetupHash = eventDataSetupHash;
     }
 }

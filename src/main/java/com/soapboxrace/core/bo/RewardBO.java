@@ -137,7 +137,7 @@ public class RewardBO {
         personaDao.update(personaEntity);
 
         if(dscIsLeveledUp == true) {
-            String constructMsg_ds = "**" + personaEntity.getName() + "** just achieved Level **" + (personaEntity.getLevel() + 1) + "**";
+            String constructMsg_ds = "**" + personaEntity.getName() + "** just achieved Level **" + personaEntity.getLevel() + "**";
 
             if(parameterBO.getStrParam("DISCORD_WEBHOOK_LEVEL_URL") != null) {
                 discord.sendMessage(constructMsg_ds, 
@@ -176,11 +176,6 @@ public class RewardBO {
         float maxSkillMultiplier = parameterBO.getFloatParam("SKILL_" + skillModRewardType.toString() + "_MAX_VALUE", 30f);
         for (SkillModPartEntity skillModPartEntity : skillModParts) {
             ProductEntity productEntity = productDAO.findByHash(skillModPartEntity.getSkillModPartAttribHash());
-
-            // Whoever made that code, thanks for making it EQUAL and deny use of translation files (hi nilzao)
-            // And whoever accepted this code to be like it was: FUCK YOU (hi leo)
-            // And big thanks to whoever noticing the issue (thanks speedou)
-            // And also another self-thank for fixing that. (hi meto)
             if (productEntity != null && productEntity.getProductTitle().contains(skillModRewardType.toString())) {
                 float skillValue = productEntity.getSkillValue();
                 skillMultiplier += skillValue;

@@ -471,18 +471,6 @@ public class InventoryBO {
     }
 
     /**
-     * Removes the FIRST item with the given entitlement tag from the given {@link InventoryEntity}.
-     * Changes are persisted!
-     *
-     * @param inventoryEntity The {@link InventoryEntity} to remove an item from.
-     * @param entitlementTag  The entitlement tag to search for in the inventory.
-     * @throws EngineException if no item with the given entitlement
-     */
-    private void removeItem(PersonaEntity personaEntity, InventoryEntity inventoryEntity, String entitlementTag) {
-        removeItem(personaEntity, inventoryEntity, entitlementTag, -1);
-    }
-
-    /**
      * Removes the given quality (or the entire stack) of the FIRST item with the given entitlement tag from the given
      * {@link InventoryEntity}.
      * Changes are persisted!

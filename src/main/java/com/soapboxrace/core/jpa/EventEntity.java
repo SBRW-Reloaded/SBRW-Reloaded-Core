@@ -243,5 +243,5 @@ public class EventEntity {
 
     public void setSingleplayerRewardConfig(EventRewardEntity singleplayerRewardConfig) {
         this.singleplayerRewardConfig = singleplayerRewardConfig;
-    }
+    }    
 }

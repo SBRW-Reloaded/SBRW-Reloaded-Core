@@ -23,7 +23,8 @@ import java.util.Set;
                 query = "SELECT obj FROM ProductEntity obj WHERE " //
                         + "obj.enabled = :enabled AND "//
                         + "obj.minLevel <= :minLevel AND " //
-                        + "(obj.premium = false or obj.premium = :premium )AND " //
+                        + "(obj.premium = false or obj.premium = :premium) AND " //
+                        + "(obj.adminOnly = false or obj.adminOnly = :admin) AND " //
                         + "obj.categoryName = :categoryName AND "//
                         + "obj.productType = :productType"), //
         @NamedQuery(name = "ProductEntity.findForEndRace", //
@@ -89,6 +90,7 @@ public class ProductEntity implements Serializable {
     private boolean enabled;
     private int minLevel;
     private boolean premium = false;
+    private boolean adminOnly = false;
     private boolean isDropable;
     private Integer topSpeed = 0;
     private Integer accel = 0;
@@ -391,5 +393,13 @@ public class ProductEntity implements Serializable {
 
     public void setDropWeight(Double dropRate) {
         this.dropWeight = dropRate;
+    }
+
+    public boolean isAdminOnly() {
+        return adminOnly;
+    }
+
+    public void setAdminOnly(boolean adminOnly) {
+        this.adminOnly = adminOnly;
     }
 }

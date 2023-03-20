@@ -8,28 +8,23 @@ package com.soapboxrace.core.xmpp;
 
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
-import javax.annotation.PostConstruct;
-import javax.ejb.*;
+import javax.ejb.EJB;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Stateless;
 
-@Startup
-@Singleton
+@Stateless
+@Lock(LockType.READ)
 public class OpenFireSoapBoxCli {
 
     @EJB
-    private OpenFireConnector openFireConnector;
+    private OpenFireRestApiCli restApi;
 
-    @PostConstruct
-    public void init() {
-        openFireConnector.connect();
-    }
-
-    @Lock(LockType.READ)
     public void send(String msg, Long to) {
-        openFireConnector.send(msg, to);
+        restApi.sendMessage(to, msg);
     }
 
-    @Lock(LockType.READ)
     public void send(Object object, Long to) {
-        openFireConnector.send(JAXBUtility.marshal(object), to);
+        restApi.sendMessage(to, JAXBUtility.marshal(object));
     }
 }

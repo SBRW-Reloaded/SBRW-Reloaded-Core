@@ -21,7 +21,7 @@ import java.util.List;
         @NamedQuery(name = "PersonaAchievementEntity.findAllByPersonaId",
                 query = "SELECT p FROM PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId"),
         @NamedQuery(name = "PersonaAchievementEntity.findByPersonaIdAndAchievementId",
-                query = "SELECT p FROM PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId AND p.achievementEntity.id = :achievementId"),
+                query = "SELECT p FROM PersonaAchievementEntity p WHERE p.personaEntity.personaId = :personaId AND p.achievementEntity.id = :achievementId")
 })
 public class PersonaAchievementEntity {
 

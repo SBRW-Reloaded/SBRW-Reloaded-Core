@@ -26,4 +26,12 @@ public class KCrewMemberDAO extends LongKeyedDAO<KCrewMemberEntity> {
         List<KCrewMemberEntity> resultList = query.getResultList();
         return !resultList.isEmpty() ? resultList.get(0) : null;
     }
+
+    public KCrewMemberEntity findCrewMembershipByUserId(Long userid) {
+        TypedQuery<KCrewMemberEntity> query = entityManager.createNamedQuery("KCrewMemberEntity.findCrewMembershipByUserId", KCrewMemberEntity.class);
+        query.setParameter("userid", userid);
+
+        List<KCrewMemberEntity> resultList = query.getResultList();
+        return !resultList.isEmpty() ? resultList.get(0) : null;
+    }
 }

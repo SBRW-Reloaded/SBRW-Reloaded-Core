@@ -64,10 +64,20 @@ public class PresenceBO {
             Long currentPresence = this.getPresence(personaId);
 
             if (!currentPresence.equals(presence)) {
-                this.connection.sync().set(getPresenceKey(personaId), presence.toString());
+                this.connection.sync().setex(getPresenceKey(personaId), parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 3*60), presence.toString());
                 this.pubSubConnection.sync().publish("game_presence_updates", personaId + "|" + presence);
                 personaPresenceUpdatedEvent.fire(new PersonaPresenceUpdated(personaId, presence));
             }
+        }
+    }
+
+    /**
+     * Refreshes persona's presence expiration time. This should be called regularly for all online personas.
+     * @param personaId Persona ID whose presence to refresh
+     */
+    public void refreshPresence(long personaId) {
+        if (this.connection != null) {
+            this.connection.sync().expire(getPresenceKey(personaId), parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 3*60));
         }
     }
 

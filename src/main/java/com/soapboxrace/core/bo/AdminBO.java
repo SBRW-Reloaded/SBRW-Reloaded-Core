@@ -72,11 +72,11 @@ public class AdminBO {
         PersonaEntity personaEntity = personaDao.find(abuserPersonaId);
         PersonaEntity personaEntity1 = personaDao.find(personaId);
 
+		if (personaEntity == null || personaEntity1 == null)
+            return; 
+
         String constructMsg = "[" + personaEntity.getName() + "] has been %s by [" + personaEntity1.getName() + "].";
         String constructMsg_ds = "**" + personaEntity.getName() + "** has been %s by **" + personaEntity1.getName() + "**";
-
-		if (personaEntity == null && personaEntity1 == null)
-            return; 
 
         UserEntity userEntity = personaEntity.getUser();
         switch (commandInfo.action) {

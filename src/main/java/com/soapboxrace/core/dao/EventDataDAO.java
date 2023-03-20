@@ -21,15 +21,13 @@ public class EventDataDAO extends LongKeyedDAO<EventDataEntity> {
     }
 
     public List<EventDataEntity> getRacers(Long eventSessionId) {
-        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.getRacers",
-                EventDataEntity.class);
+        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.getRacers", EventDataEntity.class);
         query.setParameter("eventSessionId", eventSessionId);
         return query.getResultList();
     }
 
     public EventDataEntity findByPersonaAndEventSessionId(Long personaId, Long eventSessionId) {
-        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity" +
-                ".findByPersonaAndEventSessionId", EventDataEntity.class);
+        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.findByPersonaAndEventSessionId", EventDataEntity.class);
         query.setParameter("personaId", personaId);
         query.setParameter("eventSessionId", eventSessionId);
 
@@ -37,4 +35,9 @@ public class EventDataDAO extends LongKeyedDAO<EventDataEntity> {
         return !resultList.isEmpty() ? resultList.get(0) : null;
     }
 
+    public List<EventDataEntity> getRankings(int eventid) {
+        TypedQuery<EventDataEntity> query = entityManager.createNamedQuery("EventDataEntity.getRankings", EventDataEntity.class);
+        query.setParameter("eventid", eventid);
+        return query.getResultList();
+    }
 }

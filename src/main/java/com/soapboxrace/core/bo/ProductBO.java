@@ -78,13 +78,15 @@ public class ProductBO {
 
     public List<ProductEntity> productsInCategory(String categoryName, String productType, Long personaId) {
         boolean premium = false;
+        boolean admin = false;
         int level = 1;
         if (personaId != null && !personaId.equals(0L)) {
             PersonaEntity personaEntity = personaDao.find(personaId);
             premium = personaEntity.getUser().isPremium();
+            admin = personaEntity.getUser().isAdmin();
             level = personaEntity.getLevel();
         }
-        List<ProductEntity> productEntities = productDAO.findByLevelEnabled(categoryName, productType, level, true, premium);
+        List<ProductEntity> productEntities = productDAO.findByLevelEnabled(categoryName, productType, level, true, premium, admin);
 
         for (ProductEntity product : productEntities) {
             product.getBundleItems().size();

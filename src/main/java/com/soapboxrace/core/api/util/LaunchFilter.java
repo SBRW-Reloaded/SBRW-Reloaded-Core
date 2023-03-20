@@ -138,11 +138,27 @@ public class LaunchFilter implements ContainerRequestFilter {
 
                 if (lock_access) {
                     LoginStatusVO loginStatusVO = new LoginStatusVO(0L, "", false);
-                    loginStatusVO.setDescription("You're using the wrong (or unsigned) launcher, please update to the latest one:\n\n" +
-                    "    SOAPBOX  Launcher: " + parameterBO.getStrParam("CUSTOM_SOAPBOX_LAUNCHER_URL",  "https://git.io/Download_NFSW") + "\n" + 
-                    "    Electron Launcher: " + parameterBO.getStrParam("CUSTOM_ELECTRON_LAUNCHER_URL", "https://launcher.sparkserver.eu/") + "\n" + 
-                    "    Horizon  Launcher: " + parameterBO.getStrParam("CUSTOM_HORIZON_LAUNCHER_URL",  "Not Yet Released") + "\n" + 
-                    "    WebBased Launcher: " + parameterBO.getStrParam("CUSTOM_WEBBASED_LAUNCHER_URL", "Not Yet Released"));
+
+                    StringBuilder description = new StringBuilder();
+                    description.append("You're using the wrong (or unsigned) launcher, please update to the latest one:\n\n");
+
+                    if(!parameterBO.getStrParam("CUSTOM_SOAPBOX_LAUNCHER_URL", "N/A").equals("N/A")) {
+                        description.append("    SOAPBOX  Launcher: " + parameterBO.getStrParam("CUSTOM_SOAPBOX_LAUNCHER_URL") + "\n");
+                    }
+
+                    if(!parameterBO.getStrParam("CUSTOM_ELECTRON_LAUNCHER_URL", "N/A").equals("N/A")) {
+                        description.append("    Electron Launcher: " + parameterBO.getStrParam("CUSTOM_ELECTRON_LAUNCHER_URL") + "\n");
+                    }
+
+                    if(!parameterBO.getStrParam("CUSTOM_HORIZON_LAUNCHER_URL", "N/A").equals("N/A")) {
+                        description.append("    Horizon  Launcher: " + parameterBO.getStrParam("CUSTOM_HORIZON_LAUNCHER_URL") + "\n");
+                    }
+
+                    if(!parameterBO.getStrParam("CUSTOM_WEBBASED_LAUNCHER_URL", "N/A").equals("N/A")) {
+                        description.append("    WebBased Launcher: " + parameterBO.getStrParam("CUSTOM_WEBBASED_LAUNCHER_URL") + "\n");
+                    }
+
+                    loginStatusVO.setDescription(description.toString());
 
                     requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).entity(loginStatusVO).build());
                 }

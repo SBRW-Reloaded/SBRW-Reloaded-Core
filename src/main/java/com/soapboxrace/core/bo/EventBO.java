@@ -7,8 +7,6 @@
 package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.dao.EventDAO;
-import com.soapboxrace.core.dao.LobbyDAO;
-import com.soapboxrace.core.dao.LobbyEntrantDAO;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.EventSessionDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
@@ -39,16 +37,7 @@ public class EventBO {
     private PersonaDAO personaDao;
 
     @EJB
-    private LobbyDAO lobbyDao;
-
-    @EJB
-    private LobbyEntrantDAO lobbyEntrantDao;
-
-    @EJB
     private PersonaBO personaBO;
-
-    @EJB
-    private ParameterBO parameterBO;
 
     public List<EventEntity> availableAtLevel(Long personaId) {
         PersonaEntity personaEntity = personaDao.find(personaId);
@@ -90,23 +79,10 @@ public class EventBO {
             throw new EngineException(EngineExceptionCode.CarDataInvalid, false);
         }
 
-        //NOPU
-        Boolean nopuMode = false;
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
-            if(tokenSessionEntity.getActiveLobbyId() != null) {
-                LobbyEntity lobbyEntities = lobbyDao.find(tokenSessionEntity.getActiveLobbyId());
-
-                if(lobbyEntities != null) {
-                    List<LobbyEntrantEntity> lobbyEntrants = lobbyEntities.getEntrants();
-                    nopuMode = ((Math.round((lobbyEntrantDao.getVotes(lobbyEntities) * 100.0f) / lobbyEntrants.size())) >= parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) ? false : true;
-                }
-            }
-        }
-
         EventSessionEntity eventSessionEntity = new EventSessionEntity();
         eventSessionEntity.setEvent(eventEntity);
         eventSessionEntity.setStarted(System.currentTimeMillis());
-        eventSessionEntity.setNopuMode(nopuMode);
+        eventSessionEntity.setNopuMode(false);
         eventSessionDao.insert(eventSessionEntity);
         return eventSessionEntity;
     }

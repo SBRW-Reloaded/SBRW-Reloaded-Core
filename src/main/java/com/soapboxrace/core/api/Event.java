@@ -8,11 +8,11 @@ package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.*;
-import com.soapboxrace.core.jpa.EventEntity;
-import com.soapboxrace.core.jpa.EventMode;
-import com.soapboxrace.core.jpa.EventSessionEntity;
+import com.soapboxrace.core.dao.*;
+import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
+import java.util.List;
 
 import javax.ejb.EJB;
 import javax.inject.Inject;
@@ -44,6 +44,18 @@ public class Event {
     @EJB
     private MatchmakingBO matchmakingBO;
 
+    @EJB
+    private ParameterBO parameterBO;
+
+    @EJB
+    private EventSessionDAO eventSessionDao;
+
+    @EJB
+    private LobbyEntrantDAO lobbyEntrantDao;
+    
+    @EJB
+    private PresenceBO presenceBO;
+
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
@@ -66,6 +78,30 @@ public class Event {
         matchmakingBO.removePlayerFromQueue(activePersonaId);
         eventBO.createEventDataSession(activePersonaId, eventSessionId);
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), eventSessionId);
+
+        //NOPU SETH
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
+            Boolean nopuMode = false;
+
+            EventSessionEntity eventSessionEntity = eventSessionDao.find(eventSessionId);
+            LobbyEntity lobbyEntities = eventSessionEntity.getLobby();
+
+            if(lobbyEntities != null) {
+                List<LobbyEntrantEntity> lobbyEntrants = lobbyEntities.getEntrants();
+
+                Integer totalVotes = lobbyEntrantDao.getVotes(lobbyEntities);
+                Integer totalUsersInLobby = lobbyEntrants.size();
+                Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
+                    
+                if(totalVotesPercentage >= parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
+                    nopuMode = true;
+                }
+            }
+
+            eventSessionEntity.setNopuMode(nopuMode);
+            eventSessionDao.update(eventSessionEntity);
+        }
+
         return "";
     }
 

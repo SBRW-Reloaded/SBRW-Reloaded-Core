@@ -11,17 +11,10 @@ import javax.persistence.*;
 @Entity
 @Table(name = "VINYLPRODUCT")
 @NamedQueries({ //
-        @NamedQuery(name = "VinylProductEntity.findByProductId", //
-                query = "SELECT obj FROM VinylProductEntity obj " //
-                        + "WHERE obj.productId = :productId"), //
-        @NamedQuery(name = "VinylProductEntity.findByHash", query = "SELECT obj FROM VinylProductEntity obj " //
-                + "WHERE obj.hash = :hash"),
-        @NamedQuery(name = "VinylProductEntity.findByCategoryLevelEnabled", //
-                query = "SELECT obj FROM VinylProductEntity obj " //
-                        + "WHERE obj.category = :category " //
-                        + "AND :minLevel >= obj.minLevel " //
-                        + "AND (premium = false OR premium = :premium) " //
-                        + "AND obj.enabled = :enabled") //
+        @NamedQuery(name = "VinylProductEntity.findByProductId", query = "SELECT obj FROM VinylProductEntity obj WHERE obj.productId = :productId"),
+        @NamedQuery(name = "VinylProductEntity.findByHash", query = "SELECT obj FROM VinylProductEntity obj WHERE obj.hash = :hash"),
+        @NamedQuery(name = "VinylProductEntity.findByCategoryLevelEnabled", query = "SELECT obj FROM VinylProductEntity obj  WHERE obj.category = :category AND :minLevel >= obj.minLevel AND (premium = false OR premium = :premium) AND obj.enabled = :enabled"),
+        @NamedQuery(name = "VinylProductEntity.getAllByLevelEnabled", query = "SELECT obj FROM VinylProductEntity obj  WHERE :minLevel >= obj.minLevel AND (premium = false OR premium = :premium) AND obj.enabled = :enabled")
 })
 public class VinylProductEntity {
 

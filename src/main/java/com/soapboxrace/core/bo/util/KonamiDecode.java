@@ -12,9 +12,9 @@ public class KonamiDecode {
         String[] detectedList = new String[] { };
 
         if(ref == "konami") {
-            detectedList = new String[] { "MultiHack", "FastPowerups", "SpeedHack", "SmoothWalls", "TankMode", "Wallhack", "DriftMods", "NoCops", "ProfileMasker", "Ghosting" };
+            detectedList = new String[] { "MultiHack", "FastPowerups", "SpeedHack", "SmoothWalls", "TankMode", "Wallhack", "DriftMods", "NoCops", "ProfileMasker", "Ghosting", "", "", "", "" };
         } else if (ref == "hacksDetected") {
-            detectedList = new String[] { "Autofinish", "", "", "Modified Attributes", "", "Modified GameFiles", "", "", "", "" };
+            detectedList = new String[] { "Autofinish", "", "", "Modified Attributes", "", "Modified GameFiles", "", "", "", "", "", "", "", ""};
         } else {
             return "Code " + code;
         }

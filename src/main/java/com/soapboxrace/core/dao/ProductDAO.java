@@ -31,7 +31,7 @@ public class ProductDAO extends LongKeyedDAO<ProductEntity> {
     }
 
     public List<ProductEntity> findByLevelEnabled(String categoryName, String productType, int minLevel,
-                                                  boolean enabled, boolean premium) {
+                                                  boolean enabled, boolean premium, boolean admin) {
         TypedQuery<ProductEntity> query = entityManager.createNamedQuery("ProductEntity.findByLevelEnabled",
                 ProductEntity.class);
         query.setParameter("categoryName", categoryName);
@@ -39,6 +39,7 @@ public class ProductDAO extends LongKeyedDAO<ProductEntity> {
         query.setParameter("enabled", enabled);
         query.setParameter("minLevel", minLevel);
         query.setParameter("premium", premium);
+        query.setParameter("admin", admin);
         return query.getResultList();
     }
 

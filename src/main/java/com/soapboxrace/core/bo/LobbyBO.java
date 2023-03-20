@@ -171,8 +171,6 @@ public class LobbyBO {
             List<LobbyEntrantEntity> lobbyEntrants = lobbyEntityTmp.getEntrants();
             int entrantsSize = lobbyEntrants.size();
 
-            if(entrantsSize == maxEntrants) continue;
-
             if (entrantsSize < maxEntrants) {
                 lobbyEntity = lobbyEntityTmp;
                 if (!isPersonaInside(personaEntity.getPersonaId(), lobbyEntrants)) {
@@ -187,9 +185,6 @@ public class LobbyBO {
 
         if (lobbyEntity != null) {
             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
-        } else {
-            //requeue whole lobbies again.
-            joinLobby(personaEntity, lobbys);
         }
     }
 
@@ -210,7 +205,8 @@ public class LobbyBO {
             return;
         }
 
-        matchmakingBO.ignoreEvent(activePersonaId, lobbyEntity.getEvent().getId());
+        matchmakingBO.ignoreEvent(activePersonaId, lobbyEntity.getEvent());
+
     }
 
     public LobbyInfo acceptinvite(Long personaId, Long lobbyInviteId) {
@@ -300,7 +296,9 @@ public class LobbyBO {
                             Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
                             
                             if(totalVotesPercentage < parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
-                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
+                                if(parameterBO.getBoolParam("SBRWR_NOPU_SHOW_NOTENOUGHVOTES")) {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
+                                }
                             } else {
                                 openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_SUCCESS"), personaEntity.getPersonaId());
                             }

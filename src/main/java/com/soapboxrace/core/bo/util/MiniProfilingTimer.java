@@ -31,13 +31,5 @@ public class MiniProfilingTimer {
             this.label = label;
             this.started = System.currentTimeMillis();
         }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public Long getStarted() {
-            return started;
-        }
     }
 }

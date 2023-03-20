@@ -18,12 +18,21 @@ import javax.persistence.*;
 public class OnlineUsersEntity {
 
     @Id
-    @Column(name = "ID", nullable = false)
+    private int ID;
+
+    @Column(name = "time", nullable = false)
     private int timeRecord;
 
     private long numberOfOnline = 0;
-
     private long numberOfRegistered = 0;
+
+    public int getID() {
+        return ID;
+    }
+
+    public void setID(int ID) {
+        this.ID = ID;
+    }
 
     public long getNumberOfOnline() {
         return numberOfOnline;

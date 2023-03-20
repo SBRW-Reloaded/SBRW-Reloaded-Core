@@ -1,11 +1,10 @@
 package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.bo.*;
+import com.soapboxrace.core.commands.*;
 import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.core.xmpp.*;
-
-import com.soapboxrace.core.bo.commands.*;
 
 import javax.ejb.EJB;
 import javax.ws.rs.HeaderParam;
@@ -27,6 +26,9 @@ public class Commando {
     private AdminBO adminBO;
 
     @EJB 
+    private PersonaBO personaBO;
+
+    @EJB 
     private TokenSessionBO tokenSessionBO;
 
     @EJB 
@@ -37,6 +39,18 @@ public class Commando {
 
     @EJB 
     private LobbyEntrantDAO lobbyEntrantDAO;
+
+    @EJB
+    private LiveryStoreDAO liveryStoreDao;
+
+    @EJB
+    private VinylDAO vinylDao;
+
+    @EJB
+    private VinylProductDAO vinylProductDAO;
+
+    @EJB
+    private LiveryStoreDataDAO liveryStoreDataDao;
 
     @POST
     public Response openfireHook(@HeaderParam("Authorization") String token, @QueryParam("cmd") String command, @QueryParam("pid") long persona, @QueryParam("webhook") Boolean webHook) {        
@@ -50,7 +64,8 @@ public class Commando {
         PersonaEntity personaEntity = personaDAO.find(persona);
         
         //Remove slash at the beginning
-        command = command.substring(1);
+
+        command = command.replace("/", "");
 
         //Split up commands
         String[] commandSplitted = command.split(" ");
@@ -67,7 +82,9 @@ public class Commando {
             case "debug":       new Debug().Commands(); break;
             case "ban":         //adopted from below
             case "kick":        //adopted from below
-            case "unban":       new AdminCommand().Commands(adminBO, personaEntity, command, webHook, openFireSoapBoxCli); break;
+            case "unban":       new AdminCommand().Command(adminBO, personaEntity, command, webHook, openFireSoapBoxCli); break;
+            case "livery":      new LiveryCommand().Command(command, openFireSoapBoxCli, personaEntity, liveryStoreDao, vinylDao, liveryStoreDataDao, parameterBO, personaBO, vinylProductDAO); break;
+            case "carid":       new CarIdCommand().Command(openFireSoapBoxCli, personaEntity, personaBO); break;
             default:            new DefaultCommand().Command(openFireSoapBoxCli, personaEntity, commandSplitted[0].trim()); break;
         }
         return Response.noContent().build();

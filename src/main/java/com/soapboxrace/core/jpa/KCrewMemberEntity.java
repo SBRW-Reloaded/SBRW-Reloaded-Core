@@ -8,12 +8,12 @@ package com.soapboxrace.core.jpa;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "K_CREW_MEMBER")
 @NamedQueries({
-    @NamedQuery(name = "KCrewMemberEntity.findCrewMembershipByPersonaId", query = "SELECT obj FROM KCrewMemberEntity obj WHERE obj.persona.personaId = :personaid")
+    @NamedQuery(name = "KCrewMemberEntity.findCrewMembershipByPersonaId", query = "SELECT obj FROM KCrewMemberEntity obj WHERE obj.persona.personaId = :personaid"),
+    @NamedQuery(name = "KCrewMemberEntity.findCrewMembershipByUserId",    query = "SELECT obj FROM KCrewMemberEntity obj WHERE obj.persona.user.id = :userid")
 })
 public class KCrewMemberEntity {
     @Id
@@ -31,9 +31,6 @@ public class KCrewMemberEntity {
     @OneToOne(targetEntity = KCrewEntity.class, fetch = FetchType.LAZY)
     @JoinColumn(name = "crewId", referencedColumnName = "ID")
     private KCrewEntity crew;
-
-    private Long points;
-    private int canManage;
 
     public KCrewEntity getCrew() {
         return crew;
