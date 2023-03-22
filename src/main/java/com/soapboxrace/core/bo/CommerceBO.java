@@ -139,6 +139,12 @@ public class CommerceBO {
                     if (inventoryItemEntity != null && !itemInBasket) {
                         inventoryBO.decreaseItemCount(inventoryEntity, inventoryItemEntity);
                     } else {
+                        //Check if item is available to be purchased:
+                        if(productEntity.isEnabled() == false) {
+                            commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_INVALID_BASKET);
+                            return commerceSessionResultTrans;
+                        }
+
                         if (productEntity.getCurrency().equals("CASH"))
                             removeCash += (int) productEntity.getPrice();
                         else
