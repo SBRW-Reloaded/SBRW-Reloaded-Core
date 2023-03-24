@@ -141,7 +141,7 @@ public class CommerceBO {
                     } else {
                         //Check if item is available to be purchased:
                         if(productEntity.isEnabled() == false) {
-                            commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_INVALID_BASKET);
+                            commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_INVALID_PERFORMANCE_UPGRADE);
                             return commerceSessionResultTrans;
                         }
 
