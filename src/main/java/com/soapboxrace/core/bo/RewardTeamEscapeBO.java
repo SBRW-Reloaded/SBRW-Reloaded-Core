@@ -73,7 +73,7 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
         setMultiplierReward(eventRewardEntity, rewardVO);
         setAmplifierReward(personaEntity, rewardVO);
 
-        teamEscapeArbitrationPacket.setRank(teamEscapeArbitrationPacket.getRank() + 1);
+        teamEscapeArbitrationPacket.setRank(1); //Let's force position 1 temporarely
         applyRaceReward(rewardVO.getRep(), rewardVO.getCash(), personaEntity, true, achievementTransaction);
 
         //Set leaderboard things
