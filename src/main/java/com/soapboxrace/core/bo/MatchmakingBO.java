@@ -126,10 +126,8 @@ public class MatchmakingBO {
      */
     public void ignoreEvent(long personaId, EventEntity EventEntity) {
         if (this.redisConnection != null) {
-        	if (this.redisConnection.sync().hexists("matchmaking_queue", Long.toString(personaId))) {
-        		this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
-                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
-        	}
+            this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
+            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
         }
     }
 
