@@ -10,3 +10,5 @@ project-*.yml
 src/main/java/com/soapboxrace/core/bo/BenchmarkingBO.java
 *.patch
 .vscode/settings.json
+.classpath
+.factorypath
