@@ -8,7 +8,9 @@ package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.*;
+import com.soapboxrace.core.dao.PersonaDAO;
 import com.soapboxrace.core.jpa.EventEntity;
+import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
@@ -36,6 +38,9 @@ public class Events {
     @EJB
     private PersonaBO personaBO;
 
+    @EJB
+    private PersonaDAO personaDAO;
+
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
@@ -51,10 +56,21 @@ public class Events {
         EventsPacket eventsPacket = new EventsPacket();
         ArrayOfEventDefinition arrayOfEventDefinition = new ArrayOfEventDefinition();
         List<EventEntity> availableAtLevel = eventBO.availableAtLevel(activePersonaId);
+        
+        PersonaEntity personaEntity = personaDAO.find(activePersonaId);
+
         for (EventEntity eventEntity : availableAtLevel) {
             if (carClassHash == 0 || (eventEntity.getCarClassHash() != 607077938 && carClassHash != eventEntity.getCarClassHash())) {
                 eventEntity.setLocked(true);
             }
+
+            if(eventEntity.isRankedMode()) {
+                if(eventEntity.getRankMin() <= personaEntity.getRankingPoints() || eventEntity.getRankMax() >= personaEntity.getRankingPoints()) {
+                    eventEntity.setIsEnabled(parameterBO.getBoolParam("SBRWR_SHOWRANKEDEVENTS"));
+                    eventEntity.setLocked(parameterBO.getBoolParam("SBRWR_LOCKRANKEDEVENTS"));
+                }
+            }
+
             arrayOfEventDefinition.getEventDefinition().add(getEventDefinitionWithId(eventEntity));
         }
         eventsPacket.setEvents(arrayOfEventDefinition);
