@@ -65,7 +65,7 @@ public class Events {
             }
 
             if(eventEntity.isRankedMode()) {
-                if(eventEntity.getRankMin() <= personaEntity.getRankingPoints() || eventEntity.getRankMax() >= personaEntity.getRankingPoints()) {
+                if(eventEntity.getRankMin() <= personaEntity.getRankingPoints() && eventEntity.getRankMax() >= personaEntity.getRankingPoints()) {
                     eventEntity.setIsEnabled(parameterBO.getBoolParam("SBRWR_SHOWRANKEDEVENTS"));
                     eventEntity.setLocked(parameterBO.getBoolParam("SBRWR_LOCKRANKEDEVENTS"));
                 }
