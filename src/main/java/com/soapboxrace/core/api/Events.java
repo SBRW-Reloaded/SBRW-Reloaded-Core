@@ -64,10 +64,12 @@ public class Events {
                 eventEntity.setLocked(true);
             }
 
-            if(eventEntity.isRankedMode()) {
-                if(eventEntity.getRankMin() <= personaEntity.getRankingPoints() && eventEntity.getRankMax() >= personaEntity.getRankingPoints()) {
-                    eventEntity.setIsEnabled(parameterBO.getBoolParam("SBRWR_SHOWRANKEDEVENTS"));
-                    eventEntity.setLocked(parameterBO.getBoolParam("SBRWR_LOCKRANKEDEVENTS"));
+            if (eventEntity.isRankedMode()) {
+                if (eventEntity.getRankMin() <= personaEntity.getRankingPoints() && personaEntity.getRankingPoints() <= eventEntity.getRankMax()) {
+                    System.out.println(personaEntity.getName() + " is within the rank range for " + eventEntity.getName() + ".");
+                    eventEntity.setLocked(false);
+                } else {
+                    eventEntity.setLocked(true);
                 }
             }
 
