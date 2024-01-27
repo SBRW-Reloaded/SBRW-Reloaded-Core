@@ -33,10 +33,10 @@ public class RankingBO {
             int ranking = dataEntity.getRank();
             PersonaEntity personaEntity = personaDAO.find(activePersonaId);
 
-            if(ranking == 1) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS1,%s,%s", "14", personaEntity.getRankingPoints()+14)), activePersonaId);
+            if(ranking == 1) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS1,%s,%s", "10", personaEntity.getRankingPoints()+10)), activePersonaId);
             if(ranking == 2) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS2,%s,%s", "6", personaEntity.getRankingPoints()+6)), activePersonaId);
             if(ranking == 3) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS3,%s,%s", "-6", personaEntity.getRankingPoints()-6)), activePersonaId);
-            if(ranking == 4) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS4,%s,%s", "-14", personaEntity.getRankingPoints()-14)), activePersonaId);
+            if(ranking == 4) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS4,%s,%s", "-10", personaEntity.getRankingPoints()-10)), activePersonaId);
         }
     }
 }
