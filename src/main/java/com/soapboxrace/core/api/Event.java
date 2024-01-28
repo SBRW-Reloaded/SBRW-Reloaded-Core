@@ -52,6 +52,9 @@ public class Event {
 
     @EJB
     private LobbyEntrantDAO lobbyEntrantDao;
+
+    @EJB
+    private EventDataDAO eventDataDAO;
     
     @EJB
     private PresenceBO presenceBO;
@@ -64,6 +67,11 @@ public class Event {
     @Path("/abort")
     @Produces(MediaType.APPLICATION_XML)
     public String abort(@QueryParam("eventSessionId") Long eventSessionId) {
+
+        EventDataEntity leavepenality = eventDataDAO.findByPersonaAndEventSessionId(requestSessionInfo.getActivePersonaId() ,eventSessionId);
+        leavepenality.setRank(-1);
+        eventDataDAO.update(leavepenality);
+
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         return "";
