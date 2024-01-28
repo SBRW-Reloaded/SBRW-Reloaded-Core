@@ -30,13 +30,34 @@ public class RankingBO {
 
     public void setupRanking(Long activePersonaId, EventDataEntity dataEntity) {
         if(dataEntity.getEvent().isRankedMode()) {
-            int ranking = dataEntity.getRank();
             PersonaEntity personaEntity = personaDAO.find(activePersonaId);
 
-            if(ranking == 1) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS1,%s,%s", "14", personaEntity.getRankingPoints()+14)), activePersonaId);
-            if(ranking == 2) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS2,%s,%s", "6", personaEntity.getRankingPoints()+6)), activePersonaId);
-            if(ranking == 3) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS3,%s,%s", "-4", personaEntity.getRankingPoints()-4)), activePersonaId);
-            if(ranking == 4) openFireSoapBoxCli.send(XmppChat.createSystemMessage(String.format("SBRWR_RANKEDMODE_POS4,%s,%s", "-10", personaEntity.getRankingPoints()-10)), activePersonaId);
+            int position = dataEntity.getRank();
+            int ranking_points_earned = 0;
+            int current_ranking_points = personaEntity.getRankingPoints();
+            int calculated_ranking_points;
+
+            switch(position) {
+                case 1:
+                    ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_1", 14);
+                    break;
+                case 2:
+                    ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_2", 6);
+                    break;
+                case 3:
+                    ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_3", -4);
+                    break;
+                case 4:
+                    ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_4", -10);
+                    break;
+            }
+
+            calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
+            if(calculated_ranking_points == 0) ranking_points_earned = 0;
+
+            String rankingMessage = String.format("SBRWR_RANKEDMODE_POS%s,%s,%s", position, ranking_points_earned, calculated_ranking_points);
+
+            openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), activePersonaId);
         }
     }
 }
