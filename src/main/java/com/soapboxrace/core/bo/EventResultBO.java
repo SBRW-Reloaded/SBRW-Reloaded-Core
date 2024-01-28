@@ -62,7 +62,15 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         if(parameterBo.getBoolParam("SBRWR_DISABLE_32_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~32);
         
         if (eventSessionEntity.getLobby() != null) {
-            if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) packet.setRank(eventDataDAO.getRacers(eventSessionEntity.getId()).size() + 1);
+            int ranked = 0;
+
+            for (EventDataEntity race : eventDataDAO.getRacers(eventSessionEntity.getId())) {
+                if(race.getFinishReason() == 22) {
+                    ranked++;
+                }
+            }
+
+            if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) packet.setRank(ranked);
         }
         
         return handleInternal(eventSessionEntity, activePersonaId, packet);
