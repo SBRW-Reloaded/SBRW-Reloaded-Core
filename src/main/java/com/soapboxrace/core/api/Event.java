@@ -10,6 +10,8 @@ import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.*;
 import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 import java.util.List;
@@ -55,12 +57,18 @@ public class Event {
 
     @EJB
     private EventDataDAO eventDataDAO;
+
+    @EJB
+    private PersonaDAO personaDAO;
     
     @EJB
     private PresenceBO presenceBO;
 
     @Inject
     private RequestSessionInfo requestSessionInfo;
+
+    @EJB
+    private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @POST
     @Secured
@@ -72,6 +80,18 @@ public class Event {
         leavepenality.setRank(-1);
         leavepenality.setFinishReason(518);
         eventDataDAO.update(leavepenality);
+
+        if(leavepenality.getEvent().isRankedMode()) {
+            PersonaEntity personaEntity = personaDAO.find(requestSessionInfo.getActivePersonaId());
+            int current_ranking_points = personaEntity.getRankingPoints();
+            int ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_LEFTRACE", -28);
+
+            int calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
+            if(calculated_ranking_points == 0) ranking_points_earned = 0;
+
+            String rankingMessage = String.format("SBRWR_RANKEDMODE_POS_LEFT,%s,%s", ranking_points_earned, calculated_ranking_points);
+            openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), requestSessionInfo.getActivePersonaId());
+        }
 
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
