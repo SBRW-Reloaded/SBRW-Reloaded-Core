@@ -70,6 +70,7 @@ public class Event {
 
         EventDataEntity leavepenality = eventDataDAO.findByPersonaAndEventSessionId(requestSessionInfo.getActivePersonaId() ,eventSessionId);
         leavepenality.setRank(-1);
+        leavepenality.setFinishReason(518);
         eventDataDAO.update(leavepenality);
 
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);

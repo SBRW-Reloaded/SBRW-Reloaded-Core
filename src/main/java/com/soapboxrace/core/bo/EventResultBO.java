@@ -60,19 +60,7 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         if(parameterBo.getBoolParam("SBRWR_DISABLE_8_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~8);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_16_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~16);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_32_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~32);
-        
-        if (eventSessionEntity.getLobby() != null) {
-            int ranked = 0;
-
-            for (EventDataEntity race : eventDataDAO.getRacers(eventSessionEntity.getId())) {
-                if(race.getFinishReason() == 22) {
-                    ranked++;
-                }
-            }
-
-            if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) packet.setRank(ranked);
-        }
-        
+              
         return handleInternal(eventSessionEntity, activePersonaId, packet);
     }
 
@@ -101,7 +89,18 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         eventDataEntity.setEventDurationInMilliseconds(packet.getEventDurationInMilliseconds());
         eventDataEntity.setFinishReason(packet.getFinishReason());
         eventDataEntity.setHacksDetected(packet.getHacksDetected());
-        eventDataEntity.setRank(packet.getRank());  //@FIXME: Verify this with a database result.
+
+        int setRank = 0;
+        for (EventDataEntity dummy : eventDataDAO.getRacers(eventDataEntity.getEventSessionId())) {
+            if(packet.getFinishReason() == 22) setRank = setRank+1;
+        }
+
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) {
+            eventDataEntity.setRank(setRank);
+        } else {
+            eventDataEntity.setRank(packet.getRank()); 
+        }
+        
         eventDataEntity.setPersonaId(activePersonaId);
         eventDataEntity.setEventModeId(eventDataEntity.getEvent().getEventModeId());
         eventDataEntity.setServerTimeEnded(System.currentTimeMillis());
