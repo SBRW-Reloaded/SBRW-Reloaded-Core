@@ -157,6 +157,32 @@ public class MatchmakingBO {
         return false;
     }
 
+    /**
+     * Sets next possible ranking for given eventSessionId
+     *
+     * @param eventSessionId The ID of the session
+     * @param personaId The ID of the persona.
+     */
+    public void setRankForEventSessionId(Long eventSessionId, Long personaId) {
+        if (this.redisConnection != null) {
+            this.redisConnection.sync().sadd("eventsessionid_rank_" + eventSessionId, Long.toString(personaId));
+        }
+    }
+
+    /**
+     * Gets all ranking for given eventSessionId
+     * 
+     * @param eventSessionId The ID of the session.
+     */
+
+    public Long getRankForEventSessionId(Long eventSessionId) {
+        if(this.redisConnection != null) {
+            return this.redisConnection.sync().scard("eventsessionid_rank_" + eventSessionId);
+        }
+
+        return 0L;
+    }
+
     @Asynchronous
     @Lock(LockType.READ)
     public void handlePersonaPresenceUpdated(@Observes PersonaPresenceUpdated personaPresenceUpdated) {
