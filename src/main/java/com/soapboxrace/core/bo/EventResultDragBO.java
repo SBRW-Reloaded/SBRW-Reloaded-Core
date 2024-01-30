@@ -74,7 +74,8 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
             throw new EngineException("Session already completed.", EngineExceptionCode.SecurityKickedArbitration, true);
         }
 
-        prepareBasicEventData(eventDataEntity, activePersonaId, dragArbitrationPacket);
+        prepareBasicEventData(eventDataEntity, activePersonaId, dragArbitrationPacket, eventSessionEntity);
+        
         eventDataEntity.setFractionCompleted(dragArbitrationPacket.getFractionCompleted());
         eventDataEntity.setLongestJumpDurationInMilliseconds(dragArbitrationPacket.getLongestJumpDurationInMilliseconds());
         eventDataEntity.setNumberOfCollisions(dragArbitrationPacket.getNumberOfCollisions());

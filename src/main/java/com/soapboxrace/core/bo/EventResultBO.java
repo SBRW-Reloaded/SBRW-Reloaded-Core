@@ -80,8 +80,9 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
      * @param eventDataEntity the {@link EventDataEntity} instance
      * @param activePersonaId the ID of the current persona
      * @param packet          the {@link TA} instance
+     * @param eventSessionEntity the {@link EventSessionEntity} instance
      */
-    protected final void prepareBasicEventData(EventDataEntity eventDataEntity, Long activePersonaId, TA packet) {
+    protected final void prepareBasicEventData(EventDataEntity eventDataEntity, Long activePersonaId, TA packet, EventSessionEntity eventSessionEntity) {
         ClientPhysicsMetrics clientPhysicsMetrics = packet.getPhysicsMetrics();
 
         eventDataEntity.setAlternateEventDurationInMilliseconds(packet.getAlternateEventDurationInMilliseconds());
@@ -91,8 +92,12 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         eventDataEntity.setHacksDetected(packet.getHacksDetected());
 
         if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) {
-            matchmakingBO.setRankForEventSessionId(eventDataEntity.getEventSessionId(), activePersonaId);
-            eventDataEntity.setRank(Math.toIntExact(matchmakingBO.getRankForEventSessionId(eventDataEntity.getEventSessionId())));
+            if(eventSessionEntity.getLobby() != null) {
+                matchmakingBO.setRankForEventSessionId(eventDataEntity.getEventSessionId(), activePersonaId);
+                eventDataEntity.setRank(Math.toIntExact(matchmakingBO.getRankForEventSessionId(eventDataEntity.getEventSessionId())));
+            } else {
+                eventDataEntity.setRank(packet.getRank()); 
+            }
         } else {
             eventDataEntity.setRank(packet.getRank()); 
         }

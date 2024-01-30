@@ -60,7 +60,8 @@ public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket
             throw new EngineException("Session already completed.", EngineExceptionCode.SecurityKickedArbitration, true);
         }
 
-        prepareBasicEventData(eventDataEntity, activePersonaId, pursuitArbitrationPacket);
+        prepareBasicEventData(eventDataEntity, activePersonaId, pursuitArbitrationPacket, eventSessionEntity);
+        
         eventDataEntity.setCopsDeployed(pursuitArbitrationPacket.getCopsDeployed());
         eventDataEntity.setCopsDisabled(pursuitArbitrationPacket.getCopsDisabled());
         eventDataEntity.setCopsRammed(pursuitArbitrationPacket.getCopsRammed());
