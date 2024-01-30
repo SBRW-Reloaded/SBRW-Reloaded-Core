@@ -165,7 +165,8 @@ public class MatchmakingBO {
      */
     public void setRankForEventSessionId(Long eventSessionId, Long personaId) {
         if (this.redisConnection != null) {
-            this.redisConnection.sync().sadd("eventsessionid_rank_" + eventSessionId, Long.toString(personaId));
+            this.redisConnection.sync().sadd("eventsessionid." + eventSessionId, Long.toString(personaId));
+            this.redisConnection.sync().expire("eventsessionid." + eventSessionId, Long.valueOf(7200));
         }
     }
 
@@ -177,7 +178,7 @@ public class MatchmakingBO {
 
     public Long getRankForEventSessionId(Long eventSessionId) {
         if(this.redisConnection != null) {
-            return this.redisConnection.sync().scard("eventsessionid_rank_" + eventSessionId);
+            return this.redisConnection.sync().scard("eventsessionid." + eventSessionId);
         }
 
         return 0L;
