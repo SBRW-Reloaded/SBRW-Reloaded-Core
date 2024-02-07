@@ -26,8 +26,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
 import com.soapboxrace.core.bo.util.DiscordWebhook;
-import com.soapboxrace.core.dao.PersonaDAO;
-import com.soapboxrace.core.dao.LobbyDAO;
+import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
 
 @Path("/matchmaking")
@@ -59,6 +58,9 @@ public class MatchMaking {
 
     @EJB
     private ParameterBO parameterBO;
+
+    @EJB
+    private EventDAO eventDAO;
 
     @EJB
     private OpenFireRestApiCli openFireRestApiCli;
@@ -120,6 +122,19 @@ public class MatchMaking {
     @Path("/launchevent/{eventId}")
     @Produces(MediaType.APPLICATION_XML)
     public SessionInfo launchEvent(@PathParam("eventId") int eventId) {
+
+        /*EventEntity event = eventDAO.find(eventId);
+        if(event == null) {
+            return new SessionInfo();
+        }
+
+        if(event.isRankedMode()) {
+            LobbyEntity lobby = lobbyDAO.findByEventAndPersona(event, requestSessionInfo.getActivePersonaId());
+            if(lobby.getEntrants().size() != 4) {
+                return new SessionInfo();
+            }
+        }*/
+
         TokenSessionEntity tokenSessionEntity = requestSessionInfo.getTokenSessionEntity();
         EventSessionEntity createEventSession = eventBO.createEventSession(tokenSessionEntity, eventId);
 

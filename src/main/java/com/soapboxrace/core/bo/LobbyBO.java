@@ -280,6 +280,30 @@ public class LobbyBO {
         lobbyInfoType.setLobbyInviteId(lobbyInviteId);
         lobbyInfoType.setLobbyId(lobbyInviteId);
 
+        new java.util.Timer().schedule( 
+            new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
+                    int racersinlobby = lobbyEntity.getEntrants().size();
+                    System.out.println("racersinlobby: " + racersinlobby);
+
+                    if(racersinlobby != 4) { 
+                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_RANKEDMODE_NOTENOUGHPLAYERS"), personaEntity.getPersonaId());
+
+                        matchmakingBO.removePlayerFromQueue(personaId);
+                        for (LobbyEntrantEntity lobbyEntrantEntity : entrants) {
+                            if (!Objects.equals(personaEntity.getPersonaId(), lobbyEntrantEntity.getPersona().getPersonaId())) {
+                                lobbyMessagingBO.sendLeaveMessage(lobbyEntity, personaEntity, lobbyEntrantEntity.getPersona());
+                            }
+                        }
+
+                        lobbyInfoType.setEntrants(null);
+                    }
+                }
+            }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-3000)
+        );
+
         if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
