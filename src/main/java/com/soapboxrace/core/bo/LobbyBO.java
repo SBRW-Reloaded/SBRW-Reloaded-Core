@@ -284,21 +284,25 @@ public class LobbyBO {
             new java.util.TimerTask() {
                 @Override
                 public void run() {
-                    LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
-                    int racersinlobby = lobbyEntity.getEntrants().size();
-                    System.out.println("racersinlobby: " + racersinlobby);
+                    if(lobbyEntity.getEvent().isRankedMode()) {
+                        LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
+                        int racersinlobby = lobbyEntity.getEntrants().size();
+                        System.out.println("racersinlobby: " + racersinlobby);
 
-                    if(racersinlobby != 4) { 
-                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_RANKEDMODE_NOTENOUGHPLAYERS"), personaEntity.getPersonaId());
+                        if(racersinlobby != 4) { 
+                            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_RANKEDMODE_NOTENOUGHPLAYERS"), personaEntity.getPersonaId());
 
-                        matchmakingBO.removePlayerFromQueue(personaId);
-                        for (LobbyEntrantEntity lobbyEntrantEntity : entrants) {
-                            if (!Objects.equals(personaEntity.getPersonaId(), lobbyEntrantEntity.getPersona().getPersonaId())) {
-                                lobbyMessagingBO.sendLeaveMessage(lobbyEntity, personaEntity, lobbyEntrantEntity.getPersona());
+                            matchmakingBO.removePlayerFromQueue(personaId);
+                            removeEntrantFromLobby(personaEntity.getPersonaId(), lobbyEntity.getId());
+
+                            for (LobbyEntrantEntity lobbyEntrantEntity : lobbyEntity.getEntrants()) {
+                                if (!Objects.equals(personaEntity.getPersonaId(), lobbyEntrantEntity.getPersona().getPersonaId())) {
+                                    lobbyMessagingBO.sendLeaveMessage(lobbyEntity, personaEntity, lobbyEntrantEntity.getPersona());
+                                }
                             }
-                        }
 
-                        lobbyInfoType.setEntrants(null);
+                            lobbyInfoType.setEntrants(null);
+                        }
                     }
                 }
             }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-3000)
