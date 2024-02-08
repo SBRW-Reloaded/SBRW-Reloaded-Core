@@ -273,14 +273,6 @@ public class LobbyBO {
             lobbyEntrantInfo.add(LobbyEntrantInfo);
         }
 
-        
-        //Set timer to start event faster for RANKEDMODE
-        if(lobbyEntity.getEvent().isRankedMode()) {
-            if(lobbyEntity.getEntrants().size() == 4) {
-                lobbyCountdown.setLobbyCountdownInMilliseconds(5000);
-            }
-        }
-
         LobbyInfo lobbyInfoType = new LobbyInfo();
         lobbyInfoType.setCountdown(lobbyCountdown);
         lobbyInfoType.setEntrants(arrayOfLobbyEntrantInfo);
