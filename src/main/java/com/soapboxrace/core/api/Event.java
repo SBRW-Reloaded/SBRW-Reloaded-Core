@@ -77,8 +77,8 @@ public class Event {
     public String abort(@QueryParam("eventSessionId") Long eventSessionId) {
 
         EventDataEntity leavepenality = eventDataDAO.findByPersonaAndEventSessionId(requestSessionInfo.getActivePersonaId() ,eventSessionId);
-        leavepenality.setRank(-1);
         leavepenality.setFinishReason(518);
+        leavepenality.setLeftRace(true);
         eventDataDAO.update(leavepenality);
 
         if(leavepenality.getEvent().isRankedMode()) {

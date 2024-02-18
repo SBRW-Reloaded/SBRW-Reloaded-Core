@@ -75,6 +75,7 @@ public class EventDataEntity {
     private Float speedMedian;
 
     private String eventDataSetupHash;
+    private boolean leftRace;
 
     public Long getId() {
         return id;
@@ -408,5 +409,13 @@ public class EventDataEntity {
 
     public void setEventDataSetupHash(String eventDataSetupHash) {
         this.eventDataSetupHash = eventDataSetupHash;
+    }
+
+    public boolean getLeftRace() {
+        return leftRace;
+    }
+
+    public void setLeftRace(boolean leftRace) {
+        this.leftRace = leftRace;
     }
 }

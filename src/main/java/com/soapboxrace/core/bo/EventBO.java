@@ -55,6 +55,7 @@ public class EventBO {
         eventDataEntity.setServerTimeStarted(System.currentTimeMillis());
         eventDataEntity.setCarClassHash(carEntity.getCarClassHash());
         eventDataEntity.setCarRating(carEntity.getRating());
+        eventDataEntity.setLeftRace(false);
         eventDataDao.insert(eventDataEntity);
     }
 
