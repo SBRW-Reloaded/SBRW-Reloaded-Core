@@ -104,7 +104,7 @@ public class Event {
                 rankedEntity.setPointsLost(ranking_points_earned);
                 rankedDAO.insert(rankedEntity);
 
-                personaEntity.setRankingPoints(calculated_ranking_points);
+                personaEntity.setRankingPoints(calculated_ranking_points/-1);
                 personaDAO.update(personaEntity);
             }
         }

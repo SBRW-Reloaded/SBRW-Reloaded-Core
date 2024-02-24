@@ -70,7 +70,7 @@ public class RankingBO {
 
             if(isLost) {
                 rankedEntity.setPointsWon(0);
-                rankedEntity.setPointsLost(ranking_points_earned);
+                rankedEntity.setPointsLost(ranking_points_earned/-1);
             } else {
                 rankedEntity.setPointsWon(ranking_points_earned);
                 rankedEntity.setPointsLost(0);
