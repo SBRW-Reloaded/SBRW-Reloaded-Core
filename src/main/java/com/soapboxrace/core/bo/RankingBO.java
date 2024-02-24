@@ -78,6 +78,9 @@ public class RankingBO {
 
             rankedDAO.insert(rankedEntity);
 
+            personaEntity.setRankingPoints(calculated_ranking_points);
+            personaDAO.update(personaEntity);
+
             String rankingMessage = String.format("SBRWR_RANKEDMODE_POS%s,%s,%s", position, ranking_points_earned, calculated_ranking_points);
 
             openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), activePersonaId);
