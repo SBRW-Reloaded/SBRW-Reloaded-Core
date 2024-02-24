@@ -21,6 +21,7 @@ import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
+import java.time.LocalDateTime;
 
 @Path("/event")
 public class Event {
@@ -60,6 +61,9 @@ public class Event {
 
     @EJB
     private PersonaDAO personaDAO;
+
+    @EJB
+    private RankedDAO rankedDAO;
     
     @EJB
     private PresenceBO presenceBO;
@@ -92,6 +96,13 @@ public class Event {
 
                 String rankingMessage = String.format("SBRWR_RANKEDMODE_POS_LEFT,%s,%s", ranking_points_earned, calculated_ranking_points);
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), requestSessionInfo.getActivePersonaId());
+
+                RankedEntity rankedEntity = new RankedEntity();
+                rankedEntity.setDate(LocalDateTime.now());
+                rankedEntity.setPersonaId(personaEntity.getPersonaId().intValue());
+                rankedEntity.setPointsWon(0);
+                rankedEntity.setPointsLost(ranking_points_earned);
+                rankedDAO.insert(rankedEntity);
             }
         }
 

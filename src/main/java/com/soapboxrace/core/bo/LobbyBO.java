@@ -167,6 +167,10 @@ public class LobbyBO {
             if (checkIgnoredEvents && matchmakingBO.isEventIgnored(personaEntity.getPersonaId(), event.getId()))
                 continue;
 
+            if(event.isRankedMode())
+                if (event.getRankMin() >= personaEntity.getRankingPoints() && personaEntity.getRankingPoints() >= event.getRankMax())
+                    continue;
+
             int maxEntrants = event.getMaxPlayers();
             List<LobbyEntrantEntity> lobbyEntrants = lobbyEntityTmp.getEntrants();
             int entrantsSize = lobbyEntrants.size();
