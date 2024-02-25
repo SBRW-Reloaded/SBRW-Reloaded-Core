@@ -290,18 +290,16 @@ public class LobbyBO {
 
         // Let's pray this will work, i will literally thank personally Leo for this piece of code.
         if(lobbyEntity.getEntrants().size() == lobbyEntity.getEvent().getMaxPlayers()) {
+            System.out.println("MAX PLAYERS WAS HIT!");
             informNoPuAndOtherInfos = false;
-            final XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
-            final LobbyCountdown temp = new LobbyCountdown();
-            temp.setLobbyId(lobbyEntity.getId());
-            temp.setEventId(lobbyEntity.getEvent().getId());
-            temp.setLobbyStuckDurationInMilliseconds(10000);
-            temp.setIsWaiting(false);
-            temp.setLobbyCountdownInMilliseconds(5000);
+            XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
+            lobbyCountdown.setLobbyStuckDurationInMilliseconds(1000);
+            lobbyCountdown.setLobbyCountdownInMilliseconds(2000);
 
-            response.setLobbyCountdown(temp);
+            response.setLobbyCountdown(lobbyCountdown);
 
             for (LobbyEntrantEntity lobbyEntrant : lobbyEntity.getEntrants()) {
+                System.out.println("WE SENT THIS TO " + lobbyEntrant.getPersona().getName() + ": " + response);
                 openFireSoapBoxCli.send(response, lobbyEntrant.getPersona().getPersonaId());
             }
         }
