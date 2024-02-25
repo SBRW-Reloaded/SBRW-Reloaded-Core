@@ -151,7 +151,9 @@ public class LobbyBO {
             }
         }
 
-        lobbyCountdownBO.scheduleLobbyStart(lobbyEntity);
+        if(eventEntity.isRankedMode() == false) {
+            lobbyCountdownBO.scheduleLobbyStart(lobbyEntity);
+        }
 
         return lobbyEntity;
     }
@@ -235,6 +237,7 @@ public class LobbyBO {
         lobbyCountdown.setEventId(eventId);
         lobbyCountdown.setLobbyStuckDurationInMilliseconds(10000);
         lobbyCountdown.setLobbyCountdownInMilliseconds(lobbyEntity.getLobbyCountdownInMilliseconds(lobbyEntity.getEvent().getLobbyCountdownTime()));
+        lobbyCountdown.setIsWaiting(lobbyEntity.getEvent().isRankedMode());
 
         ArrayOfLobbyEntrantInfo arrayOfLobbyEntrantInfo = new ArrayOfLobbyEntrantInfo();
         List<LobbyEntrantInfo> lobbyEntrantInfo = arrayOfLobbyEntrantInfo.getLobbyEntrantInfo();
@@ -357,7 +360,7 @@ public class LobbyBO {
                                 }
                             }
                         }
-                    }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-5000)
+                    }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-3000)
                 );
             }
         }
