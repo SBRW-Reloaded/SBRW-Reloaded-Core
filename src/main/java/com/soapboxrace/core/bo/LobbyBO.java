@@ -19,7 +19,9 @@ import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.ArrayOfLobbyEntrantInfo;
 import com.soapboxrace.jaxb.http.LobbyCountdown;
 import com.soapboxrace.jaxb.http.LobbyEntrantInfo;
+import com.soapboxrace.jaxb.http.LobbyEntrantState;
 import com.soapboxrace.jaxb.http.LobbyInfo;
+import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeLobbyCountdown;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -214,6 +216,7 @@ public class LobbyBO {
     }
 
     public LobbyInfo acceptinvite(Long personaId, Long lobbyInviteId) {
+        Boolean informNoPuAndOtherInfos = true;
         LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
         PersonaEntity personaEntity = personaDao.find(personaId);
 
@@ -284,6 +287,25 @@ public class LobbyBO {
         lobbyInfoType.setLobbyInviteId(lobbyInviteId);
         lobbyInfoType.setLobbyId(lobbyInviteId);
 
+
+        // Let's pray this will work, i will literally thank personally Leo for this piece of code.
+        if(lobbyEntity.getEntrants().size() == lobbyEntity.getEvent().getMaxPlayers()) {
+            informNoPuAndOtherInfos = false;
+            final XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
+            final LobbyCountdown temp = new LobbyCountdown();
+            temp.setLobbyId(lobbyEntity.getId());
+            temp.setEventId(lobbyEntity.getEvent().getId());
+            temp.setLobbyStuckDurationInMilliseconds(10000);
+            temp.setIsWaiting(false);
+            temp.setLobbyCountdownInMilliseconds(5000);
+
+            response.setLobbyCountdown(temp);
+
+            for (LobbyEntrantEntity lobbyEntrant : lobbyEntity.getEntrants()) {
+                openFireSoapBoxCli.send(response, lobbyEntrant.getPersona().getPersonaId());
+            }
+        }
+
         new java.util.Timer().schedule( 
             new java.util.TimerTask() {
                 @Override
@@ -312,7 +334,7 @@ public class LobbyBO {
             }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-3000)
         );
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && informNoPuAndOtherInfos) {
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
                     @Override
