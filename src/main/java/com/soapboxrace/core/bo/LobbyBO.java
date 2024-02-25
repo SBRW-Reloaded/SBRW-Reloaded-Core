@@ -293,7 +293,7 @@ public class LobbyBO {
             System.out.println("MAX PLAYERS WAS HIT!");
             informNoPuAndOtherInfos = false;
             XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
-            lobbyCountdown.setLobbyStuckDurationInMilliseconds(4000);
+            lobbyCountdown.setLobbyStuckDurationInMilliseconds(10000);
             lobbyCountdown.setLobbyCountdownInMilliseconds(4000);
 
             response.setLobbyCountdown(lobbyCountdown);
@@ -304,7 +304,7 @@ public class LobbyBO {
             }
         }
 
-        if(informNoPuAndOtherInfos == false) {
+        if(informNoPuAndOtherInfos == true) {
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
                     @Override
