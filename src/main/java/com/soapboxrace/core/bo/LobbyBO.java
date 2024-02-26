@@ -248,12 +248,6 @@ public class LobbyBO {
             throw new EngineException(EngineExceptionCode.GameLocked, false);
         }
 
-        if(lobbyEntity.getEvent().isRankedMode() == false) {
-            if (lobbyCountdown.getLobbyCountdownInMilliseconds() <= 6000) {
-                throw new EngineException(EngineExceptionCode.GameLocked, false);
-            }
-        }
-
         matchmakingBO.removePlayerFromQueue(personaId);
         for (LobbyEntrantEntity lobbyEntrantEntity : entrants) {
             if (!Objects.equals(personaEntity.getPersonaId(), lobbyEntrantEntity.getPersona().getPersonaId())) {
