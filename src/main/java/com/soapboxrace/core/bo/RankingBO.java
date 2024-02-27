@@ -61,9 +61,6 @@ public class RankingBO {
                     break;
             }
 
-            calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
-            if(calculated_ranking_points == 0) ranking_points_earned = 0;
-
             RankedEntity rankedEntity = new RankedEntity();
             rankedEntity.setDate(LocalDateTime.now());
             rankedEntity.setPersonaId(personaEntity.getPersonaId().intValue());
@@ -77,6 +74,9 @@ public class RankingBO {
             }
 
             rankedDAO.insert(rankedEntity);
+            
+            calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
+            if(calculated_ranking_points == 0) ranking_points_earned = 0;
 
             personaEntity.setRankingPoints(calculated_ranking_points);
             personaDAO.update(personaEntity);
