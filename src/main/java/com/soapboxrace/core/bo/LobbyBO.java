@@ -302,62 +302,32 @@ public class LobbyBO {
         lobbyInfoType.setLobbyInviteId(lobbyInviteId);
         lobbyInfoType.setLobbyId(lobbyInviteId);
 
-        if(informNoPuAndOtherInfos == true) {
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
                     @Override
                     public void run() {
-                        if(lobbyEntity.getEvent().isRankedMode()) {
-                            LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
-                            int racersinlobby = lobbyEntity.getEntrants().size();
-                            System.out.println("racersinlobby: " + racersinlobby);
+                        LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
+                        LobbyEntrantEntity userCheck = lobbyEntrantDao.getVoteStatus(personaEntity, lobbyEntity);
 
-                            if(racersinlobby != 4) { 
-                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_RANKEDMODE_NOTENOUGHPLAYERS"), personaEntity.getPersonaId());
+                        if(userCheck != null) {
+                            List<LobbyEntrantEntity> lobbyEntrants = lobbyEntity.getEntrants();
 
-                                matchmakingBO.removePlayerFromQueue(personaId);
-                                removeEntrantFromLobby(personaEntity.getPersonaId(), lobbyEntity.getId());
-
-                                for (LobbyEntrantEntity lobbyEntrantEntity : lobbyEntity.getEntrants()) {
-                                    if (!Objects.equals(personaEntity.getPersonaId(), lobbyEntrantEntity.getPersona().getPersonaId())) {
-                                        lobbyMessagingBO.sendLeaveMessage(lobbyEntity, personaEntity, lobbyEntrantEntity.getPersona());
-                                    }
+                            Integer totalVotes = lobbyEntrantDao.getVotes(lobbyEntity);
+                            Integer totalUsersInLobby = lobbyEntrants.size();
+                            Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
+                                
+                            if(totalVotesPercentage < parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
+                                if(parameterBO.getBoolParam("SBRWR_NOPU_SHOW_NOTENOUGHVOTES")) {
+                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
                                 }
-
-                                lobbyInfoType.setEntrants(null);
+                            } else {
+                                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_SUCCESS"), personaEntity.getPersonaId());
                             }
                         }
                     }
-                }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-3000)
+                }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-2000)
             );
-
-            if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
-                new java.util.Timer().schedule( 
-                    new java.util.TimerTask() {
-                        @Override
-                        public void run() {
-                            LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
-                            LobbyEntrantEntity userCheck = lobbyEntrantDao.getVoteStatus(personaEntity, lobbyEntity);
-
-                            if(userCheck != null) {
-                                List<LobbyEntrantEntity> lobbyEntrants = lobbyEntity.getEntrants();
-
-                                Integer totalVotes = lobbyEntrantDao.getVotes(lobbyEntity);
-                                Integer totalUsersInLobby = lobbyEntrants.size();
-                                Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
-                                
-                                if(totalVotesPercentage < parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
-                                    if(parameterBO.getBoolParam("SBRWR_NOPU_SHOW_NOTENOUGHVOTES")) {
-                                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
-                                    }
-                                } else {
-                                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_SUCCESS"), personaEntity.getPersonaId());
-                                }
-                            }
-                        }
-                    }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-3000)
-                );
-            }
         }
 
         return lobbyInfoType;
