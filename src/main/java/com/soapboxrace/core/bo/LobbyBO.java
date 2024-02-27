@@ -292,8 +292,7 @@ public class LobbyBO {
                 openFireSoapBoxCli.send(response, lobbyEntrant.getPersona().getPersonaId());
             }
 
-            lobbyEntity.getEvent().setLobbyCountdownTime(6000);
-            lobbyCountdownBO.scheduleLobbyStart(lobbyEntity);
+            lobbyCountdownBO.scheduleLobbyStart(lobbyEntity, 6000);
         }
 
         LobbyInfo lobbyInfoType = new LobbyInfo();
