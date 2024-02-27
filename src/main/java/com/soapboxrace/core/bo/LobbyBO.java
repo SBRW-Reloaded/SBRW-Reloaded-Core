@@ -284,7 +284,7 @@ public class LobbyBO {
             informNoPuAndOtherInfos = false;
             XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
             lobbyCountdown.setIsWaiting(false);
-            lobbyCountdown.setLobbyCountdownInMilliseconds(4000);
+            lobbyCountdown.setLobbyCountdownInMilliseconds(6000);
         
             response.setLobbyCountdown(lobbyCountdown);
         
@@ -292,7 +292,7 @@ public class LobbyBO {
                 openFireSoapBoxCli.send(response, lobbyEntrant.getPersona().getPersonaId());
             }
 
-            lobbyEntity.getEvent().setLobbyCountdownTime(4000);
+            lobbyEntity.getEvent().setLobbyCountdownTime(6000);
             lobbyCountdownBO.scheduleLobbyStart(lobbyEntity);
         }
 
