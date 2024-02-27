@@ -218,7 +218,6 @@ public class LobbyBO {
     }
 
     public LobbyInfo acceptinvite(Long personaId, Long lobbyInviteId) {
-        Boolean informNoPuAndOtherInfos = true;
         LobbyEntity lobbyEntity = lobbyDao.find(lobbyInviteId);
         PersonaEntity personaEntity = personaDao.find(personaId);
 
@@ -279,9 +278,8 @@ public class LobbyBO {
             lobbyEntrantInfo.add(LobbyEntrantInfo);
         }
 
-       // Let's pray this will work, i will literally thank personally Leo for this piece of code.
-       if(lobbyEntity.getEntrants().size() == lobbyEntity.getEvent().getMaxPlayers()) {
-            informNoPuAndOtherInfos = false;
+        // Let's pray this will work, i will literally thank personally Leo for this piece of code.
+        if(lobbyEntity.getEntrants().size() == lobbyEntity.getEvent().getMaxPlayers()) {
             XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
             lobbyCountdown.setIsWaiting(false);
             lobbyCountdown.setLobbyCountdownInMilliseconds(6000);
@@ -293,6 +291,8 @@ public class LobbyBO {
             }
 
             lobbyCountdownBO.scheduleLobbyStart(lobbyEntity, 6000);
+        } else {
+            lobbyCountdown.setIsWaiting(lobbyEntity.getEvent().isRankedMode());
         }
 
         LobbyInfo lobbyInfoType = new LobbyInfo();
