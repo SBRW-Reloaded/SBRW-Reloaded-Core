@@ -60,7 +60,7 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
         if (eventDataEntity.getFinishReason() != 0) {
-            throw new EngineException("Session already completed.", EngineExceptionCode.SecurityKickedArbitration, true);
+            return new RouteEventResult();
         }
 
         prepareBasicEventData(eventDataEntity, activePersonaId, routeArbitrationPacket, eventSessionEntity);

@@ -71,7 +71,7 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
         if (eventDataEntity.getFinishReason() != 0) {
-            throw new EngineException("Session already completed.", EngineExceptionCode.SecurityKickedArbitration, true);
+            return new DragEventResult();
         }
 
         prepareBasicEventData(eventDataEntity, activePersonaId, dragArbitrationPacket, eventSessionEntity);

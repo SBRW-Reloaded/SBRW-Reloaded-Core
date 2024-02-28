@@ -122,19 +122,6 @@ public class MatchMaking {
     @Path("/launchevent/{eventId}")
     @Produces(MediaType.APPLICATION_XML)
     public SessionInfo launchEvent(@PathParam("eventId") int eventId) {
-
-        /*EventEntity event = eventDAO.find(eventId);
-        if(event == null) {
-            return new SessionInfo();
-        }
-
-        if(event.isRankedMode()) {
-            LobbyEntity lobby = lobbyDAO.findByEventAndPersona(event, requestSessionInfo.getActivePersonaId());
-            if(lobby.getEntrants().size() != 4) {
-                return new SessionInfo();
-            }
-        }*/
-
         TokenSessionEntity tokenSessionEntity = requestSessionInfo.getTokenSessionEntity();
         EventSessionEntity createEventSession = eventBO.createEventSession(tokenSessionEntity, eventId);
 

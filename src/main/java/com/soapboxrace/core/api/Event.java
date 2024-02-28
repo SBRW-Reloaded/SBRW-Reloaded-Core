@@ -91,18 +91,18 @@ public class Event {
                 int current_ranking_points = personaEntity.getRankingPoints();
                 int ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_LEFTRACE", -28);
 
-                int calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
-                if(calculated_ranking_points == 0) ranking_points_earned = 0;
-
-                String rankingMessage = String.format("SBRWR_RANKEDMODE_POS_LEFT,%s,%s", ranking_points_earned, calculated_ranking_points);
-                openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), requestSessionInfo.getActivePersonaId());
-
                 RankedEntity rankedEntity = new RankedEntity();
                 rankedEntity.setDate(LocalDateTime.now());
                 rankedEntity.setPersonaId(personaEntity.getPersonaId().intValue());
                 rankedEntity.setPointsWon(0);
                 rankedEntity.setPointsLost(ranking_points_earned);
                 rankedDAO.insert(rankedEntity);
+
+                int calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
+                if(calculated_ranking_points == 0) ranking_points_earned = 0;
+
+                String rankingMessage = String.format("SBRWR_RANKEDMODE_POS_LEFT,%s,%s", ranking_points_earned, calculated_ranking_points);
+                openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), requestSessionInfo.getActivePersonaId());
 
                 personaEntity.setRankingPoints(calculated_ranking_points/-1);
                 personaDAO.update(personaEntity);

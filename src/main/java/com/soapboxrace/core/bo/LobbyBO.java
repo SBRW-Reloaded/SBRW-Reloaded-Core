@@ -19,7 +19,6 @@ import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.ArrayOfLobbyEntrantInfo;
 import com.soapboxrace.jaxb.http.LobbyCountdown;
 import com.soapboxrace.jaxb.http.LobbyEntrantInfo;
-import com.soapboxrace.jaxb.http.LobbyEntrantState;
 import com.soapboxrace.jaxb.http.LobbyInfo;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeLobbyCountdown;
 
