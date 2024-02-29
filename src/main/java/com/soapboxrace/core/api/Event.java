@@ -104,7 +104,7 @@ public class Event {
                 String rankingMessage = String.format("SBRWR_RANKEDMODE_POS_LEFT,%s,%s", ranking_points_earned, calculated_ranking_points);
                 openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), requestSessionInfo.getActivePersonaId());
 
-                personaEntity.setRankingPoints(calculated_ranking_points/-1);
+                personaEntity.setRankingPoints(calculated_ranking_points);
                 personaDAO.update(personaEntity);
             }
         }
