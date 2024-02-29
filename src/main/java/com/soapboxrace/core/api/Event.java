@@ -95,7 +95,7 @@ public class Event {
                 rankedEntity.setDate(LocalDateTime.now());
                 rankedEntity.setPersonaId(personaEntity.getPersonaId().intValue());
                 rankedEntity.setPointsWon(0);
-                rankedEntity.setPointsLost(ranking_points_earned);
+                rankedEntity.setPointsLost(ranking_points_earned/-1);
                 rankedDAO.insert(rankedEntity);
 
                 int calculated_ranking_points = Math.max(current_ranking_points + ranking_points_earned, 0);
