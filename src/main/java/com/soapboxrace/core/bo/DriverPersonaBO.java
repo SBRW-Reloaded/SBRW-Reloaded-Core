@@ -281,9 +281,24 @@ public class DriverPersonaBO {
         //Because i forgot to tag it...
         if (personaDao.findByName(name) != null) {
             arrayOfString.getString().add("NONE");
-        } else if (name.equals("NONE")) {
+        } 
+        
+        if (name.equals("NONE")) {
             arrayOfString.getString().add("SRSLY");
-        } else if (parameterBO.getStrParam("BLACKLISTED_NICKNAMES", "").contains(name)) {
+        }
+
+        String blacklistedNames = parameterBO.getStrParam("BLACKLISTED_NICKNAMES", "");
+        String[] blacklistedArray = blacklistedNames.split(",");
+
+        boolean isBlacklisted = false;
+        for (String blacklistedName : blacklistedArray) {
+            if (name.contains(blacklistedName)) {
+                isBlacklisted = true;
+                break;
+            }
+        }
+
+        if (isBlacklisted) {
             arrayOfString.getString().add("NONE");
         }
 
