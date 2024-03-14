@@ -190,6 +190,10 @@ public class User {
     @LauncherChecks
     public Response modernRegister(ModernRegisterRequest req)
     {
+        if(!parameterBO.getStrParam("SERVER_INFO_SIGNUPURL").isEmpty()) {
+            return Response.ok(new ModernRegisterResponse("In order to create account, please go to " + parameterBO.getStrParam("SERVER_INFO_SIGNUPURL"))).build();
+        }
+
         try {
             if (!parameterBO.getBoolParam("MODERN_AUTH_ENABLED")) {
                 throw new AuthException("Modern Auth not enabled!");
