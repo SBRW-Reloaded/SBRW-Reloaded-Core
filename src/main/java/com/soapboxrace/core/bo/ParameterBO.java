@@ -97,7 +97,7 @@ public class ParameterBO {
         String parameterFromDB = getParameter(parameter);
 
         if (parameterFromDB == null || parameterFromDB.isEmpty()) {
-            setParameter(parameter, "");
+            return "";
         }
 
         return parameterFromDB;
