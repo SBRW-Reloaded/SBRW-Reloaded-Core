@@ -8,6 +8,7 @@ package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.*;
+import com.soapboxrace.core.bo.util.RacerStatus;
 import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
@@ -84,6 +85,8 @@ public class Event {
         if(leavepenality != null) {
             leavepenality.setFinishReason(518);
             leavepenality.setLeftRace(true);
+            leavepenality.setRacerStatus(RacerStatus.ABANDONED);
+
             eventDataDAO.update(leavepenality);
 
             if(leavepenality.getEvent().isRankedMode()) {
@@ -167,27 +170,20 @@ public class Event {
         switch (eventMode) {
             case CIRCUIT:
             case SPRINT:
-                RouteArbitrationPacket routeArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml,
-                        RouteArbitrationPacket.class);
-                eventResult = eventResultRouteBO.handle(eventSessionEntity, activePersonaId,
-                        routeArbitrationPacket);
+                RouteArbitrationPacket routeArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml, RouteArbitrationPacket.class);
+                eventResult = eventResultRouteBO.handle(eventSessionEntity, activePersonaId, routeArbitrationPacket);
                 break;
             case DRAG:
-                DragArbitrationPacket dragArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml,
-                        DragArbitrationPacket.class);
+                DragArbitrationPacket dragArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml, DragArbitrationPacket.class);
                 eventResult = eventResultDragBO.handle(eventSessionEntity, activePersonaId, dragArbitrationPacket);
                 break;
             case PURSUIT_MP:
-                TeamEscapeArbitrationPacket teamEscapeArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml,
-                        TeamEscapeArbitrationPacket.class);
-                eventResult = eventResultTeamEscapeBO.handle(eventSessionEntity, activePersonaId,
-                        teamEscapeArbitrationPacket);
+                TeamEscapeArbitrationPacket teamEscapeArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml, TeamEscapeArbitrationPacket.class);
+                eventResult = eventResultTeamEscapeBO.handle(eventSessionEntity, activePersonaId, teamEscapeArbitrationPacket);
                 break;
             case PURSUIT_SP:
-                PursuitArbitrationPacket pursuitArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml,
-                        PursuitArbitrationPacket.class);
-                eventResult = eventResultPursuitBO.handle(eventSessionEntity, activePersonaId,
-                        pursuitArbitrationPacket);
+                PursuitArbitrationPacket pursuitArbitrationPacket = JAXBUtility.unMarshal(arbitrationXml, PursuitArbitrationPacket.class);
+                eventResult = eventResultPursuitBO.handle(eventSessionEntity, activePersonaId, pursuitArbitrationPacket);
                 break;
             case MEETINGPLACE:
             default:
@@ -208,11 +204,16 @@ public class Event {
     @Secured
     @Path("/bust")
     @Produces(MediaType.APPLICATION_XML)
-    public String bust(InputStream bustXml, @HeaderParam("securityToken") String securityToken, @QueryParam(
-            "eventSessionId") Long eventSessionId) {
+    public String bust(InputStream bustXml, @HeaderParam("securityToken") String securityToken, @QueryParam("eventSessionId") Long eventSessionId) {
         EventSessionEntity eventSessionEntity = eventBO.findEventSessionById(eventSessionId);
-        PursuitArbitrationPacket pursuitArbitrationPacket = JAXBUtility.unMarshal(bustXml,
-                PursuitArbitrationPacket.class);
+        EventDataEntity bustedData = eventDataDAO.findByPersonaAndEventSessionId(requestSessionInfo.getActivePersonaId() ,eventSessionId);
+
+        if(bustedData != null) {
+            bustedData.setRacerStatus(RacerStatus.BUSTED);
+            eventDataDAO.update(bustedData);
+        }
+
+        PursuitArbitrationPacket pursuitArbitrationPacket = JAXBUtility.unMarshal(bustXml, PursuitArbitrationPacket.class);
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
         return JAXBUtility.marshal(eventResultPursuitBO.handle(eventSessionEntity, activePersonaId, pursuitArbitrationPacket));
     }

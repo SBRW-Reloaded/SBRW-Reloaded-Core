@@ -8,6 +8,8 @@ package com.soapboxrace.core.jpa;
 
 import javax.persistence.*;
 
+import com.soapboxrace.core.bo.util.RacerStatus;
+
 @Entity
 @Table(name = "EVENT_DATA")
 @NamedQueries({ //
@@ -76,6 +78,7 @@ public class EventDataEntity {
 
     private String eventDataSetupHash;
     private boolean leftRace;
+    private RacerStatus racerStatus;
 
     public Long getId() {
         return id;
@@ -417,5 +420,13 @@ public class EventDataEntity {
 
     public void setLeftRace(boolean leftRace) {
         this.leftRace = leftRace;
+    }
+
+    public RacerStatus geRacerStatus() {
+        return racerStatus;
+    }
+
+    public void setRacerStatus(RacerStatus racerStatus) {
+        this.racerStatus = racerStatus;
     }
 }
