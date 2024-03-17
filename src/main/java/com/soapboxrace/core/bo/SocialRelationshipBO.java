@@ -348,7 +348,9 @@ public class SocialRelationshipBO {
     private void addFriendToList(PersonaFriendsList personaFriendsList,
                                  SocialRelationshipEntity socialRelationshipEntity) {
         for (PersonaEntity personaEntity : socialRelationshipEntity.getRemoteUser().getPersonas()) {
+
             FriendPersona friendPersona = copyPersonaEntityToFriendPersona(personaEntity);
+            friendPersona.setLevel(personaEntity.getRealLevel());
             friendPersona.setPresence(presenceBO.getPresence(personaEntity.getPersonaId()));
             personaFriendsList.getFriendPersona().getFriendPersona().add(friendPersona);
         }
@@ -370,7 +372,7 @@ public class SocialRelationshipBO {
         friendPersona.setOriginalName("test");
         friendPersona.setSocialNetwork(0);
         friendPersona.setUserId(personaEntity.getUser().getId());
-        friendPersona.setLevel(personaEntity.getLevel());
+        friendPersona.setLevel(personaEntity.getRealLevel());
         friendPersona.setIconIndex(personaEntity.getIconIndex());
 
         return friendPersona;
