@@ -309,5 +309,4 @@ public class ProfileData {
     public void setCcar(ArrayOfPersonaCCar value) {
         this.ccar = value;
     }
-
 }

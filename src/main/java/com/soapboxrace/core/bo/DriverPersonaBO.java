@@ -151,6 +151,7 @@ public class DriverPersonaBO {
 
         ArrayOfBadgePacket arrayOfBadgePacket = this.getBadges(personaId);
 
+        profileData.setLevel(personaEntity.getRealLevel());
         profileData.setBadges(arrayOfBadgePacket);
         profileData.setMotto(personaEntity.getMotto());
         profileData.setPercentToLevel(personaEntity.getPercentToLevel());
