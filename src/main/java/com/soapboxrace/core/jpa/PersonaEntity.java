@@ -219,8 +219,4 @@ public class PersonaEntity {
     public void setRankingPoints(int rankingPoints) {
         this.rankingPoints = rankingPoints;
     }
-    
-    public int getRealLevel() {
-        return (prestige*100)+level;
-    }
 }
