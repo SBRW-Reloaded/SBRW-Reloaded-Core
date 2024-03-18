@@ -14,6 +14,8 @@ import com.soapboxrace.jaxb.http.*;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.inject.Inject;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -69,6 +71,9 @@ public class DriverPersonaBO {
     
     @EJB
     private KCrewMemberDAO kCrewMemberDAO;
+
+    @Inject
+    private RequestSessionInfo requestSessionInfo;
 
     public ProfileData createPersona(Long userId, PersonaEntity personaEntity) {
         UserEntity userEntity = userDao.find(userId);
@@ -151,7 +156,11 @@ public class DriverPersonaBO {
 
         ArrayOfBadgePacket arrayOfBadgePacket = this.getBadges(personaId);
 
-        profileData.setLevel(personaEntity.getRealLevel());
+
+        if(personaId != requestSessionInfo.getActivePersonaId()) {
+            profileData.setLevel(personaEntity.getRealLevel());
+        }
+
         profileData.setBadges(arrayOfBadgePacket);
         profileData.setMotto(personaEntity.getMotto());
         profileData.setPercentToLevel(personaEntity.getPercentToLevel());
