@@ -301,7 +301,7 @@ public class LobbyBO {
         lobbyInfoType.setLobbyInviteId(lobbyInviteId);
         lobbyInfoType.setLobbyId(lobbyInviteId);
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && lobbyEntity.getEvent().isRankedMode() == false) {
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
                     @Override
