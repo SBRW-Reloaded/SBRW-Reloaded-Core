@@ -102,8 +102,7 @@ public static void broadcastUICustom(String personaIdsString, String text, Strin
         try {
             long personaId = Long.parseLong(pid.trim());
             // Retrieve PersonaEntity based on personaId
-            PersonaEntity personaEntity = // Retrieve PersonaEntity from personaId;
-            
+            PersonaEntity personaEntity = personaDao.find(personaId); // Retrieve PersonaEntity from personaId;            
             if (personaEntity != null) {
                 AchievementsAwarded achievementsAwarded = new AchievementsAwarded();
                 achievementsAwarded.setPersonaId(personaEntity.getPersonaId());
