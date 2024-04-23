@@ -62,19 +62,27 @@ public class SendAnnouncement {
     @GET
     @Produces(MediaType.TEXT_HTML)
     @Path("/Alert")
-    public String sendAlert(@QueryParam("announcementAuth") String token, @QueryParam("message") String message, @QueryParam("pid") Long personaId) {
+    public String sendAlert(@QueryParam("announcementAuth") String token, @QueryParam("message") String message, @QueryParam("pid") String personaIds) {
         String announcementToken = parameterBO.getStrParam("ANNOUNCEMENT_AUTH");
         if (announcementToken == null) {
             return "ERROR! no announcement token set in DB";
         }
 
         if (announcementToken.equals(token)) {
-            PersonaEntity personaEntity = personaDAO.find(personaId);
-            if(personaEntity == null) {
-                return "ERROR! User not found!";
+
+            String[] personaIdsArray = personaIds.split(",");
+            for (String pid : personaIdsArray) {
+                try {
+                    long personaId = Long.parseLong(pid.trim());
+                    PersonaEntity personaEntity = personaDAO.find(personaId);        
+                    if (personaEntity != null) {
+                        HelpingTools.broadcastUICustom(personaEntity, message, "ADMINALERT", 5, openFireSoapBoxCli);
+                    }
+                } catch(NumberFormatException e) {
+                    return "Invalid personaId: " + pid.trim();
+                }
             }
-            
-            HelpingTools.broadcastUICustom(personaEntity, message, "ADMINALERT", 5, openFireSoapBoxCli);
+
             return "SUCCESS!";
         } else {
             return "ERROR! invalid admin token";

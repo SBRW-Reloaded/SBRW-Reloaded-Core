@@ -96,54 +96,40 @@ public class HelpingTools {
         return sb.toString();
     }
     
-public static void broadcastUICustom(String personaIdsString, String text, String description, int seconds, OpenFireSoapBoxCli openFireSoapBoxCli) {
-    String[] personaIdsArray = personaIdsString.split(",");
-    for (String pid : personaIdsArray) {
-        try {
-            long personaId = Long.parseLong(pid.trim());
-            // Retrieve PersonaEntity based on personaId
-            PersonaEntity personaEntity = personaDao.find(personaId); // Retrieve PersonaEntity from personaId;            
-            if (personaEntity != null) {
-                AchievementsAwarded achievementsAwarded = new AchievementsAwarded();
-                achievementsAwarded.setPersonaId(personaEntity.getPersonaId());
-                achievementsAwarded.setScore(personaEntity.getScore());
-                AchievementAwarded achievementAwarded = new AchievementAwarded();
+public static void broadcastUICustom(PersonaEntity personaEntity, String text, String description, int seconds, OpenFireSoapBoxCli openFireSoapBoxCli) {
+    AchievementsAwarded achievementsAwarded = new AchievementsAwarded();
+    achievementsAwarded.setPersonaId(personaEntity.getPersonaId());
+    achievementsAwarded.setScore(personaEntity.getScore());
+    AchievementAwarded achievementAwarded = new AchievementAwarded();
 
-                String achievedOnStr = "0001-01-01T00:00:00";
+    String achievedOnStr = "0001-01-01T00:00:00";
 
-                try {
-                    LocalDate date = LocalDate.now();
-                    GregorianCalendar gcal = GregorianCalendar.from(date.atStartOfDay(ZoneId.systemDefault()));
-                    XMLGregorianCalendar xmlCalendar = DatatypeFactory.newInstance().newXMLGregorianCalendar(gcal);
-                    xmlCalendar.setTimezone(DatatypeConstants.FIELD_UNDEFINED);
-                    achievedOnStr = xmlCalendar.toXMLFormat();
-                } catch (Exception e) {
-                    System.err.println("xml calendar str error");
-                }
-
-                achievementAwarded.setAchievedOn(achievedOnStr);
-                achievementAwarded.setAchievementDefinitionId((long) 104);
-                achievementAwarded.setClip("AchievementFlasherBase");
-                achievementAwarded.setClipLengthInSeconds(seconds);
-                achievementAwarded.setDescription(description);
-                achievementAwarded.setIcon("BADGE18");
-                achievementAwarded.setName(text);
-                achievementAwarded.setPoints(0);
-                achievementAwarded.setRare(false);
-                achievementAwarded.setRarity(0);
-
-                ArrayList<AchievementAwarded> achievements = new ArrayList<>();
-                achievements.add(achievementAwarded);
-
-                achievementsAwarded.setAchievements(achievements);
-                openFireSoapBoxCli.send(achievementsAwarded, personaEntity.getPersonaId());
-            } else {
-                System.out.println("PersonaEntity not found for personaId: " + personaId);
-            }
-        } catch (NumberFormatException e) {
-            System.err.println("Invalid personaId: " + pid.trim());
-        }
+    try {
+        LocalDate date = LocalDate.now();
+        GregorianCalendar gcal = GregorianCalendar.from(date.atStartOfDay(ZoneId.systemDefault()));
+        XMLGregorianCalendar xmlCalendar = DatatypeFactory.newInstance().newXMLGregorianCalendar(gcal);
+        xmlCalendar.setTimezone(DatatypeConstants.FIELD_UNDEFINED);
+        achievedOnStr = xmlCalendar.toXMLFormat();
+    } catch (Exception e) {
+        System.err.println("xml calendar str error");
     }
+
+    achievementAwarded.setAchievedOn(achievedOnStr);
+    achievementAwarded.setAchievementDefinitionId((long) 104);
+    achievementAwarded.setClip("AchievementFlasherBase");
+    achievementAwarded.setClipLengthInSeconds(seconds);
+    achievementAwarded.setDescription(description);
+    achievementAwarded.setIcon("BADGE18");
+    achievementAwarded.setName(text);
+    achievementAwarded.setPoints(0);
+    achievementAwarded.setRare(false);
+    achievementAwarded.setRarity(0);
+
+    ArrayList<AchievementAwarded> achievements = new ArrayList<>();
+    achievements.add(achievementAwarded);
+
+    achievementsAwarded.setAchievements(achievements);
+    openFireSoapBoxCli.send(achievementsAwarded, personaEntity.getPersonaId());
 }
 
 
