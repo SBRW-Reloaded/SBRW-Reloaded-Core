@@ -302,6 +302,9 @@ public class LobbyBO {
         lobbyInfoType.setLobbyId(lobbyInviteId);
 
         if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && lobbyEntity.getEvent().isRankedMode() == false) {
+            int currentRefreshTime = lobbyCountdown.getLobbyCountdownInMilliseconds()-2000;
+            if(currentRefreshTime <= 2000) currentRefreshTime = 100;
+
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
                     @Override
@@ -325,7 +328,7 @@ public class LobbyBO {
                             }
                         }
                     }
-                }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-2000)
+                }, (currentRefreshTime)
             );
         }
 
