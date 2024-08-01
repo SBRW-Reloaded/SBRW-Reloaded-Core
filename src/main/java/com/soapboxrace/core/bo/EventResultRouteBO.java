@@ -15,6 +15,7 @@ import com.soapboxrace.core.jpa.EventDataEntity;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.core.xmpp.XmppEvent;
 import com.soapboxrace.jaxb.http.ArrayOfRouteEntrantResult;
 import com.soapboxrace.jaxb.http.RouteArbitrationPacket;
@@ -66,8 +67,12 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         xmppRouteResult.setRanking(routeArbitrationPacket.getRank());
         xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
 
+        openFireSoapBoxCli.send(XmppChat.createSystemMessage("EXIT NODE: " + routeArbitrationPacket.getFinishReason()), activePersonaId);
+
         XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
         routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
+
+        openFireSoapBoxCli.send(XmppChat.createSystemMessage("EXIT NODE 2: " + routeEntrantResultResponse.toString()), activePersonaId);
 
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
@@ -101,7 +106,7 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
             if (!racer.getPersonaId().equals(activePersonaId)) {
                 XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
                 xmppEvent.sendRaceEnd(routeEntrantResultResponse);
-                
+
                 if (routeArbitrationPacket.getFinishReason() == 22 && routeArbitrationPacket.getRank() == 1) {
                     xmppEvent.sendEventTimingOut(eventSessionEntity);
                 }
@@ -109,6 +114,8 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
                 if(eventSessionEntity.getEvent().isDnfEnabled()) {
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
+
+
             }
         }
 
