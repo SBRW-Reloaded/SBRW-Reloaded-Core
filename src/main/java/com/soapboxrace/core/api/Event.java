@@ -116,7 +116,7 @@ public class Event {
             }
         }
 
-        return arbitration(inputStream, eventSessionId, 0);
+        return arbitration(inputStream, eventSessionId);
     }
 
     @PUT
