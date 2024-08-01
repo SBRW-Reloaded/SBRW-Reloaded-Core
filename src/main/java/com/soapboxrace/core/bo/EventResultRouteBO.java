@@ -101,8 +101,12 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
             if (!racer.getPersonaId().equals(activePersonaId)) {
                 XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
                 xmppEvent.sendRaceEnd(routeEntrantResultResponse);
-                if (routeArbitrationPacket.getFinishReason() == 22 && routeArbitrationPacket.getRank() == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
+                
+                if (routeArbitrationPacket.getFinishReason() == 22 && routeArbitrationPacket.getRank() == 1) {
                     xmppEvent.sendEventTimingOut(eventSessionEntity);
+                }
+
+                if(eventSessionEntity.getEvent().isDnfEnabled()) {
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
             }
