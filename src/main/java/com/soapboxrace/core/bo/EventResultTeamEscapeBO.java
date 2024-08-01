@@ -63,8 +63,7 @@ public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitration
         xmppTeamEscapeResult.setFinishReason(teamEscapeArbitrationPacket.getFinishReason());
         xmppTeamEscapeResult.setPersonaId(activePersonaId);
 
-        XMPP_ResponseTypeTeamEscapeEntrantResult teamEscapeEntrantResultResponse =
-                new XMPP_ResponseTypeTeamEscapeEntrantResult();
+        XMPP_ResponseTypeTeamEscapeEntrantResult teamEscapeEntrantResultResponse = new XMPP_ResponseTypeTeamEscapeEntrantResult();
         teamEscapeEntrantResultResponse.setTeamEscapeEntrantResult(xmppTeamEscapeResult);
 
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
