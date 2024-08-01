@@ -74,6 +74,21 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         eventDataEntity.setTopSpeed(routeArbitrationPacket.getTopSpeed());
         eventSessionEntity.setEnded(System.currentTimeMillis());
 
+        private void sendXmppPacket(EventSessionEntity eventSessionEntity, Long activePersonaId,
+        RouteArbitrationPacket routeArbitrationPacket) {
+        XMPP_RouteEntrantResultType xmppRouteResult = new XMPP_RouteEntrantResultType();
+        xmppRouteResult.setBestLapDurationInMilliseconds(routeArbitrationPacket.getBestLapDurationInMilliseconds());
+        xmppRouteResult.setEventDurationInMilliseconds(routeArbitrationPacket.getEventDurationInMilliseconds());
+        xmppRouteResult.setEventSessionId(eventSessionEntity.getId());
+        xmppRouteResult.setFinishReason(routeArbitrationPacket.getFinishReason());
+        xmppRouteResult.setPersonaId(activePersonaId);
+        xmppRouteResult.setRanking(routeArbitrationPacket.getRank());
+        xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
+
+        XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
+            routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
+        }
+
         ArrayOfRouteEntrantResult arrayOfRouteEntrantResult = new ArrayOfRouteEntrantResult();
         for (EventDataEntity racer : eventDataDao.getRacers(eventSessionId)) {
             RouteEntrantResult routeEntrantResult = new RouteEntrantResult();
@@ -122,20 +137,4 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
 
         return routeEventResult;
     }
-
-    private void sendXmppPacket(EventSessionEntity eventSessionEntity, Long activePersonaId,
-                                RouteArbitrationPacket routeArbitrationPacket) {
-        XMPP_RouteEntrantResultType xmppRouteResult = new XMPP_RouteEntrantResultType();
-        xmppRouteResult.setBestLapDurationInMilliseconds(routeArbitrationPacket.getBestLapDurationInMilliseconds());
-        xmppRouteResult.setEventDurationInMilliseconds(routeArbitrationPacket.getEventDurationInMilliseconds());
-        xmppRouteResult.setEventSessionId(eventSessionEntity.getId());
-        xmppRouteResult.setFinishReason(routeArbitrationPacket.getFinishReason());
-        xmppRouteResult.setPersonaId(activePersonaId);
-        xmppRouteResult.setRanking(routeArbitrationPacket.getRank());
-        xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
-
-        XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
-        routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
-    }
-
 }
