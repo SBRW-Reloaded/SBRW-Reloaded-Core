@@ -79,7 +79,7 @@ public class Event {
     @Secured
     @Path("/abort")
     @Produces(MediaType.APPLICATION_XML)
-    public String abort(InputStream inputStream, @QueryParam("eventSessionId") Long eventSessionId, Boolean leftRace) {
+    public String abort(InputStream inputStream, @QueryParam("eventSessionId") Long eventSessionId) {
 
         EventDataEntity leavepenality = eventDataDAO.findByPersonaAndEventSessionId(requestSessionInfo.getActivePersonaId() ,eventSessionId);
         if(leavepenality != null) {
@@ -116,7 +116,7 @@ public class Event {
             }
         }
 
-        return arbitration(inputStream, eventSessionId);
+        return arbitration(inputStream, eventSessionId, 0);
     }
 
     @PUT
