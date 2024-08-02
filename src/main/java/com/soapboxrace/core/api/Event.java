@@ -81,9 +81,10 @@ public class Event {
     @Produces(MediaType.APPLICATION_XML)
     public String abort(InputStream inputStream, @QueryParam("eventSessionId") Long eventSessionId) {
 
+        String arbitrationRedirect = arbitration(inputStream, eventSessionId);
+
         EventDataEntity leavepenality = eventDataDAO.findByPersonaAndEventSessionId(requestSessionInfo.getActivePersonaId() ,eventSessionId);
         if(leavepenality != null) {
-            leavepenality.setFinishReason(8202);
             leavepenality.setLeftRace(true);
             leavepenality.setRacerStatus(RacerStatus.ABANDONED);
 
@@ -116,7 +117,7 @@ public class Event {
             }
         }
 
-        return arbitration(inputStream, eventSessionId);
+        return arbitrationRedirect;
     }
 
     @PUT
