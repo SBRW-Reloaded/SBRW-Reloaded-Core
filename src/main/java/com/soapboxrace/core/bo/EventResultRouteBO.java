@@ -67,12 +67,8 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         xmppRouteResult.setRanking(routeArbitrationPacket.getRank());
         xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
 
-        openFireSoapBoxCli.send(XmppChat.createSystemMessage("EXIT NODE: " + routeArbitrationPacket.getFinishReason()), activePersonaId);
-
         XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
         routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
-
-        openFireSoapBoxCli.send(XmppChat.createSystemMessage("EXIT NODE 2: " + routeEntrantResultResponse.toString()), activePersonaId);
 
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
