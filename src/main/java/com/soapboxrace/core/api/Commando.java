@@ -64,7 +64,6 @@ public class Commando {
         PersonaEntity personaEntity = personaDAO.find(persona);
         
         //Remove slash at the beginning
-
         command = command.replace("/", "");
 
         //Split up commands
