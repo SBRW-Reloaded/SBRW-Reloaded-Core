@@ -121,6 +121,12 @@ public class CommerceBO {
                 VinylProductEntity vinylProductEntity = vinylProductDAO.findByHash(addedItem.getKey());
 
                 if (vinylProductEntity != null) {
+                    //Check if item is available to be purchased:
+                    if(vinylProductEntity.isEnabled() == false) {
+                        commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_INVALID_BASKET);
+                        return commerceSessionResultTrans;
+                    }
+        
                     if (vinylProductEntity.getCurrency().equals("CASH"))
                         removeCash += (int) vinylProductEntity.getPrice();
                     else
