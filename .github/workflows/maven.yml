@@ -53,7 +53,7 @@ jobs:
       run: mvn clean package -e "-Dnfs.core.stage=production"
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: Core-thorntail-reloaded
         path: |
@@ -78,7 +78,7 @@ jobs:
         echo "::set-output name=upload-url::$upload_url"
 
     - name: Upload release's upload URL
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: upload-url
         path: upload-url.txt
@@ -89,13 +89,13 @@ jobs:
       run: echo $RELEASE_ID > release-id.txt
 
     - name: Upload release's upload URL
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: release-id
         path: release-id.txt
 
     - name: Download URL to upload to
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: upload-url
         
