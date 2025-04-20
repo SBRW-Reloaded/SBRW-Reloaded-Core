@@ -198,10 +198,34 @@ public class ItemRewardBO {
             for (ProductEntity productEntity : productEntities) {
                 switch (productEntity.getProductType().toLowerCase()) {
                     case "presetcar":
+                        // Enregistrer l'état avant d'ajouter la voiture
+                        int carCountBefore = carDAO.findNumByPersonaId(personaEntity.getPersonaId());
+                        
+                        // Ajouter la voiture
                         CarEntity carEntity = basketBO.addCar(productEntity, personaEntity);
-                        // Définir l'index de voiture courante pour le joueur afin qu'il puisse accéder à la voiture immédiatement
-                        personaEntity.setCurCarIndex(carDAO.findNumByPersonaId(personaEntity.getPersonaId()) - 1);
-                        personaDao.update(personaEntity);
+                        
+                        // Vérifier si la voiture a bien un ID valide (signe qu'elle a été persistée)
+                        if (carEntity.getId() == null || carEntity.getId() == 0) {
+                            // Si la voiture n'a pas d'ID, essayer de la persister manuellement
+                            carDAO.insert(carEntity);
+                        }
+                        
+                        // Enregistrer l'état après avoir ajouté la voiture
+                        int carCountAfter = carDAO.findNumByPersonaId(personaEntity.getPersonaId());
+                        
+                        // Mettre à jour l'index de voiture courante seulement si le nombre de voitures a changé
+                        if (carCountAfter > carCountBefore) {
+                            personaEntity.setCurCarIndex(carCountAfter - 1);
+                            personaDao.update(personaEntity);
+                            
+                            // S'assurer que la voiture a bien un propriétaire
+                            if (carEntity.getPersona() == null) {
+                                carEntity.setPersona(personaEntity);
+                                carDAO.update(carEntity);
+                            }
+                        }
+                        
+                        // Ajouter la voiture à la liste des récompenses
                         rewardedItemsContainer.getCarRewardList().add(new WrappedCarReward(carEntity, productEntity));
                         break;
                     case "performancepart":
