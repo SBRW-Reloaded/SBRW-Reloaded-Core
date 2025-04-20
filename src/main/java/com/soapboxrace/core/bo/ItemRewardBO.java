@@ -52,6 +52,12 @@ public class ItemRewardBO {
     @EJB
     private CarClassesDAO carClassesDAO;
 
+    @EJB
+    private CarDAO carDAO;
+    
+    @EJB
+    private PersonaDAO personaDao;
+
     public RewardedItemsContainer getRewards(PersonaEntity personaEntity, String rewardScript) {
         try {
             if (rewardScript != null) {
@@ -192,7 +198,11 @@ public class ItemRewardBO {
             for (ProductEntity productEntity : productEntities) {
                 switch (productEntity.getProductType().toLowerCase()) {
                     case "presetcar":
-                        rewardedItemsContainer.getCarRewardList().add(new WrappedCarReward(basketBO.addCar(productEntity, personaEntity), productEntity));
+                        CarEntity carEntity = basketBO.addCar(productEntity, personaEntity);
+                        // Définir l'index de voiture courante pour le joueur afin qu'il puisse accéder à la voiture immédiatement
+                        personaEntity.setCurCarIndex(carDAO.findNumByPersonaId(personaEntity.getPersonaId()) - 1);
+                        personaDao.update(personaEntity);
+                        rewardedItemsContainer.getCarRewardList().add(new WrappedCarReward(carEntity, productEntity));
                         break;
                     case "performancepart":
                     case "skillmodpart":
