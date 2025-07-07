@@ -78,7 +78,7 @@ jobs:
         echo "::set-output name=upload-url::$upload_url"
 
     - name: Upload release's upload URL
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: upload-url
         path: upload-url.txt
