@@ -104,7 +104,7 @@ public class LobbyMessagingBO {
             logger.info(String.format("Lobby invitation sent successfully to PersonaId=%d", recipientPersona.getPersonaId()));
         } catch (Exception e) {            logger.error(String.format("Failed to send lobby invitation to PersonaId=%d: %s",
                     recipientPersona.getPersonaId(), e.getMessage()), e);
-            // Optionally re-throw or handle the exception based on requirements
+            // Optionally rethrow or handle the exception based on requirements
         }
     }
 
