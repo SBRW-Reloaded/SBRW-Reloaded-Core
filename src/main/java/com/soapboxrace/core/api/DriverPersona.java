@@ -13,6 +13,7 @@ import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
+import org.slf4j.Logger;
 
 import javax.ejb.EJB;
 import javax.inject.Inject;
@@ -41,6 +42,9 @@ public class DriverPersona {
 
     @Inject
     private RequestSessionInfo requestSessionInfo;
+
+    @Inject
+    private Logger logger;
 
     @GET
     @Secured
@@ -137,8 +141,16 @@ public class DriverPersona {
         // For some reason the game calls UpdatePersonaPresence AFTER SecureLogoutPersona - that messes up the presence
         // tracking system. So we update presence only if the persona matches the logged in persona.
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        
+        logger.debug("UpdatePersonaPresence called: personaId={}, presence={}, activePersonaId={}", 
+                    personaId, presence, activePersonaId);
+        
         if (!Objects.isNull(activePersonaId) && !activePersonaId.equals(0L) && activePersonaId.equals(personaId)) {
             presenceBO.updatePresence(personaId, presence);
+            logger.info("Updated presence for active persona {}: {}", personaId, presence);
+        } else {
+            logger.warn("Ignored presence update for persona {} (not active): presence={}, active={}", 
+                       personaId, presence, activePersonaId);
         }
 
         return "";

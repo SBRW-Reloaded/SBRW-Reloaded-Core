@@ -94,6 +94,11 @@ public class User {
     public String secureLoginPersona(@QueryParam("personaId") Long personaId) {
         tokenBO.setActivePersonaId(requestSessionInfo.getTokenSessionEntity(), personaId);
         userBO.secureLoginPersona(requestSessionInfo.getUser().getId(), personaId);
+        
+        // FIX: Définir automatiquement la présence comme "en ligne" lors de la connexion
+        // Cela garantit que le joueur apparaîtra en ligne même si UpdatePersonaPresence échoue
+        presenceBO.updatePresence(personaId, 1L); // 1L = en ligne
+        
         // Question: Why is this here?
         // Answer: Weird things happen sometimes.
         matchmakingBO.removePlayerFromQueue(personaId);

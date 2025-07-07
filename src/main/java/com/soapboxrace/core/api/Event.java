@@ -64,8 +64,16 @@ public class Event {
     @Path("/abort")
     @Produces(MediaType.APPLICATION_XML)
     public String abort(@QueryParam("eventSessionId") Long eventSessionId) {
+        Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
+        
+        // Remettre le statut de présence à "en ligne" (1) après abandon de course
+        if (activePersonaId != null && !activePersonaId.equals(0L)) {
+            presenceBO.updatePresence(activePersonaId, 1L); // 1 = en ligne
+        }
+        
         return "";
     }
 
@@ -78,6 +86,11 @@ public class Event {
         matchmakingBO.removePlayerFromQueue(activePersonaId);
         eventBO.createEventDataSession(activePersonaId, eventSessionId);
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), eventSessionId);
+
+        // Mettre le statut de présence à "en course" (-1)
+        if (activePersonaId != null && !activePersonaId.equals(0L)) {
+            presenceBO.updatePresence(activePersonaId, 2L); // 2 = en course
+        }
 
         //NOPU SETH
         if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
@@ -150,6 +163,11 @@ public class Event {
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
 
+        // Remettre le statut de présence à "en ligne" (1) après la course
+        if (activePersonaId != null && !activePersonaId.equals(0L)) {
+            presenceBO.updatePresence(activePersonaId, 1L); // 1 = en ligne
+        }
+
         if (eventResult == null) {
             return "";
         }
@@ -167,6 +185,12 @@ public class Event {
         PursuitArbitrationPacket pursuitArbitrationPacket = JAXBUtility.unMarshal(bustXml,
                 PursuitArbitrationPacket.class);
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        
+        // Remettre le statut de présence à "en ligne" (1) après la poursuite
+        if (activePersonaId != null && !activePersonaId.equals(0L)) {
+            presenceBO.updatePresence(activePersonaId, 1L); // 1 = en ligne
+        }
+        
         return JAXBUtility.marshal(eventResultPursuitBO.handle(eventSessionEntity, activePersonaId, pursuitArbitrationPacket));
     }
 }

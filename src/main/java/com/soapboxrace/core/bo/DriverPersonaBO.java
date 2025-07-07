@@ -73,7 +73,12 @@ public class DriverPersonaBO {
     public ProfileData createPersona(Long userId, PersonaEntity personaEntity) {
         UserEntity userEntity = userDao.find(userId);
 
-        if (userEntity.getPersonas().size() >= parameterBO.getIntParam("MAX_PROFILES", 3)) {
+        // Compter seulement les personas actifs (non supprimés)
+        long activePersonasCount = userEntity.getPersonas().stream()
+                .filter(persona -> persona.getDeletedAt() == null)
+                .count();
+
+        if (activePersonasCount >= parameterBO.getIntParam("MAX_PROFILES", 3)) {
             throw new EngineException(EngineExceptionCode.MaximumNumberOfPersonasForUserReached, false);
         }
 

@@ -28,9 +28,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public class OpenfireXmppProvider implements XmppProvider {
+    private static final Logger logger = LoggerFactory.getLogger(OpenfireXmppProvider.class);
+    
     private String openFireToken;
     private String openFireAddress;
     private String xmppIp;
@@ -123,37 +127,81 @@ public class OpenfireXmppProvider implements XmppProvider {
 
     @Override
     public List<Long> getAllPersonasInGroup(long personaId) {
-        Builder builder = getBuilder("chatrooms/forUser",
-                Map.of(
-                        "userName", parameterBO.getStrParam("SBRWR_XMPP_APPEND", "sbrw") + "." + personaId,
-                        "domain", xmppIp,
-                        "resource", "EA-Chat"));
-        MUCRoomEntities roomEntities = builder.get(MUCRoomEntities.class);
-        List<MUCRoomEntity> listRoomEntity = roomEntities.getMucRooms();
-        for (MUCRoomEntity entity : listRoomEntity) {
-            String roomName = entity.getRoomName();
-            if (roomName.contains("group.channel.")) {
-                getAllOccupantsInRoom(roomName);
-                return getAllOccupantsInRoom(roomName);
+        logger.info(String.format("Getting group members for PersonaId=%d via OpenFire XMPP", personaId));
+        
+        try {
+            String userName = parameterBO.getStrParam("SBRWR_XMPP_APPEND", "sbrw") + "." + personaId;
+            logger.info(String.format("OpenFire query: userName=%s, domain=%s", userName, xmppIp));
+            
+            Builder builder = getBuilder("chatrooms/forUser",
+                    Map.of(
+                            "userName", userName,
+                            "domain", xmppIp,
+                            "resource", "EA-Chat"));
+            MUCRoomEntities roomEntities = builder.get(MUCRoomEntities.class);
+            List<MUCRoomEntity> listRoomEntity = roomEntities.getMucRooms();
+            
+            logger.info(String.format("Found %d chat rooms for PersonaId=%d", 
+                listRoomEntity != null ? listRoomEntity.size() : 0, personaId));
+            
+            if (listRoomEntity != null) {
+                for (MUCRoomEntity entity : listRoomEntity) {
+                    String roomName = entity.getRoomName();
+                    logger.info(String.format("Checking room: %s", roomName));
+                    
+                    if (roomName.contains("group.channel.")) {
+                        logger.info(String.format("Found group channel: %s, getting occupants", roomName));
+                        List<Long> groupMembers = getAllOccupantsInRoom(roomName);
+                        logger.info(String.format("Group members found in room %s: %d members - %s", 
+                            roomName, groupMembers.size(), groupMembers.toString()));
+                        return groupMembers;
+                    }
+                }
             }
+            
+            logger.warn(String.format("No group channel found for PersonaId=%d", personaId));
+            return new ArrayList<>();
+        } catch (Exception e) {            logger.error(String.format("Error getting group members for PersonaId=%d: %s",
+                    personaId, e.getMessage()), e);
+            return new ArrayList<>();
         }
-        return new ArrayList<>();
     }
 
     private List<Long> getAllOccupantsInRoom(String roomName) {
-        Builder builder = getBuilder("chatrooms/" + roomName + "/occupants");
-        OccupantEntities occupantEntities = builder.get(OccupantEntities.class);
-        List<Long> listOfPersona = new ArrayList<>();
-        for (OccupantEntity entity : occupantEntities.getOccupants()) {
-            String jid = entity.getJid();
-            try {
-                Long personaId = Long.parseLong(jid.substring(jid.lastIndexOf('.') + 1));
-                listOfPersona.add(personaId);
-            } catch (Exception e) {
-                //
+        logger.info(String.format("Getting occupants for room: %s", roomName));
+        
+        try {
+            Builder builder = getBuilder("chatrooms/" + roomName + "/occupants");
+            OccupantEntities occupantEntities = builder.get(OccupantEntities.class);
+            List<Long> listOfPersona = new ArrayList<>();
+            
+            if (occupantEntities != null && occupantEntities.getOccupants() != null) {
+                logger.info(String.format("Found %d occupants in room %s", 
+                    occupantEntities.getOccupants().size(), roomName));
+                
+                for (OccupantEntity entity : occupantEntities.getOccupants()) {
+                    String jid = entity.getJid();
+                    logger.debug(String.format("Processing occupant JID: %s", jid));
+                    
+                    try {
+                        Long personaId = Long.parseLong(jid.substring(jid.lastIndexOf('.') + 1));
+                        listOfPersona.add(personaId);
+                        logger.debug(String.format("Extracted PersonaId=%d from JID=%s", personaId, jid));
+                    } catch (Exception e) {
+                        logger.warn(String.format("Failed to extract PersonaId from JID=%s: %s", jid, e.getMessage()));
+                    }
+                }
+            } else {
+                logger.warn(String.format("No occupants data received for room %s", roomName));
             }
+            
+            logger.info(String.format("Extracted %d PersonaIds from room %s: %s", 
+                listOfPersona.size(), roomName, listOfPersona.toString()));
+            return listOfPersona;
+        } catch (Exception e) {
+            logger.error(String.format("Error getting occupants for room %s: %s", roomName, e.getMessage()), e);
+            return new ArrayList<>();
         }
-        return listOfPersona;
     }
 
     @Override

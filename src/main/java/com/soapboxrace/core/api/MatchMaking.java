@@ -94,7 +94,10 @@ public class MatchMaking {
     @Path("/leavequeue")
     @Produces(MediaType.APPLICATION_XML)
     public String leaveQueue() {
-        matchmakingBO.removePlayerFromQueue(requestSessionInfo.getActivePersonaId());
+        Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        matchmakingBO.removePlayerFromQueue(activePersonaId);
+        // Retirer aussi de la file RaceNow persistante
+        matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
         tokenSessionBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         return "";

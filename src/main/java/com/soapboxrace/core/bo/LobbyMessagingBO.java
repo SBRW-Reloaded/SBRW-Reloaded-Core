@@ -8,6 +8,9 @@ import com.soapboxrace.jaxb.http.LobbyEntrantInfo;
 import com.soapboxrace.jaxb.http.LobbyEntrantRemoved;
 import com.soapboxrace.jaxb.xmpp.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import java.util.List;
@@ -19,6 +22,8 @@ import java.util.List;
  */
 @Stateless
 public class LobbyMessagingBO {
+    private static final Logger logger = LoggerFactory.getLogger(LobbyMessagingBO.class);
+    
     @EJB
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
@@ -77,20 +82,30 @@ public class LobbyMessagingBO {
      * @param inviteLifetime   The lifetime of the invitation in milliseconds.
      */
     public void sendLobbyInvitation(LobbyEntity lobbyEntity, PersonaEntity recipientPersona, long inviteLifetime) {
-        XMPP_LobbyInviteType lobbyInvite = new XMPP_LobbyInviteType();
-        lobbyInvite.setEventId(lobbyEntity.getEvent().getId());
-        lobbyInvite.setLobbyInviteId(lobbyEntity.getId());
+        try {
+            logger.info(String.format("Sending lobby invitation: LobbyId=%d, RecipientPersonaId=%d, InviteLifetime=%d", 
+                lobbyEntity.getId(), recipientPersona.getPersonaId(), inviteLifetime));
+            
+            XMPP_LobbyInviteType lobbyInvite = new XMPP_LobbyInviteType();
+            lobbyInvite.setEventId(lobbyEntity.getEvent().getId());
+            lobbyInvite.setLobbyInviteId(lobbyEntity.getId());
 
-        if (!lobbyEntity.getPersonaId().equals(recipientPersona.getPersonaId())) {
-            lobbyInvite.setInvitedByPersonaId(lobbyEntity.getPersonaId());
-            lobbyInvite.setInviteLifetimeInMilliseconds(inviteLifetime);
-            lobbyInvite.setPrivate(lobbyEntity.getIsPrivate());
+            if (!lobbyEntity.getPersonaId().equals(recipientPersona.getPersonaId())) {
+                lobbyInvite.setInvitedByPersonaId(lobbyEntity.getPersonaId());
+                lobbyInvite.setInviteLifetimeInMilliseconds(inviteLifetime);
+                lobbyInvite.setPrivate(lobbyEntity.getIsPrivate());
+            }
+
+            XMPP_ResponseTypeLobbyInvite response = new XMPP_ResponseTypeLobbyInvite();
+            response.setLobbyInvite(lobbyInvite);
+
+            openFireSoapBoxCli.send(response, recipientPersona.getPersonaId());
+            
+            logger.info(String.format("Lobby invitation sent successfully to PersonaId=%d", recipientPersona.getPersonaId()));
+        } catch (Exception e) {            logger.error(String.format("Failed to send lobby invitation to PersonaId=%d: %s",
+                    recipientPersona.getPersonaId(), e.getMessage()), e);
+            // Optionally re-throw or handle the exception based on requirements
         }
-
-        XMPP_ResponseTypeLobbyInvite response = new XMPP_ResponseTypeLobbyInvite();
-        response.setLobbyInvite(lobbyInvite);
-
-        openFireSoapBoxCli.send(response, recipientPersona.getPersonaId());
     }
 
     public void sendRelay(XMPP_LobbyLaunchedType lobbyLaunched, XMPP_CryptoTicketsType xMPP_CryptoTicketsType) {

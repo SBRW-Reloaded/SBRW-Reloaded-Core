@@ -12,12 +12,16 @@ import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.EventEntity;
 import com.soapboxrace.core.jpa.InventoryItemEntity;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 
 @Stateless
 public class CarDamageBO {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CarDamageBO.class);
 
     @EJB
     private CarDAO carDAO;
@@ -48,9 +52,13 @@ public class CarDamageBO {
         int durability = carEntity.getDurability();
         if (durability > 0) {
             int calcDamage = eventEntity.getEventModeId() == 19 ? 2 : 5; // 5% for non-drags, 2% for drags
-            int newCarDamage = Math.max(durability - calcDamage, 0);
+            int minCarDurability = parameterBO.getIntParam("SBRWR_MIN_CAR_DURABILITY", 0);
+            int newCarDurability = Math.max(durability - calcDamage, minCarDurability);
+            
+            LOGGER.debug("Car damage calculation - CarId: {}, CurrentDurability: {}, Damage: {}, MinDurability: {}, NewDurability: {}", 
+                         carId, durability, calcDamage, minCarDurability, newCarDurability);
 
-            updateDurability(carEntity, newCarDamage);
+            updateDurability(carEntity, newCarDurability);
         }
         return carEntity.getDurability();
     }
@@ -69,5 +77,13 @@ public class CarDamageBO {
             performanceBO.calcNewCarClass(carEntity, false);
             carDAO.update(carEntity);
         }
+    }
+
+    /**
+     * Récupère la durabilité minimum configurée pour les voitures
+     * @return la durabilité minimum (0-100)
+     */
+    public int getMinCarDurability() {
+        return parameterBO.getIntParam("SBRWR_MIN_CAR_DURABILITY", 0);
     }
 }

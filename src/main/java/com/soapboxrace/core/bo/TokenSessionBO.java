@@ -132,7 +132,12 @@ public class TokenSessionBO {
             throw new AuthException("Invalid email or password");
         }
         if (userEntity.isLocked()) {
-            throw new AuthException("Account locked. Contact an administrator.");
+            // Vérifier si c'est un nouveau compte (jamais connecté) ou un compte existant verrouillé
+            if (userEntity.getLastLogin() == null) {
+                throw new AuthException("Account not activated. Please check your email inbox (including spam folder) to activate your account before playing.");
+            } else {
+                throw new AuthException("Account locked. Contact the moderation team via our Discord server for more information.");
+            }
         }
 
         BanEntity banEntity = authenticationBO.checkUserBan(userEntity);

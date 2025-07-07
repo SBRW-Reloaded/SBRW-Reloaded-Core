@@ -349,7 +349,10 @@ public class SocialRelationshipBO {
                                  SocialRelationshipEntity socialRelationshipEntity) {
         for (PersonaEntity personaEntity : socialRelationshipEntity.getRemoteUser().getPersonas()) {
             FriendPersona friendPersona = copyPersonaEntityToFriendPersona(personaEntity);
-            friendPersona.setPresence(presenceBO.getPresence(personaEntity.getPersonaId()));
+            Long presence = presenceBO.getPresence(personaEntity.getPersonaId());
+            friendPersona.setPresence(presence);
+            
+            logger.debug("Added friend {} to list with presence {}", personaEntity.getName(), presence);
             personaFriendsList.getFriendPersona().getFriendPersona().add(friendPersona);
         }
     }
