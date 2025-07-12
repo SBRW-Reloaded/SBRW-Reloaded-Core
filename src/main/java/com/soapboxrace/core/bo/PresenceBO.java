@@ -97,11 +97,34 @@ public class PresenceBO {
                 this.connection.sync().expire(presenceKey, parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 5*60));
                 logger.debug("Refreshed presence TTL for persona {}, was {} seconds", personaId, ttl);
             } else {
-                // La clé n'existe pas ou a expiré - tenter de restaurer la présence comme "en ligne"
-                logger.warn("Presence key missing for active persona {}, restoring as online", personaId);
-                updatePresence(personaId, PRESENCE_ONLINE); // Restaurer comme en ligne
+                // La clé n'existe pas ou a expiré - ne pas restaurer automatiquement
+                // Ceci évite de marquer des joueurs comme en ligne quand ils ne le sont pas
+                logger.debug("Presence key missing for persona {}, not restoring automatically", personaId);
             }
         }
+    }
+
+    /**
+     * Rafraîchit la présence d'un joueur seulement s'il a déjà une présence active.
+     * Cette méthode évite de recréer une présence pour des joueurs qui se sont déconnectés.
+     * @param personaId ID du persona
+     * @return true si la présence a été rafraîchie, false sinon
+     */
+    public boolean refreshPresenceIfExists(long personaId) {
+        if (this.connection != null) {
+            String presenceKey = getPresenceKey(personaId);
+            Long ttl = this.connection.sync().ttl(presenceKey);
+            
+            if (ttl != null && ttl > 0) {
+                this.connection.sync().expire(presenceKey, parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 5*60));
+                logger.debug("Refreshed presence TTL for persona {}, was {} seconds", personaId, ttl);
+                return true;
+            } else {
+                logger.debug("Presence key missing for persona {}, not refreshing", personaId);
+                return false;
+            }
+        }
+        return false;
     }
 
     public void removePresence(Long personaId) {

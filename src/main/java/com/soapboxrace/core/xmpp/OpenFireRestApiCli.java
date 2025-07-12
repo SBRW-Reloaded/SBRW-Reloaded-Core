@@ -26,10 +26,8 @@ public class OpenFireRestApiCli {
      public void init() {
           if (openfireProvider.isEnabled()) {
                provider = openfireProvider;
-               logger.info("Using OpenFire XMPP provider");
           } else if (sbrwProvider.isEnabled()) {
                provider = sbrwProvider;
-               logger.info("Using SBRW XMPP provider");
           } else {
                throw new RuntimeException("No XMPP provider is enabled");
           }
@@ -44,13 +42,8 @@ public class OpenFireRestApiCli {
      }
  
      public List<Long> getAllPersonaByGroup(Long personaId) {
-          logger.info(String.format("OpenFireRestApiCli.getAllPersonaByGroup called for PersonaId=%d", personaId));
-          
           try {
-              List<Long> result = provider.getAllPersonasInGroup(personaId);
-              logger.info(String.format("OpenFireRestApiCli.getAllPersonaByGroup result for PersonaId=%d: %d members - %s", 
-                  personaId, result.size(), result.toString()));
-              return result;
+              return provider.getAllPersonasInGroup(personaId);
           } catch (Exception e) {
               logger.error(String.format("OpenFireRestApiCli.getAllPersonaByGroup failed for PersonaId=%d: %s", 
                   personaId, e.getMessage()), e);

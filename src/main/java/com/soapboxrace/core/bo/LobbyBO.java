@@ -28,6 +28,7 @@ import javax.ejb.EJB;
 import javax.ejb.Stateless;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -71,35 +72,78 @@ public class LobbyBO {
     private ParameterBO parameterBO;
 
     public void joinFastLobby(Long personaId, int carClassHash) {
-        PersonaEntity personaEntity = personaDao.find(personaId);
-        List<LobbyEntity> lobbys = lobbyDao.findAllOpen(carClassHash, personaEntity.getLevel());
-
-        logger.info(String.format("RaceNow: PersonaId=%d, Level=%d, CarClassHash=%d found %d open lobbies", 
-            personaId, personaEntity.getLevel(), carClassHash, lobbys.size()));
+        logger.info("JOINFAST: PersonaId={} attempting to join fast lobby with carClass={}", personaId, carClassHash);
         
-        // Log des événements trouvés pour diagnostic
-        for (LobbyEntity lobby : lobbys) {
+        PersonaEntity personaEntity = personaDao.find(personaId);
+        if (personaEntity == null) {
+            logger.error("JOINFAST: PersonaEntity not found for PersonaId={}", personaId);
+            return;
+        }
+        
+        logger.info("JOINFAST: PersonaId={} found, level={}", personaId, personaEntity.getLevel());
+        
+        List<LobbyEntity> allLobbys = lobbyDao.findAllOpen(carClassHash, personaEntity.getLevel());
+        logger.info("JOINFAST: Found {} open lobbies for PersonaId={} (carClass={}, level={})", 
+                    allLobbys.size(), personaId, carClassHash, personaEntity.getLevel());
+
+        // SÉCURITÉ : Double-vérification des niveaux après la requête SQL
+        // pour s'assurer qu'aucun lobby avec restriction de niveau inappropriée n'est retourné
+        List<LobbyEntity> levelFilteredLobbys = new ArrayList<>();
+        for (LobbyEntity lobby : allLobbys) {
             EventEntity event = lobby.getEvent();
-            logger.info(String.format("RaceNow found lobby: LobbyId=%d, EventId=%d, EventName=%s, EventCarClass=%d, EventMinLevel=%d, EventMaxLevel=%d, PlayerLevel=%d", 
-                lobby.getId(), event.getId(), event.getName(), event.getCarClassHash(), event.getMinLevel(), event.getMaxLevel(), personaEntity.getLevel()));
+            if (personaEntity.getLevel() >= event.getMinLevel() && personaEntity.getLevel() <= event.getMaxLevel()) {
+                levelFilteredLobbys.add(lobby);
+            } else {
+                logger.warn("JOINFAST: SECURITY - SQL query returned inappropriate lobby: PersonaId={} (Level={}) got EventId={} (MinLevel={}, MaxLevel={})", 
+                           personaId, personaEntity.getLevel(), event.getId(), event.getMinLevel(), event.getMaxLevel());
+            }
+        }
+        
+        if (levelFilteredLobbys.size() != allLobbys.size()) {
+            logger.error("JOINFAST: CRITICAL - SQL level filtering failed! Expected {} lobbies, got {} after level verification", 
+                        levelFilteredLobbys.size(), allLobbys.size());
         }
 
-        if (lobbys.isEmpty()) {
-            // Aucun lobby n'est trouvé : ajouter le joueur à la file d'attente RaceNow persistante
-            logger.info(String.format("RaceNow: No lobbies found for PersonaId=%d (Level=%d), adding to persistent RaceNow queue", 
-                personaId, personaEntity.getLevel()));
+        // Filtrer les lobbies pour exclure les événements ignorés
+        List<LobbyEntity> availableLobbys = new ArrayList<>();
+        for (LobbyEntity lobby : levelFilteredLobbys) {
+            if (!matchmakingBO.isEventIgnored(personaId, lobby.getEvent().getId())) {
+                availableLobbys.add(lobby);
+            } else {
+                logger.debug("JOINFAST: PersonaId={} - Skipping ignored event {} ({})", 
+                            personaId, lobby.getEvent().getId(), lobby.getEvent().getName());
+            }
+        }
+        
+        logger.info("JOINFAST: PersonaId={} - After filtering ignored events: {} available lobbies (was {} after level check, {} from SQL)", 
+                    personaId, availableLobbys.size(), levelFilteredLobbys.size(), allLobbys.size());
+
+        if (availableLobbys.isEmpty()) {
+            // Aucun lobby disponible (soit il n'y en a pas, soit tous sont ignorés) : ajouter le joueur à la file d'attente RaceNow persistante
+            logger.info("JOINFAST: No available lobby for PersonaId={}, adding to RaceNow queue", personaId);
             matchmakingBO.addPlayerToRaceNowQueue(personaId, carClassHash, personaEntity.getLevel());
         } else {
-            Collections.shuffle(lobbys);
-            joinLobby(personaEntity, lobbys, true);
+            logger.info("JOINFAST: Available lobby found, joining PersonaId={} to existing lobby", personaId);
+            Collections.shuffle(availableLobbys);
+            joinLobby(personaEntity, availableLobbys, false); // Ne pas re-vérifier les événements ignorés, on l'a déjà fait
             // Si le joueur rejoint un lobby avec succès, le retirer de la file RaceNow
+            logger.info("JOINFAST: PersonaId={} joined lobby successfully, removing from RaceNow queue", personaId);
             matchmakingBO.removePlayerFromRaceNowQueue(personaId);
         }
+        
+        logger.info("JOINFAST: PersonaId={} joinFastLobby completed", personaId);
     }
 
     public void joinQueueEvent(Long personaId, int eventId) {
         PersonaEntity personaEntity = personaDao.find(personaId);
         EventEntity eventEntity = eventDao.find(eventId);
+
+        // SÉCURITÉ : Vérifier le niveau du joueur AVANT de permettre l'accès à l'événement
+        if (personaEntity.getLevel() < eventEntity.getMinLevel() || personaEntity.getLevel() > eventEntity.getMaxLevel()) {
+            logger.info("Level restriction: PersonaId={} (Level={}) cannot access EventId={} (MinLevel={}, MaxLevel={}) - request ignored", 
+                personaEntity.getPersonaId(), personaEntity.getLevel(), eventId, eventEntity.getMinLevel(), eventEntity.getMaxLevel());
+            return; // Ignorer silencieusement la demande
+        }
 
         CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
 
@@ -117,30 +161,29 @@ public class LobbyBO {
     }
 
     public void createPrivateLobby(Long creatorPersonaId, int eventId) {
-        logger.info(String.format("Creating private lobby: CreatorPersonaId=%d, EventId=%d", creatorPersonaId, eventId));
-        
         List<Long> personaIdList = openFireRestApiCli.getAllPersonaByGroup(creatorPersonaId);
-        logger.info(String.format("Found %d personas in group for creator %d: %s", 
-            personaIdList.size(), creatorPersonaId, personaIdList.toString()));
         
         EventEntity eventEntity = eventDao.find(eventId);
+        PersonaEntity creatorPersonaEntity = personaDao.find(creatorPersonaId);
+        
+        // SÉCURITÉ : Vérifier que le créateur peut accéder à cet événement selon son niveau
+        if (creatorPersonaEntity.getLevel() < eventEntity.getMinLevel() || creatorPersonaEntity.getLevel() > eventEntity.getMaxLevel()) {
+            logger.warn("Level restriction violation blocked: CreatorPersonaId={} (Level={}) tried to create private lobby for EventId={} (MinLevel={}, MaxLevel={})", 
+                creatorPersonaId, creatorPersonaEntity.getLevel(), eventId, eventEntity.getMinLevel(), eventEntity.getMaxLevel());
+            throw new EngineException(EngineExceptionCode.InvalidEntrantEventSession, true);
+        }
+        
         if (!personaIdList.isEmpty()) {
             createLobby(creatorPersonaId, eventId, eventEntity.getCarClassHash(), true);
 
             LobbyEntity lobbyEntity = lobbyDao.findByEventAndPersona(eventEntity, creatorPersonaId);
             if (lobbyEntity != null) {
-                logger.info(String.format("Lobby created successfully with ID=%d", lobbyEntity.getId()));
-                
-                int invitationsSent = 0;
-                int invitationsSkipped = 0;
-                
                 for (Long recipientPersonaId : personaIdList) {
                     if (!recipientPersonaId.equals(creatorPersonaId)) {
                         PersonaEntity recipientPersonaEntity = personaDao.find(recipientPersonaId);
                         
                         if (recipientPersonaEntity == null) {
                             logger.warn(String.format("Recipient PersonaEntity not found for PersonaId=%d", recipientPersonaId));
-                            invitationsSkipped++;
                             continue;
                         }
 
@@ -148,33 +191,25 @@ public class LobbyBO {
                         
                         if (carEntity == null) {
                             logger.warn(String.format("Default car not found for PersonaId=%d", recipientPersonaId));
-                            invitationsSkipped++;
                             continue;
                         }
-                        
-                        logger.info(String.format("Checking car compatibility: EventCarClass=%d, PlayerCarClass=%d, PersonaId=%d", 
-                            eventEntity.getCarClassHash(), carEntity.getCarClassHash(), recipientPersonaId));
                         
                         // SECURITY CHECK: Vérifier que le joueur a bien accès à cet événement selon son niveau
                         if (recipientPersonaEntity.getLevel() < eventEntity.getMinLevel() || recipientPersonaEntity.getLevel() > eventEntity.getMaxLevel()) {
                             logger.warn(String.format("Invitation skipped due to level restriction: PersonaId=%d (Level=%d) cannot access EventId=%d (MinLevel=%d, MaxLevel=%d)", 
                                 recipientPersonaId, recipientPersonaEntity.getLevel(), eventEntity.getId(), eventEntity.getMinLevel(), eventEntity.getMaxLevel()));
-                            invitationsSkipped++;
                             continue;
                         }
                         
                         if(eventEntity.getCarClassHash() == 607077938 || carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
                             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, recipientPersonaEntity, eventEntity.getLobbyCountdownTime());
-                            invitationsSent++;
                         } else {
                             logger.warn(String.format("Car class mismatch for PersonaId=%d: Event requires %d, player has %d", 
                                 recipientPersonaId, eventEntity.getCarClassHash(), carEntity.getCarClassHash()));
-                            invitationsSkipped++;
                         }
                     }
                 }
                 
-                logger.info(String.format("Private lobby invitation summary: %d sent, %d skipped", invitationsSent, invitationsSkipped));
             } else {
                 logger.error(String.format("Failed to find created lobby for CreatorPersonaId=%d, EventId=%d", creatorPersonaId, eventId));
             }
@@ -239,9 +274,6 @@ public class LobbyBO {
                 return;
             }
             
-            logger.info("New lobby created (LobbyId={}), checking {} RaceNow players for compatibility", 
-                lobbyEntity.getId(), raceNowPlayers.size());
-            
             int invitationsSent = 0;
             int maxInvitations = Math.min(raceNowPlayers.size(), 
                 event.getMaxPlayers() - lobbyEntity.getEntrants().size());
@@ -281,18 +313,8 @@ public class LobbyBO {
                                     event.getLobbyCountdownTime());
                                 
                                 invitationsSent++;
-                                
-                                logger.info("RaceNow invitation sent for new lobby: PersonaId={} invited to LobbyId={} (EventId={})", 
-                                    personaId, lobbyEntity.getId(), event.getId());
                             }
-                        } else {
-                            logger.debug("PersonaId={} has ignored EventId={}, skipping invitation", 
-                                personaId, event.getId());
                         }
-                    } else {
-                        logger.debug("PersonaId={} not compatible: CarClass={}/{}, Level={} (event range: {}-{})", 
-                            personaId, playerCarClass, carClassHash, playerLevel, 
-                            event.getMinLevel(), event.getMaxLevel());
                     }
                     
                 } catch (NumberFormatException e) {
@@ -302,8 +324,6 @@ public class LobbyBO {
                         personaIdStr, e.getMessage(), e);
                 }
             }
-            
-            logger.info("Sent {} RaceNow invitations for new LobbyId={}", invitationsSent, lobbyEntity.getId());
             
         } catch (Exception e) {
             logger.error("Error checking RaceNow queue for new lobby: {}", e.getMessage(), e);
@@ -336,8 +356,6 @@ public class LobbyBO {
 
             if (entrantsSize < maxEntrants) {
                 lobbyEntity = lobbyEntityTmp;
-                logger.info(String.format("RaceNow: PersonaId=%d (Level=%d) successfully joining EventId=%d (MinLevel=%d, MaxLevel=%d)", 
-                    personaEntity.getPersonaId(), personaEntity.getLevel(), event.getId(), event.getMinLevel(), event.getMaxLevel()));
                 
                 if (!isPersonaInside(personaEntity.getPersonaId(), lobbyEntrants)) {
                     LobbyEntrantEntity lobbyEntrantEntity = new LobbyEntrantEntity();

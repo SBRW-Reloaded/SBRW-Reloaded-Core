@@ -39,8 +39,9 @@ public class Catalog {
             "categoryName") String categoryName,
                                                   @QueryParam("clientProductType") String clientProductType) {
         ArrayOfProductTrans arrayOfProductTrans = new ArrayOfProductTrans();
+        Long activePersonaId = requestSessionInfo.getActivePersonaId();
         List<ProductEntity> productsInCategory = productBO.productsInCategory(categoryName, clientProductType,
-                requestSessionInfo.getActivePersonaId());
+                activePersonaId);
         List<ProductTrans> productTransList = productBO.getProductTransList(productsInCategory);
         arrayOfProductTrans.getProductTrans().addAll(productTransList);
         return arrayOfProductTrans;

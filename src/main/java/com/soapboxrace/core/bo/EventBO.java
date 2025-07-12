@@ -1,5 +1,5 @@
 /*
- * This file is part of the Soapbox Race World core source code.
+ * This file is part of the Soapbox Race World     public void createEventDataSession(Long personaId, Long eventSessionId) {ce code.
  * If you use any of this code for third-party purposes, please provide attribution.
  * Copyright (c) 2020.
  */
@@ -14,9 +14,11 @@ import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
 import org.hibernate.Hibernate;
+import org.slf4j.Logger;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 
@@ -39,9 +41,20 @@ public class EventBO {
     @EJB
     private PersonaBO personaBO;
 
+    @Inject
+    private Logger logger;
+
     public List<EventEntity> availableAtLevel(Long personaId) {
         PersonaEntity personaEntity = personaDao.find(personaId);
         return eventDao.findByLevel(personaEntity.getLevel());
+    }
+
+    /**
+     * Récupère tous les événements disponibles (activés)
+     * @return Liste de tous les événements activés
+     */
+    public List<EventEntity> getAllEvents() {
+        return eventDao.findAll();
     }
 
     public void createEventDataSession(Long personaId, Long eventSessionId) {
@@ -72,10 +85,21 @@ public class EventBO {
             return null;
         }
 
+        // SÉCURITÉ : Vérifier le niveau du joueur AVANT de créer la session d'événement
+        PersonaEntity personaEntity = personaDao.find(activePersonaId);
+        if (personaEntity.getLevel() < eventEntity.getMinLevel() || personaEntity.getLevel() > eventEntity.getMaxLevel()) {
+            logger.warn("Level restriction violation blocked: PersonaId={} (Level={}) tried to launch EventId={} (MinLevel={}, MaxLevel={})", 
+                activePersonaId, personaEntity.getLevel(), eventId, eventEntity.getMinLevel(), eventEntity.getMaxLevel());
+            throw new EngineException(EngineExceptionCode.InvalidEntrantEventSession, true);
+        }
+
         CarEntity carEntity = personaBO.getDefaultCarEntity(activePersonaId);
 
-        if (carEntity.getCarClassHash() == 0 || (eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() != eventEntity.getCarClassHash())) {
-            // The client UI does not allow you to join events outside your current car's class
+        // Vérification du niveau du joueur et de la classe de voiture - traiter comme une restriction de classe
+        if (carEntity.getCarClassHash() == 0 || 
+            (eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() != eventEntity.getCarClassHash()) ||
+            (personaEntity.getLevel() < eventEntity.getMinLevel() || personaEntity.getLevel() > eventEntity.getMaxLevel())) {
+            // The client UI does not allow you to join events outside your current car's class or level range
             throw new EngineException(EngineExceptionCode.CarDataInvalid, false);
         }
 

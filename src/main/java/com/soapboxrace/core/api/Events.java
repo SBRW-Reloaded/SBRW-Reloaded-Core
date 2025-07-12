@@ -50,8 +50,8 @@ public class Events {
 
         EventsPacket eventsPacket = new EventsPacket();
         ArrayOfEventDefinition arrayOfEventDefinition = new ArrayOfEventDefinition();
-        List<EventEntity> availableAtLevel = eventBO.availableAtLevel(activePersonaId);
-        for (EventEntity eventEntity : availableAtLevel) {
+        List<EventEntity> findEventsByLevel = eventBO.availableAtLevel(activePersonaId);
+        for (EventEntity eventEntity : findEventsByLevel) {
             if (carClassHash == 0 || (eventEntity.getCarClassHash() != 607077938 && carClassHash != eventEntity.getCarClassHash())) {
                 eventEntity.setLocked(true);
             }

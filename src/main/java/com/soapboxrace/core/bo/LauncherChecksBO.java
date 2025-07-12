@@ -14,13 +14,11 @@ import javax.ejb.EJB;
 import javax.ejb.Schedule;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
-import javax.inject.Inject;
 
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 
-import org.slf4j.Logger;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonParseException;
@@ -33,9 +31,6 @@ public class LauncherChecksBO {
 
     @EJB
     private ParameterBO parameterBO;
-
-    @Inject
-    private Logger logger;
 
     @PostConstruct
     public void init() {
@@ -60,10 +55,8 @@ public class LauncherChecksBO {
                 String shaHash = StringUtils.substringBetween(jsonResponse.get("body").toString(), "EXE: `", "`");
                 // If the found version is not whitelisted add it to the list
                 if (shaHash != null && parameter != null && !parameter.contains(shaHash)) {
-                    logger.info("LauncherChecksBO: Found New SBRW Launcher release! {} ({})", version, shaHash);
                     parameterBO.setParameter("SIGNED_LAUNCHER_HASH", parameter + "\n" + version + "=" + shaHash);
-                    logger.info("LauncherChecksBO: Whitelisted New SBRW Launcher version {}", version);
-                } else { logger.info("LauncherChecksBO: No new SBRW Launcher releases found."); }
+                }
             }
         }
     }

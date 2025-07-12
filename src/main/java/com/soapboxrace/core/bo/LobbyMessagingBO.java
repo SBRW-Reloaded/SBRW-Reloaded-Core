@@ -83,9 +83,6 @@ public class LobbyMessagingBO {
      */
     public void sendLobbyInvitation(LobbyEntity lobbyEntity, PersonaEntity recipientPersona, long inviteLifetime) {
         try {
-            logger.info(String.format("Sending lobby invitation: LobbyId=%d, RecipientPersonaId=%d, InviteLifetime=%d", 
-                lobbyEntity.getId(), recipientPersona.getPersonaId(), inviteLifetime));
-            
             XMPP_LobbyInviteType lobbyInvite = new XMPP_LobbyInviteType();
             lobbyInvite.setEventId(lobbyEntity.getEvent().getId());
             lobbyInvite.setLobbyInviteId(lobbyEntity.getId());
@@ -100,9 +97,8 @@ public class LobbyMessagingBO {
             response.setLobbyInvite(lobbyInvite);
 
             openFireSoapBoxCli.send(response, recipientPersona.getPersonaId());
-            
-            logger.info(String.format("Lobby invitation sent successfully to PersonaId=%d", recipientPersona.getPersonaId()));
-        } catch (Exception e) {            logger.error(String.format("Failed to send lobby invitation to PersonaId=%d: %s",
+        } catch (Exception e) {
+            logger.error(String.format("Failed to send lobby invitation to PersonaId=%d: %s",
                     recipientPersona.getPersonaId(), e.getMessage()), e);
             // Optionally re-throw or handle the exception based on requirements
         }

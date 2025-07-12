@@ -12,16 +12,11 @@ import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.EventEntity;
 import com.soapboxrace.core.jpa.InventoryItemEntity;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 
 @Stateless
 public class CarDamageBO {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(CarDamageBO.class);
 
     @EJB
     private CarDAO carDAO;
@@ -54,9 +49,6 @@ public class CarDamageBO {
             int calcDamage = eventEntity.getEventModeId() == 19 ? 2 : 5; // 5% for non-drags, 2% for drags
             int minCarDurability = parameterBO.getIntParam("SBRWR_MIN_CAR_DURABILITY", 0);
             int newCarDurability = Math.max(durability - calcDamage, minCarDurability);
-            
-            LOGGER.debug("Car damage calculation - CarId: {}, CurrentDurability: {}, Damage: {}, MinDurability: {}, NewDurability: {}", 
-                         carId, durability, calcDamage, minCarDurability, newCarDurability);
 
             updateDurability(carEntity, newCarDurability);
         }

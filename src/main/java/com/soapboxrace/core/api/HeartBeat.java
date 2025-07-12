@@ -33,7 +33,8 @@ public class HeartBeat {
     public com.soapboxrace.jaxb.http.HeartBeat heartbeat() {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
         if (!Objects.isNull(activePersonaId) && !activePersonaId.equals(0L)) {
-            presenceBO.refreshPresence(activePersonaId);
+            // Utiliser la méthode sécurisée qui ne recrée pas de présence
+            presenceBO.refreshPresenceIfExists(activePersonaId);
         }
 
         com.soapboxrace.jaxb.http.HeartBeat heartBeat = new com.soapboxrace.jaxb.http.HeartBeat();

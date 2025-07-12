@@ -9,11 +9,9 @@ package com.soapboxrace.core.bo;
 import com.soapboxrace.core.dao.ParameterDAO;
 import com.soapboxrace.core.jpa.ParameterEntity;
 import com.soapboxrace.core.jpa.UserEntity;
-import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.*;
-import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -28,8 +26,6 @@ public class ParameterBO {
     @EJB
     private ParameterDAO parameterDao;
 
-    @Inject
-    private Logger logger;
     private final ConcurrentMap<String, String> parameterMap;
     public ParameterBO() {
         parameterMap = new ConcurrentHashMap<>();
@@ -48,7 +44,6 @@ public class ParameterBO {
             if (parameterEntity.getValue() != null)
                 parameterMap.put(parameterEntity.getName(), parameterEntity.getValue());
         }
-        logger.info("Loaded {} parameters from database", parameterMap.size());
     }
 
     private String getParameter(String name) {

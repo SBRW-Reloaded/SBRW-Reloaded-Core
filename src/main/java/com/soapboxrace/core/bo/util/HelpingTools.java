@@ -16,6 +16,8 @@ import com.soapboxrace.jaxb.xmpp.AchievementAwarded;
 import com.soapboxrace.jaxb.xmpp.AchievementsAwarded;
 import com.soapboxrace.core.dao.*;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import javax.xml.datatype.DatatypeConstants;
@@ -24,6 +26,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
 import java.time.ZoneId;
 
 public class HelpingTools {
+    private static final Logger logger = LoggerFactory.getLogger(HelpingTools.class);
+    
     @EJB
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
@@ -55,16 +59,14 @@ public class HelpingTools {
 
     public static String getClass(int classHash) {
         switch(classHash) {
-            case 869393278: return "F";
             case 872416321: return "E";
             case 415909161: return "D";
             case 1866825865: return "C";
             case -406473455: return "B";
             case -405837480: return "A";
-            case -2142411446: return "S";
             case 86241155: return "S1";
             case 221915816: return "S2";
-            case 1526233495: return "S3";
+            case -543091316: return "X";
             default: return "OPEN";
         }
     }
@@ -111,7 +113,7 @@ public class HelpingTools {
 			xmlCalendar.setTimezone(DatatypeConstants.FIELD_UNDEFINED);
 			achievedOnStr = xmlCalendar.toXMLFormat();
 		} catch (Exception e) {
-			System.err.println("xml calendar str error");
+			logger.error("Error creating XML calendar string", e);
 		}
 
 		achievementAwarded.setAchievedOn(achievedOnStr);

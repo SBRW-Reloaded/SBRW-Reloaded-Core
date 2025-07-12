@@ -29,6 +29,7 @@ import com.soapboxrace.core.bo.util.DiscordWebhook;
 import com.soapboxrace.core.dao.PersonaDAO;
 import com.soapboxrace.core.dao.LobbyDAO;
 import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
+import org.slf4j.Logger;
 
 @Path("/matchmaking")
 public class MatchMaking {
@@ -69,14 +70,25 @@ public class MatchMaking {
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
+    @Inject
+    private Logger logger;
+
     @PUT
     @Secured
     @Path("/joinqueueracenow")
     @Produces(MediaType.APPLICATION_XML)
     public String joinQueueRaceNow() {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        logger.info("RACENOW ENDPOINT: PersonaId={} is requesting to join RaceNow queue", activePersonaId);
+        
         OwnedCarTrans defaultCar = personaBO.getDefaultCar(activePersonaId);
-        lobbyBO.joinFastLobby(activePersonaId, defaultCar.getCustomCar().getCarClassHash());
+        int carClassHash = defaultCar.getCustomCar().getCarClassHash();
+        
+        logger.info("RACENOW ENDPOINT: PersonaId={} using car with class hash={}", activePersonaId, carClassHash);
+        
+        lobbyBO.joinFastLobby(activePersonaId, carClassHash);
+        
+        logger.info("RACENOW ENDPOINT: PersonaId={} joinFastLobby call completed", activePersonaId);
         return "";
     }
 
@@ -95,9 +107,14 @@ public class MatchMaking {
     @Produces(MediaType.APPLICATION_XML)
     public String leaveQueue() {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        logger.info("LEAVE_QUEUE ENDPOINT: PersonaId={} is leaving all queues", activePersonaId);
+        
         matchmakingBO.removePlayerFromQueue(activePersonaId);
         // Retirer aussi de la file RaceNow persistante
         matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
+        
+        logger.info("LEAVE_QUEUE ENDPOINT: PersonaId={} removed from all queues", activePersonaId);
+        
         tokenSessionBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         return "";
@@ -193,7 +210,12 @@ public class MatchMaking {
     @Path("/declineinvite")
     @Produces(MediaType.APPLICATION_XML)
     public String declineInvite(@QueryParam("lobbyInviteId") Long lobbyInviteId) {
-        lobbyBO.declineinvite(requestSessionInfo.getActivePersonaId(), lobbyInviteId);
+        Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        logger.info("DECLINE_INVITE ENDPOINT: PersonaId={} is declining lobbyInviteId={}", activePersonaId, lobbyInviteId);
+        
+        lobbyBO.declineinvite(activePersonaId, lobbyInviteId);
+        
+        logger.info("DECLINE_INVITE ENDPOINT: PersonaId={} decline completed", activePersonaId);
         return "";
     }
 

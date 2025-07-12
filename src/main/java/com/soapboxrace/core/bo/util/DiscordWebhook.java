@@ -47,8 +47,6 @@ public class DiscordWebhook {
 			DiscordEmbed embed = de.build();
 			DiscordMessage dm = DiscordMessage.builder().username(botName).embeds(Arrays.asList(embed)).build();
 			temmie.sendMessage(dm);
-		} else {
-			System.out.println("Discord WebHooks are disabled.");
 		}
 	}
 

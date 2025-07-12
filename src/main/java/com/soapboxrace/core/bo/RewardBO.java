@@ -16,8 +16,6 @@ import javax.ejb.Stateless;
 import java.util.Map;
 import java.util.Set;
 
-import com.soapboxrace.core.bo.util.DiscordWebhook;
-
 @Stateless
 public class RewardBO {
 
@@ -74,6 +72,63 @@ public class RewardBO {
         return (int) baseRewardResult;
     }
 
+    private boolean addRepToPersona(PersonaEntity personaEntity, Integer rep) {
+    // If the player has reached the maximum level, do nothing.
+    int maxLevel = parameterBO.getMaxLevel(personaEntity.getUser());
+    if (personaEntity.getLevel() >= maxLevel) {
+        return false;
+    }
+
+    // Not at max level? We can add to the player's TOTAL reputation.
+    // This isn't the same as RepAtCurrentLevel; this can accumulate for a long, long time.
+    personaEntity.setRep(personaEntity.getRep() + rep);
+
+    // RepAtCurrentLevel represents the player's progress since reaching their current level.
+    // We start by adding the entire reputation reward to RepAtCurrentLevel. It may or may not be
+    // enough to level up.
+    long newRepAtCurrentLevel = personaEntity.getRepAtCurrentLevel() + rep;
+
+    // Now we need to find the maximum RepAtCurrentLevel for the player's current level.
+    // This is also called "points to next level". In other words, how much reputation do you have to earn
+    // AFTER reaching level `n`, in order to reach level `n+1` ?
+    long repToNextLevel = levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
+
+    // If the player hasn't earned enough to level up, we're done.
+    if (newRepAtCurrentLevel < repToNextLevel) {
+        personaEntity.setRepAtCurrentLevel((int) newRepAtCurrentLevel);
+        return false;
+    }
+
+    // At this point, leveling up is guaranteed.
+    while (newRepAtCurrentLevel >= repToNextLevel) {
+        // 1. Increase the player's level.
+        personaEntity.setLevel(personaEntity.getLevel() + 1);
+
+        // 1b. Is the player now at the maximum level? If so, wipe out RepAtCurrentLevel,
+        //     since any value other than 0 makes no sense at this point.
+        //     Also stop the loop, so we don't go past the maximum level.
+        if (personaEntity.getLevel() >= maxLevel) {
+            personaEntity.setRepAtCurrentLevel(0);
+            break;
+        }
+
+        // 2. Update the player's RepAtCurrentLevel.
+        //    Whatever is left over after leveling up is added.
+        //    This may be excessive, which is why we loop.
+        //    It could also be zero (if the player earns exactly enough to level up), or less than the maximum.
+        //    It WON'T be negative, since we've established that [newRepAtCurrentLevel >= repToNextLevel].
+        personaEntity.setRepAtCurrentLevel((int) (newRepAtCurrentLevel - repToNextLevel));
+
+        // 3. Find the "points to next level" for the player's NEW level.
+        repToNextLevel = levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
+
+        // 4. Update the RepAtCurrentLevel tracker. This keeps us from looping more than is appropriate.
+        newRepAtCurrentLevel = personaEntity.getRepAtCurrentLevel();
+    }
+
+    return true;
+}
+
     public void setBaseReward(PersonaEntity personaEntity, EventEntity eventEntity, EventRewardEntity eventRewardEntity,
                               ArbitrationPacket arbitrationPacket, RewardVO rewardVO) {
         float baseRep = (float) eventRewardEntity.getBaseRepReward();
@@ -111,28 +166,7 @@ public class RewardBO {
         boolean dscIsLeveledUp = false;
 
         if (parameterBO.getBoolParam("ENABLE_REPUTATION") && personaEntity.getLevel() < maxLevel) {
-            Long expToNextLevel = levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
-            long expMax = personaEntity.getRepAtCurrentLevel() + exp;
-            if (expMax >= expToNextLevel) {
-                boolean isLeveledUp = true;
-                dscIsLeveledUp = true;
-                hasLevelChanged = true;
-                while (isLeveledUp) {
-                    personaEntity.setLevel(personaEntity.getLevel() + 1);
-                    personaEntity.setRepAtCurrentLevel((int) (expMax - expToNextLevel));
-
-                    expToNextLevel = levelRepDao.find((long) personaEntity.getLevel()).getExpPoint();
-                    expMax = personaEntity.getRepAtCurrentLevel() + exp;
-
-                    isLeveledUp = (expMax >= expToNextLevel);
-                    if (personaEntity.getLevel() >= maxLevel) {
-                        isLeveledUp = false;
-                    }
-                }
-            } else {
-                personaEntity.setRepAtCurrentLevel((int) expMax);
-            }
-            personaEntity.setRep(personaEntity.getRep() + exp);
+        hasLevelChanged = dscIsLeveledUp = addRepToPersona(personaEntity, exp);
         }
         personaDao.update(personaEntity);
 

@@ -19,6 +19,8 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.ejb.*;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,25 +139,45 @@ public class RaceNowMonitorBO {
             // Récupérer tous les joueurs en attente RaceNow
             Set<String> playersInQueue = matchmakingBO.getRaceNowQueuePlayers();
             
+            // Debug: Afficher les détails de la queue récupérée
+            if (!playersInQueue.isEmpty() || shouldLogDetails) {
+                logger.info("RACENOW MONITOR: Retrieved {} players from queue: {}", 
+                    playersInQueue.size(), playersInQueue);
+            }
+            
+            // Vérifier s'il y a des joueurs à scanner immédiatement
+            Set<String> immediateScanPlayers = matchmakingBO.getAndClearImmediateScanPlayers();
+            
+            // Combiner les joueurs en attente normale et ceux demandant un scan immédiat
+            Set<String> allPlayersToProcess = new HashSet<>(playersInQueue);
+            if (!immediateScanPlayers.isEmpty()) {
+                // Ajouter les joueurs du scan immédiat (éviter les doublons avec addAll)
+                allPlayersToProcess.addAll(immediateScanPlayers);
+                logger.info("Processing {} immediate scan requests for players: {}", 
+                    immediateScanPlayers.size(), immediateScanPlayers);
+            }
+            
             // Si il y a des joueurs en file, toujours logger les détails
-            if (!playersInQueue.isEmpty()) {
+            if (!allPlayersToProcess.isEmpty()) {
                 shouldLogDetails = true;
                 logger.info("========== RACENOW MONITOR ACTIVE #{} ==========", executionCounter);
             }
             
-            logger.info("RaceNow queue status: {} players waiting", playersInQueue.size());
+            logger.info("RaceNow queue status: {} players waiting ({} immediate scans)", 
+                playersInQueue.size(), immediateScanPlayers.size());
             
-            if (playersInQueue.isEmpty()) {
+            if (allPlayersToProcess.isEmpty()) {
                 if (shouldLogDetails) {
                     logger.info("No players in RaceNow queue, nothing to do");
                 }
                 return; // Rien à faire
             }
             
-            logger.info("Processing {} players in RaceNow queue:", playersInQueue.size());
+            logger.info("Processing {} total players ({} in queue + {} immediate):", 
+                allPlayersToProcess.size(), playersInQueue.size(), immediateScanPlayers.size());
             
             int playersProcessed = 0;
-            for (String personaIdStr : playersInQueue) {
+            for (String personaIdStr : allPlayersToProcess) {
                 try {
                     Long personaId = Long.parseLong(personaIdStr);
                     logger.info("  [{}] Processing PersonaId={}", ++playersProcessed, personaId);
@@ -225,16 +247,33 @@ public class RaceNowMonitorBO {
             // Rechercher des lobbies disponibles
             List<LobbyEntity> availableLobbies = lobbyDAO.findAllOpen(carClassHash, playerLevel);
             
-            logger.debug("Found {} lobbies for PersonaId={}", availableLobbies.size(), personaId);
+            // SÉCURITÉ : Double-vérification des niveaux après la requête SQL
+            List<LobbyEntity> levelVerifiedLobbies = new ArrayList<>();
+            for (LobbyEntity lobby : availableLobbies) {
+                EventEntity event = lobby.getEvent();
+                if (playerLevel >= event.getMinLevel() && playerLevel <= event.getMaxLevel()) {
+                    levelVerifiedLobbies.add(lobby);
+                } else {
+                    logger.warn("RACENOW_MONITOR: SECURITY - SQL query returned inappropriate lobby: PersonaId={} (Level={}) got EventId={} (MinLevel={}, MaxLevel={})", 
+                               personaId, playerLevel, event.getId(), event.getMinLevel(), event.getMaxLevel());
+                }
+            }
             
-            if (!availableLobbies.isEmpty()) {
+            if (levelVerifiedLobbies.size() != availableLobbies.size()) {
+                logger.error("RACENOW_MONITOR: CRITICAL - SQL level filtering failed! Expected {} lobbies, got {} after level verification", 
+                            levelVerifiedLobbies.size(), availableLobbies.size());
+            }
+            
+            logger.debug("Found {} level-verified lobbies for PersonaId={} (was {} from SQL)", levelVerifiedLobbies.size(), personaId, availableLobbies.size());
+            
+            if (!levelVerifiedLobbies.isEmpty()) {
                 PersonaEntity personaEntity = personaDAO.find(personaId);
                 if (personaEntity != null) {
                     logger.info("Found {} available lobbies for RaceNow PersonaId={}, attempting to join directly", 
-                        availableLobbies.size(), personaId);
+                        levelVerifiedLobbies.size(), personaId);
                     
                     // Faire rejoindre directement le joueur au lieu d'envoyer juste une invitation
-                    boolean joinedSuccessfully = attemptToJoinLobbyDirectly(personaEntity, availableLobbies);
+                    boolean joinedSuccessfully = attemptToJoinLobbyDirectly(personaEntity, levelVerifiedLobbies);
                     
                     if (joinedSuccessfully) {
                         matchmakingBO.removePlayerFromRaceNowQueue(personaId);

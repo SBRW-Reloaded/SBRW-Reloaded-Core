@@ -60,7 +60,6 @@ public class MatchmakingBO {
     public void initialize() {
         if (this.parameterBO.getBoolParam("ENABLE_REDIS")) {
             this.redisConnection = this.redisBO.getConnection();
-            logger.info("Initialized matchmaking system");
         } else {
             logger.warn("Redis is not enabled! Matchmaking queue is disabled.");
         }
@@ -71,7 +70,6 @@ public class MatchmakingBO {
         if (this.redisConnection != null) {
             this.redisConnection.sync().del("matchmaking_queue");
         }
-        logger.info("Shutdown matchmaking system");
     }
 
     /**
@@ -130,10 +128,11 @@ public class MatchmakingBO {
      */
     public void ignoreEvent(long personaId, EventEntity EventEntity) {
         if (this.redisConnection != null) {
-        	if (this.redisConnection.sync().hexists("matchmaking_queue", Long.toString(personaId))) {
-        		this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
-                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
-        	}
+            // Ajouter l'événement à la liste des ignorés sans condition restrictive
+            // Car un joueur peut décliner une invitation même s'il n'est pas dans une file d'attente
+            this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
+            logger.debug("PersonaId={} ignored EventId={} ({})", personaId, EventEntity.getId(), EventEntity.getName());
+            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
         }
     }
 
@@ -144,7 +143,9 @@ public class MatchmakingBO {
      */
     public void resetIgnoredEvents(long personaId) {
         if (this.redisConnection != null) {
+            Set<String> ignoredEvents = this.redisConnection.sync().smembers("ignored_events." + personaId);
             this.redisConnection.sync().del("ignored_events." + personaId);
+            logger.debug("PersonaId={} reset ignored events: {}", personaId, ignoredEvents);
         }
     }
 
@@ -157,10 +158,25 @@ public class MatchmakingBO {
      */
     public boolean isEventIgnored(long personaId, long eventId) {
         if (this.redisConnection != null) {
-            return this.redisConnection.sync().sismember("ignored_events." + personaId, Long.toString(eventId));
+            boolean ignored = this.redisConnection.sync().sismember("ignored_events." + personaId, Long.toString(eventId));
+            logger.debug("PersonaId={} EventId={} ignored={}", personaId, eventId, ignored);
+            return ignored;
         }
 
         return false;
+    }
+
+    /**
+     * Gets the list of ignored events for the given persona ID (for debugging)
+     *
+     * @param personaId the persona ID
+     * @return Set of ignored event IDs
+     */
+    public Set<String> getIgnoredEvents(long personaId) {
+        if (this.redisConnection != null) {
+            return this.redisConnection.sync().smembers("ignored_events." + personaId);
+        }
+        return new HashSet<>();
     }
 
     /**
@@ -171,21 +187,38 @@ public class MatchmakingBO {
      * @param level     The level of the persona.
      */
     public void addPlayerToRaceNowQueue(Long personaId, Integer carClass, Integer level) {
+        logger.info("RACENOW: Attempting to add PersonaId={} to RaceNow queue (carClass={}, level={})", personaId, carClass, level);
+        
         if (this.redisConnection != null) {
-            // Stocker les informations du joueur dans une hash map Redis dédiée à RaceNow
-            String raceNowKey = "racenow_queue:" + personaId;
-            Map<String, String> data = new HashMap<>();
-            data.put("carClass", carClass.toString());
-            data.put("level", level.toString());
-            data.put("timestamp", String.valueOf(System.currentTimeMillis()));
-            
-            this.redisConnection.sync().hmset(raceNowKey, data);
-            
-            // Ajouter à un set pour un accès rapide
-            this.redisConnection.sync().sadd("racenow_active_players", personaId.toString());
-            
-            logger.info("Added PersonaId={} to persistent RaceNow queue (CarClass={}, Level={})", 
-                personaId, carClass, level);
+            try {
+                // D'abord supprimer l'ancien état si le joueur était déjà en queue
+                // pour forcer un nouveau cycle de recherche
+                removePlayerFromRaceNowQueue(personaId);
+                
+                // Stocker les informations du joueur dans une hash map Redis dédiée à RaceNow
+                String raceNowKey = "racenow_queue:" + personaId;
+                Map<String, String> data = new HashMap<>();
+                data.put("carClass", carClass.toString());
+                data.put("level", level.toString());
+                data.put("timestamp", String.valueOf(System.currentTimeMillis()));
+                
+                this.redisConnection.sync().hmset(raceNowKey, data);
+                
+                // Ajouter à un set pour un accès rapide
+                this.redisConnection.sync().sadd("racenow_active_players", personaId.toString());
+                
+                // Déclencher un scan immédiat pour ce joueur
+                triggerImmediateScanForPlayer(personaId);
+                
+                logger.info("RACENOW: SUCCESS - PersonaId={} added to RaceNow queue with immediate scan triggered", personaId);
+                
+                // Diagnostic pour vérifier que l'ajout a bien fonctionné
+                diagnoseRaceNowQueueState(personaId);
+            } catch (Exception e) {
+                logger.error("RACENOW: FAILED to add PersonaId={} to RaceNow queue: {}", personaId, e.getMessage(), e);
+            }
+        } else {
+            logger.warn("RACENOW: FAILED to add PersonaId={} - Redis connection is null", personaId);
         }
     }
 
@@ -196,9 +229,9 @@ public class MatchmakingBO {
      */
     public void removePlayerFromRaceNowQueue(Long personaId) {
         if (this.redisConnection != null) {
+            logger.debug("RACENOW: Removing PersonaId={} from RaceNow queue", personaId);
             this.redisConnection.sync().del("racenow_queue:" + personaId);
             this.redisConnection.sync().srem("racenow_active_players", personaId.toString());
-            logger.info("Removed PersonaId={} from persistent RaceNow queue", personaId);
         }
     }
 
@@ -240,11 +273,106 @@ public class MatchmakingBO {
         return null;
     }
 
+    /**
+     * Force un scan immédiat pour un joueur spécifique qui vient de se mettre en queue RaceNow
+     * Ceci évite d'attendre le prochain cycle automatique de 5 secondes
+     *
+     * @param personaId The ID of the persona to scan immediately
+     */
+    public void triggerImmediateScanForPlayer(Long personaId) {
+        if (this.redisConnection != null) {
+            // Marquer ce joueur pour un scan immédiat
+            this.redisConnection.sync().sadd("racenow_immediate_scan", personaId.toString());
+            this.redisConnection.sync().expire("racenow_immediate_scan", 30); // Expirer après 30 secondes
+            logger.debug("PersonaId={} marked for immediate RaceNow scan", personaId);
+        }
+    }
+
+    /**
+     * Vérifie et traite les joueurs marqués pour un scan immédiat
+     *
+     * @return Set des joueurs à scanner immédiatement
+     */
+    public Set<String> getAndClearImmediateScanPlayers() {
+        if (this.redisConnection != null) {
+            Set<String> players = this.redisConnection.sync().smembers("racenow_immediate_scan");
+            if (!players.isEmpty()) {
+                this.redisConnection.sync().del("racenow_immediate_scan");
+                logger.debug("Found {} players for immediate scan: {}", players.size(), players);
+            }
+            return players;
+        }
+        return new HashSet<>();
+    }
+
+    /**
+     * Diagnostic method to check RaceNow queue state
+     * This method logs detailed information about the current queue state
+     * 
+     * @param personaId Optional persona ID to focus diagnostics on
+     */
+    public void diagnoseRaceNowQueueState(Long personaId) {
+        logger.info("=== RACENOW QUEUE DIAGNOSTIC ===");
+        
+        if (this.redisConnection == null) {
+            logger.error("DIAGNOSTIC: Redis connection is NULL");
+            return;
+        }
+        
+        try {
+            // Vérifier le nombre total de joueurs en queue
+            Set<String> allPlayers = this.redisConnection.sync().smembers("racenow_active_players");
+            logger.info("DIAGNOSTIC: Total players in RaceNow queue: {}", allPlayers.size());
+            
+            if (allPlayers.isEmpty()) {
+                logger.info("DIAGNOSTIC: Queue is empty");
+            } else {
+                logger.info("DIAGNOSTIC: Players in queue: {}", allPlayers);
+                
+                // Vérifier les données de chaque joueur
+                for (String playerStr : allPlayers) {
+                    Map<String, String> playerData = this.redisConnection.sync().hgetall("racenow_queue:" + playerStr);
+                    logger.info("DIAGNOSTIC: Player {} data: {}", playerStr, playerData);
+                }
+            }
+            
+            // Si un persona ID spécifique est fourni, vérifier son état
+            if (personaId != null) {
+                logger.info("DIAGNOSTIC: Checking specific PersonaId={}", personaId);
+                
+                boolean isInSet = this.redisConnection.sync().sismember("racenow_active_players", personaId.toString());
+                logger.info("DIAGNOSTIC: PersonaId={} in active_players set: {}", personaId, isInSet);
+                
+                Map<String, String> queueData = this.redisConnection.sync().hgetall("racenow_queue:" + personaId);
+                if (queueData.isEmpty()) {
+                    logger.info("DIAGNOSTIC: PersonaId={} has NO queue data", personaId);
+                } else {
+                    logger.info("DIAGNOSTIC: PersonaId={} queue data: {}", personaId, queueData);
+                }
+                
+                boolean inImmediateScan = this.redisConnection.sync().sismember("racenow_immediate_scan", personaId.toString());
+                logger.info("DIAGNOSTIC: PersonaId={} in immediate scan: {}", personaId, inImmediateScan);
+            }
+            
+            // Vérifier les scans immédiats
+            Set<String> immediatePlayers = this.redisConnection.sync().smembers("racenow_immediate_scan");
+            logger.info("DIAGNOSTIC: Players in immediate scan queue: {} ({})", immediatePlayers.size(), immediatePlayers);
+            
+        } catch (Exception e) {
+            logger.error("DIAGNOSTIC: Exception while checking queue state: {}", e.getMessage(), e);
+        }
+        
+        logger.info("=== END RACENOW QUEUE DIAGNOSTIC ===");
+    }
+
     @Asynchronous
     @Lock(LockType.READ)
     public void handlePersonaPresenceUpdated(@Observes PersonaPresenceUpdated personaPresenceUpdated) {
-        removePlayerFromQueue(personaPresenceUpdated.getPersonaId());
+        Long personaId = personaPresenceUpdated.getPersonaId();
+        removePlayerFromQueue(personaId);
         // Nettoyer aussi la file RaceNow quand le joueur se déconnecte
-        removePlayerFromRaceNowQueue(personaPresenceUpdated.getPersonaId());
+        removePlayerFromRaceNowQueue(personaId);
+        // Réinitialiser les événements ignorés lors de la déconnexion
+        resetIgnoredEvents(personaId);
     }
 }

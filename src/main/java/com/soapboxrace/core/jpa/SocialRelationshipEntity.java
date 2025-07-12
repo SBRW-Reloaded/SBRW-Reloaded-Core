@@ -19,6 +19,8 @@ import javax.persistence.*;
                 "SocialRelationshipEntity obj WHERE obj.user.id = :id AND obj.status=:status"), //
         @NamedQuery(name = "SocialRelationshipEntity.findByRemoteUserAndStatus", query = "SELECT obj FROM " +
                 "SocialRelationshipEntity obj WHERE obj.remoteUser.id = :remoteId AND obj.status=:status"), //
+        @NamedQuery(name = "SocialRelationshipEntity.findByRemotePersonaId", query = "SELECT obj FROM " +
+                "SocialRelationshipEntity obj WHERE obj.remotePersonaId = :remotePersonaId"), //
         @NamedQuery(name = "SocialRelationshipEntity.findByLocalAndRemoteUser", query = "SELECT obj FROM " +
                 "SocialRelationshipEntity" +
                 " obj" +

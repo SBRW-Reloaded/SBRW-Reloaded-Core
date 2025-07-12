@@ -15,13 +15,11 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
-import org.slf4j.Logger;
 
 import javax.ejb.EJB;
 import javax.ejb.Lock;
 import javax.ejb.LockType;
 import javax.ejb.Singleton;
-import javax.inject.Inject;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.security.cert.X509Certificate;
@@ -36,9 +34,6 @@ public class OpenFireConnector {
     @EJB
     private ParameterBO parameterBO;
 
-    @Inject
-    private Logger logger;
-
     private XMPPTCPConnection connection;
 
     private String ipAddress;
@@ -46,8 +41,6 @@ public class OpenFireConnector {
     private Integer port;
 
     private String engineToken;
-
-    private boolean debugMode;
 
     private static X509TrustManager getX509TrustManager() {
         return new X509TrustManager() {
@@ -72,7 +65,6 @@ public class OpenFireConnector {
         this.ipAddress = parameterBO.getStrParam("XMPP_IP", "127.0.0.1");
         this.port = parameterBO.getIntParam("XMPP_PORT", 5222);
         this.engineToken = parameterBO.getStrParam("OPENFIRE_TOKEN");
-        this.debugMode = parameterBO.getBoolParam("XMPP_DEBUG");
 
         this.connection = new XMPPTCPConnection(getConnectionConfiguration());
         try {
@@ -83,7 +75,6 @@ public class OpenFireConnector {
             ReconnectionManager.getInstanceFor(this.connection)
                     .setReconnectionPolicy(ReconnectionManager.ReconnectionPolicy.RANDOM_INCREASING_DELAY);
 
-            logger.info("Logged in to Openfire server!");
         } catch (IOException | SmackException | XMPPException | InterruptedException e) {
             throw new RuntimeException("Failed to connect to Openfire server", e);
         }
@@ -97,10 +88,6 @@ public class OpenFireConnector {
      */
     @Lock(LockType.READ)
     public void send(String msg, Long personaId) {
-        if (this.debugMode) {
-            logger.debug("MESSAGE TO {}", personaId);
-            logger.debug(msg);
-        }
         Message message = new Message();
         message.setSubject("1337733113377331");
         message.setStanzaId("JN_1234567");

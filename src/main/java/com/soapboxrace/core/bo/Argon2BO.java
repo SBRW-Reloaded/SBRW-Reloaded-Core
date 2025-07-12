@@ -10,7 +10,6 @@ import com.google.common.base.Charsets;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
 import de.mkammerer.argon2.Argon2Helper;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
@@ -56,9 +55,6 @@ public class Argon2BO {
             paramString += ":" + iterations.toString();
             parameterBO.setParameter("ARGON2_PARAMS", paramString);
         }
-        LoggerFactory.getLogger("Argon2").info(
-                "Initialized. timeCost = {}, memoryCost = {}, parallelism = {}, iterations = {}",
-                timeCost, memoryCost, parallelism, iterations);
     }
 
     public String hash(String password) {

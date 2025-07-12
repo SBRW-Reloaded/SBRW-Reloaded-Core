@@ -49,6 +49,20 @@ public class SocialRelationshipDAO extends LongKeyedDAO<SocialRelationshipEntity
         return query.getResultList();
     }
 
+    public List<SocialRelationshipEntity> findByRemotePersonaId(Long remotePersonaId) {
+        TypedQuery<SocialRelationshipEntity> query = entityManager.createNamedQuery(
+                "SocialRelationshipEntity.findByRemotePersonaId", SocialRelationshipEntity.class);
+        query.setParameter("remotePersonaId", remotePersonaId);
+        return query.getResultList();
+    }
+
+    public List<SocialRelationshipEntity> findByStatus(Long status) {
+        TypedQuery<SocialRelationshipEntity> query = entityManager.createQuery(
+                "SELECT obj FROM SocialRelationshipEntity obj WHERE obj.status = :status", SocialRelationshipEntity.class);
+        query.setParameter("status", status);
+        return query.getResultList();
+    }
+
 
     public SocialRelationshipEntity findByLocalAndRemoteUser(Long localUserId, Long remoteUserId) {
         TypedQuery<SocialRelationshipEntity> query = entityManager.createNamedQuery(

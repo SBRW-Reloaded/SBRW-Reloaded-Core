@@ -8,6 +8,8 @@ package com.soapboxrace.core.api.util;
 
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.model.CountryResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -16,6 +18,7 @@ import java.util.List;
 
 public class GeoIp2 {
 
+    private static final Logger logger = LoggerFactory.getLogger(GeoIp2.class);
     private static GeoIp2 instance;
     private DatabaseReader dbReader = null;
 
@@ -38,7 +41,7 @@ public class GeoIp2 {
             File database = new File(pathToMmdb);
             dbReader = new DatabaseReader.Builder(database).build();
         } catch (Exception e) {
-            System.err.println("error inside geoip class [" + e.getMessage() + "]");
+            logger.error("Error initializing GeoIP database: {}", e.getMessage(), e);
         }
     }
 
@@ -49,7 +52,7 @@ public class GeoIp2 {
             CountryResponse country = dbReader.country(ipAddress);
             countryIso = country.getCountry().getIsoCode();
         } catch (Exception e) {
-            System.err.println("error inside geoip class [" + e.getMessage() + "]");
+            logger.error("Error getting country ISO for IP {}: {}", ip, e.getMessage());
         }
         return countryIso;
     }
@@ -62,7 +65,7 @@ public class GeoIp2 {
                 return true;
             }
         } catch (Exception e) {
-            System.err.println("error inside geoip class [" + e.getMessage() + "]");
+            logger.error("Error checking country allowance for IP {}: {}", ip, e.getMessage());
         }
         return false;
     }

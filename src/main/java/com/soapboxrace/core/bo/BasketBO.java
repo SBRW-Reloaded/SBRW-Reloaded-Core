@@ -21,6 +21,7 @@ import com.soapboxrace.jaxb.util.JAXBUtility;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -197,7 +198,12 @@ public class BasketBO {
             return CommerceResultStatus.FAIL_INVALID_BASKET;
         }
 
-        if (canPurchaseProduct(personaEntity, bundleProduct)) {
+        // Vérifier si le joueur possède un ticket gratuit pour ce bundle
+        InventoryItemEntity freeTicket = findFreeBundleTicket(personaEntity, bundleProduct);
+        boolean useFreeTicket = (freeTicket != null);
+
+        // Vérifier si l'achat est possible (soit gratuitement avec le ticket, soit avec de l'argent)
+        if (useFreeTicket || canPurchaseProduct(personaEntity, bundleProduct)) {
             try {
                 CardPackEntity cardPackEntity = cardPackDAO.findByEntitlementTag(bundleProduct.getEntitlementTag());
 
@@ -212,7 +218,13 @@ public class BasketBO {
                     );
                 }
 
-                performPersonaTransaction(personaEntity, bundleProduct);
+                if (useFreeTicket) {
+                    // Utiliser le ticket gratuit : décrémenter le count ou le supprimer
+                    inventoryBO.removeItem(personaEntity.getPersonaId(), bundleProduct.getEntitlementTag(), 1);
+                } else {
+                    // Effectuer la transaction normale avec paiement
+                    performPersonaTransaction(personaEntity, bundleProduct);
+                }
 
                 AchievementCommerceContext commerceContext = new AchievementCommerceContext(AchievementCommerceContext.CommerceType.BUNDLE_PURCHASE);
                 commerceContext.setProductEntity(bundleProduct);
@@ -465,5 +477,31 @@ public class BasketBO {
         }
 
         personaDao.update(personaEntity);
+    }
+
+    /**
+     * Vérifie si le joueur possède un ticket gratuit pour un bundle donné
+     * et retourne l'item d'inventaire correspondant
+     * 
+     * @param personaEntity Le joueur
+     * @param bundleProduct Le produit bundle à acheter
+     * @return L'item d'inventaire ticket s'il est disponible, null sinon
+     */
+    private InventoryItemEntity findFreeBundleTicket(PersonaEntity personaEntity, ProductEntity bundleProduct) {
+        if (!bundleProduct.getProductType().equals("BUNDLE")) {
+            return null;
+        }
+        
+        List<InventoryItemEntity> inventoryItems = inventoryItemDao.findAllByPersonaIdAndEntitlementTag(
+            personaEntity.getPersonaId(), bundleProduct.getEntitlementTag());
+        
+        // Chercher le premier item avec des utilisations restantes
+        for (InventoryItemEntity item : inventoryItems) {
+            if (item.getRemainingUseCount() > 0) {
+                return item;
+            }
+        }
+        
+        return null;
     }
 }
