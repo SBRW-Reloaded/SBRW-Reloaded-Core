@@ -15,7 +15,6 @@ import com.soapboxrace.jaxb.http.PursuitArbitrationPacket;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
-import java.util.Random;
 
 @Stateless
 public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
@@ -28,6 +27,9 @@ public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
 
     @EJB
     private LeaderboardBO leaderboardBO;
+
+    @EJB
+    private RankingBO rankingBO;
 
     public Accolades getAccolades(Long activePersonaId, PursuitArbitrationPacket pursuitArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity,
@@ -50,6 +52,7 @@ public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, pursuitArbitrationPacket, eventSessionEntity, eventDataEntity);
+        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, pursuitArbitrationPacket, rewardVO);
     }

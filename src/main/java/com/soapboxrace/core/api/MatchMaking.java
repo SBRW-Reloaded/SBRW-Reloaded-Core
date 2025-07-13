@@ -26,8 +26,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
 import com.soapboxrace.core.bo.util.DiscordWebhook;
-import com.soapboxrace.core.dao.PersonaDAO;
-import com.soapboxrace.core.dao.LobbyDAO;
+import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
 import org.slf4j.Logger;
 
@@ -60,6 +59,9 @@ public class MatchMaking {
 
     @EJB
     private ParameterBO parameterBO;
+
+    @EJB
+    private EventDAO eventDAO;
 
     @EJB
     private OpenFireRestApiCli openFireRestApiCli;
@@ -198,7 +200,7 @@ public class MatchMaking {
             } 
         }
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22)) {
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22) && lobbyInformation.getEvent().isRankedMode() == false) {
             openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_JOIN_MSG," + parameterBO.getStrParam("SBRWR_NOPU_REQUIREDPERCENT")), activePersonaId);
         }
 

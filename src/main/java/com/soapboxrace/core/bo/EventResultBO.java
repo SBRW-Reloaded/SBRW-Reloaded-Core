@@ -43,6 +43,8 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
     @EJB
     private EventDataSetupDAO eventDataSetupDAO;
 
+    @EJB
+    private EventDataDAO eventDataDAO;
     /**
      * Converts the given {@link TA} instance to a new {@link TR} instance.
      *
@@ -58,7 +60,7 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         if(parameterBo.getBoolParam("SBRWR_DISABLE_8_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~8);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_16_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~16);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_32_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~32);
-
+              
         return handleInternal(eventSessionEntity, activePersonaId, packet);
     }
 
@@ -78,8 +80,9 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
      * @param eventDataEntity the {@link EventDataEntity} instance
      * @param activePersonaId the ID of the current persona
      * @param packet          the {@link TA} instance
+     * @param eventSessionEntity the {@link EventSessionEntity} instance
      */
-    protected final void prepareBasicEventData(EventDataEntity eventDataEntity, Long activePersonaId, TA packet) {
+    protected final void prepareBasicEventData(EventDataEntity eventDataEntity, Long activePersonaId, TA packet, EventSessionEntity eventSessionEntity) {
         ClientPhysicsMetrics clientPhysicsMetrics = packet.getPhysicsMetrics();
 
         eventDataEntity.setAlternateEventDurationInMilliseconds(packet.getAlternateEventDurationInMilliseconds());
@@ -87,7 +90,18 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         eventDataEntity.setEventDurationInMilliseconds(packet.getEventDurationInMilliseconds());
         eventDataEntity.setFinishReason(packet.getFinishReason());
         eventDataEntity.setHacksDetected(packet.getHacksDetected());
-        eventDataEntity.setRank(packet.getRank());  //@FIXME: Verify this with a database result.
+
+        if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) {
+            if(eventSessionEntity.getLobby() != null) {
+                matchmakingBO.setRankForEventSessionId(eventDataEntity.getEventSessionId(), activePersonaId);
+                eventDataEntity.setRank(Math.toIntExact(matchmakingBO.getRankForEventSessionId(eventDataEntity.getEventSessionId())));
+            } else {
+                eventDataEntity.setRank(packet.getRank()); 
+            }
+        } else {
+            eventDataEntity.setRank(packet.getRank()); 
+        }
+        
         eventDataEntity.setPersonaId(activePersonaId);
         eventDataEntity.setEventModeId(eventDataEntity.getEvent().getEventModeId());
         eventDataEntity.setServerTimeEnded(System.currentTimeMillis());

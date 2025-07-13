@@ -27,6 +27,9 @@ public class RewardDragBO extends RewardEventBO<DragArbitrationPacket> {
     @EJB
     private LeaderboardBO leaderboardBO;
 
+    @EJB
+    private RankingBO rankingBO;
+
     @Override
     public Accolades getAccolades(Long activePersonaId, DragArbitrationPacket dragArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity, AchievementTransaction achievementTransaction) {
@@ -52,6 +55,7 @@ public class RewardDragBO extends RewardEventBO<DragArbitrationPacket> {
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, dragArbitrationPacket, eventSessionEntity, eventDataEntity);
+        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, dragArbitrationPacket, rewardVO);
     }

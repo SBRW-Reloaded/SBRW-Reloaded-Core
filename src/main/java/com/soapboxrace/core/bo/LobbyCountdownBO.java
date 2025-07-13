@@ -44,6 +44,12 @@ public class LobbyCountdownBO {
         timerService.createSingleActionTimer(lobbyEntity.getEvent().getLobbyCountdownTime(), timerConfig);
     }
 
+    public void scheduleLobbyStart(LobbyEntity lobbyEntity, Integer countdownTime) {
+        TimerConfig timerConfig = new TimerConfig();
+        timerConfig.setInfo(lobbyEntity.getId());
+        timerService.createSingleActionTimer(countdownTime, timerConfig);
+    }
+
     @Timeout
     public void onTimeout(Timer timer) {
         Long lobbyId = (Long) timer.getInfo();

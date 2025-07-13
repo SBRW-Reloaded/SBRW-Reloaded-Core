@@ -20,6 +20,7 @@ import com.soapboxrace.jaxb.http.ArrayOfLobbyEntrantInfo;
 import com.soapboxrace.jaxb.http.LobbyCountdown;
 import com.soapboxrace.jaxb.http.LobbyEntrantInfo;
 import com.soapboxrace.jaxb.http.LobbyInfo;
+import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeLobbyCountdown;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -254,7 +255,9 @@ public class LobbyBO {
             checkRaceNowQueueForNewLobby(lobbyEntity, carClassHash);
         }
 
-        lobbyCountdownBO.scheduleLobbyStart(lobbyEntity);
+        if(eventEntity.isRankedMode() == false) {
+            lobbyCountdownBO.scheduleLobbyStart(lobbyEntity);
+        }
 
         return lobbyEntity;
     }
@@ -418,8 +421,9 @@ public class LobbyBO {
         LobbyCountdown lobbyCountdown = new LobbyCountdown();
         lobbyCountdown.setLobbyId(lobbyInviteId);
         lobbyCountdown.setEventId(eventId);
-        lobbyCountdown.setLobbyCountdownInMilliseconds(lobbyEntity.getLobbyCountdownInMilliseconds(lobbyEntity.getEvent().getLobbyCountdownTime()));
         lobbyCountdown.setLobbyStuckDurationInMilliseconds(10000);
+        lobbyCountdown.setLobbyCountdownInMilliseconds(lobbyEntity.getLobbyCountdownInMilliseconds(lobbyEntity.getEvent().getLobbyCountdownTime()));
+        lobbyCountdown.setIsWaiting(lobbyEntity.getEvent().isRankedMode());
 
         ArrayOfLobbyEntrantInfo arrayOfLobbyEntrantInfo = new ArrayOfLobbyEntrantInfo();
         List<LobbyEntrantInfo> lobbyEntrantInfo = arrayOfLobbyEntrantInfo.getLobbyEntrantInfo();
@@ -427,10 +431,6 @@ public class LobbyBO {
         List<LobbyEntrantEntity> entrants = lobbyEntity.getEntrants();
 
         if (entrants.size() >= lobbyEntity.getEvent().getMaxPlayers()) {
-            throw new EngineException(EngineExceptionCode.GameLocked, false);
-        }
-
-        if (lobbyCountdown.getLobbyCountdownInMilliseconds() <= 6000) {
             throw new EngineException(EngineExceptionCode.GameLocked, false);
         }
 
@@ -467,6 +467,23 @@ public class LobbyBO {
             lobbyEntrantInfo.add(LobbyEntrantInfo);
         }
 
+        // Let's pray this will work, i will literally thank personally Leo for this piece of code.
+        if(lobbyEntity.getEntrants().size() == lobbyEntity.getEvent().getMaxPlayers()) {
+            XMPP_ResponseTypeLobbyCountdown response = new XMPP_ResponseTypeLobbyCountdown();
+            lobbyCountdown.setIsWaiting(false);
+            lobbyCountdown.setLobbyCountdownInMilliseconds(6000);
+        
+            response.setLobbyCountdown(lobbyCountdown);
+        
+            for (LobbyEntrantEntity lobbyEntrant : lobbyEntity.getEntrants()) {
+                openFireSoapBoxCli.send(response, lobbyEntrant.getPersona().getPersonaId());
+            }
+
+            lobbyCountdownBO.scheduleLobbyStart(lobbyEntity, 6000);
+        } else {
+            lobbyCountdown.setIsWaiting(lobbyEntity.getEvent().isRankedMode());
+        }
+
         LobbyInfo lobbyInfoType = new LobbyInfo();
         lobbyInfoType.setCountdown(lobbyCountdown);
         lobbyInfoType.setEntrants(arrayOfLobbyEntrantInfo);
@@ -474,7 +491,10 @@ public class LobbyBO {
         lobbyInfoType.setLobbyInviteId(lobbyInviteId);
         lobbyInfoType.setLobbyId(lobbyInviteId);
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && lobbyEntity.getEvent().isRankedMode() == false) {
+            int currentRefreshTime = lobbyCountdown.getLobbyCountdownInMilliseconds()-2000;
+            if(currentRefreshTime <= 2000) currentRefreshTime = 100;
+
             new java.util.Timer().schedule( 
                 new java.util.TimerTask() {
                     @Override
@@ -488,7 +508,7 @@ public class LobbyBO {
                             Integer totalVotes = lobbyEntrantDao.getVotes(lobbyEntity);
                             Integer totalUsersInLobby = lobbyEntrants.size();
                             Integer totalVotesPercentage = Math.round((totalVotes * 100.0f) / totalUsersInLobby);
-                            
+                                
                             if(totalVotesPercentage < parameterBO.getIntParam("SBRWR_NOPU_REQUIREDPERCENT")) {
                                 if(parameterBO.getBoolParam("SBRWR_NOPU_SHOW_NOTENOUGHVOTES")) {
                                     openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_INFO_NOTENOUGHVOTES"), personaEntity.getPersonaId());
@@ -498,7 +518,7 @@ public class LobbyBO {
                             }
                         }
                     }
-                }, (lobbyCountdown.getLobbyCountdownInMilliseconds()-5000)
+                }, (currentRefreshTime)
             );
         }
 

@@ -27,6 +27,9 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
     @EJB
     private LeaderboardBO leaderboardBO;
 
+    @EJB
+    private RankingBO rankingBO;
+
     public Accolades getAccolades(Long activePersonaId, RouteArbitrationPacket routeArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity, AchievementTransaction achievementTransaction) {
         int finishReason = routeArbitrationPacket.getFinishReason();
@@ -34,7 +37,8 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
         eventDataEntity.setLegit(legit);
         if (!legit || finishReason != 22) {
             return new Accolades();
-        }
+        }        
+
         PersonaEntity personaEntity = personaDao.find(activePersonaId);
         RewardVO rewardVO = getRewardVO(personaEntity);
         EventRewardEntity eventRewardEntity = getRewardConfiguration(eventSessionEntity);
@@ -51,6 +55,7 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, routeArbitrationPacket, eventSessionEntity, eventDataEntity);        
+        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, routeArbitrationPacket, rewardVO);
     }

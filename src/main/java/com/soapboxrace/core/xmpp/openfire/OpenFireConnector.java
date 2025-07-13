@@ -65,6 +65,7 @@ public class OpenFireConnector {
         this.ipAddress = parameterBO.getStrParam("XMPP_IP", "127.0.0.1");
         this.port = parameterBO.getIntParam("XMPP_PORT", 5222);
         this.engineToken = parameterBO.getStrParam("OPENFIRE_TOKEN");
+        this.debugMode = parameterBO.getBoolParam("XMPP_DEBUG");
 
         this.connection = new XMPPTCPConnection(getConnectionConfiguration());
         try {

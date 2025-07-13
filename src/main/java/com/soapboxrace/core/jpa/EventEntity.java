@@ -61,6 +61,12 @@ public class EventEntity {
     @JoinColumn(name = "private_reward_config_id", referencedColumnName = "ID", foreignKey = @ForeignKey(name = "FK_EVENT_PRIVATE_REWARD_CONFIG_ID"))
     private EventRewardEntity privateRewardConfig;
 
+    @Column(name = "rankedMode", columnDefinition = "BIT DEFAULT 0", nullable = false)
+    private boolean isRankedMode;
+
+    private int rankMin;
+    private int rankMax;
+
     public int getId() {
         return id;
     }
@@ -244,4 +250,28 @@ public class EventEntity {
     public void setSingleplayerRewardConfig(EventRewardEntity singleplayerRewardConfig) {
         this.singleplayerRewardConfig = singleplayerRewardConfig;
     }    
+
+    public boolean isRankedMode() {
+        return isRankedMode;
+    }
+
+    public void setRankedMode(boolean isRankedMode) {
+        this.isRankedMode = isRankedMode;
+    }
+
+    public int getRankMin() {
+        return rankMin;
+    }
+
+    public void setRankMin(int rankMin) {
+        this.rankMin = rankMin;
+    }
+
+    public int getRankMax() {
+        return rankMax;
+    }
+
+    public void setRankMax(int rankMax) {
+        this.rankMax = rankMax;
+    }
 }

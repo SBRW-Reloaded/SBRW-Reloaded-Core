@@ -27,6 +27,11 @@ import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 
 
+import com.soapboxrace.core.jpa.EventEntity;
+import com.soapboxrace.core.xmpp.XmppChat;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+
+
 /**
  * Responsible for managing the multiplayer matchmaking system.
  * This deals with 2 classes of events: restricted and open.

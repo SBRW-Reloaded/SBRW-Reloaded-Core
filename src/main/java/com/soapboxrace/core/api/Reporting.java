@@ -48,22 +48,19 @@ public class Reporting {
     @Produces(MediaType.APPLICATION_XML)
     public String sendHardwareInfo(InputStream is) {
         HardwareInfo hardwareInfo = JAXBUtility.unMarshal(is, HardwareInfo.class);
-        if(hardwareInfo.getCpuid0().equals("GenuineIntel") || hardwareInfo.getCpuid0().equals("AuthenticAMD") || hardwareInfo.getCpuid0().equals("VIA VIA VIA ")) {            
-            HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
-            UserEntity user = requestSessionInfo.getUser();
-            user.setGameHardwareHash(hardwareInfoEntity.getHardwareHash());
-            user.setState("ONLINE");
-            userDAO.update(user);
+        HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
+        UserEntity user = requestSessionInfo.getUser();
+        user.setGameHardwareHash(hardwareInfoEntity.getHardwareHash());
+        user.setState("ONLINE");
+        userDAO.update(user);
 
-            HardwareInfoEntity checkBannedHWID = hardwareInfoDAO.findBannedByHardwareHash(hardwareInfoEntity.getHardwareHash());
-            if(checkBannedHWID != null) {
-                user.setLocked(true);
-                userDAO.update(user);
-                tokenBO.deleteByUserId(user.getId());
-            }
-        } else {
-            tokenBO.deleteByUserId(requestSessionInfo.getUser().getId());
+        HardwareInfoEntity checkBannedHWID = hardwareInfoDAO.findBannedByHardwareHash(hardwareInfoEntity.getHardwareHash());
+        if(checkBannedHWID != null) {
+            user.setLocked(true);
+            userDAO.update(user);
+            tokenBO.deleteByUserId(user.getId());
         }
+        
         return "";
     }
 

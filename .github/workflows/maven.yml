@@ -89,13 +89,13 @@ jobs:
       run: echo $RELEASE_ID > release-id.txt
 
     - name: Upload release's upload URL
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: release-id
         path: release-id.txt
 
     - name: Download URL to upload to
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: upload-url
         

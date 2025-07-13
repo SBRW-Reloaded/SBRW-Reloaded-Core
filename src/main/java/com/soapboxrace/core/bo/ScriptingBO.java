@@ -1,6 +1,5 @@
 package com.soapboxrace.core.bo;
 
-import jdk.nashorn.api.scripting.NashornScriptEngine;
 import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
@@ -24,11 +23,13 @@ public class ScriptingBO {
     @Inject
     private Logger logger;
 
-    private NashornScriptEngine scriptEngine;
+    @Deprecated()
+    private jdk.nashorn.api.scripting.NashornScriptEngine scriptEngine;
 
+    @Deprecated()
     @PostConstruct
     public void init() {
-        scriptEngine = (NashornScriptEngine) new ScriptEngineManager().getEngineByName("nashorn");
+        scriptEngine = (jdk.nashorn.api.scripting.NashornScriptEngine) new ScriptEngineManager().getEngineByName("nashorn");
         logger.info("Initialized JavaScript engine");
     }
 

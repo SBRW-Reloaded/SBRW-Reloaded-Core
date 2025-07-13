@@ -16,6 +16,7 @@ import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.EventDataEntity;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
+import com.soapboxrace.jaxb.http.DragEventResult;
 import com.soapboxrace.jaxb.http.ExitPath;
 import com.soapboxrace.jaxb.http.PursuitArbitrationPacket;
 import com.soapboxrace.jaxb.http.PursuitEventResult;
@@ -57,10 +58,11 @@ public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
         if (eventDataEntity.getFinishReason() != 0) {
-            throw new EngineException("Session already completed.", EngineExceptionCode.SecurityKickedArbitration, true);
+            return new PursuitEventResult();
         }
 
-        prepareBasicEventData(eventDataEntity, activePersonaId, pursuitArbitrationPacket);
+        prepareBasicEventData(eventDataEntity, activePersonaId, pursuitArbitrationPacket, eventSessionEntity);
+        
         eventDataEntity.setCopsDeployed(pursuitArbitrationPacket.getCopsDeployed());
         eventDataEntity.setCopsDisabled(pursuitArbitrationPacket.getCopsDisabled());
         eventDataEntity.setCopsRammed(pursuitArbitrationPacket.getCopsRammed());

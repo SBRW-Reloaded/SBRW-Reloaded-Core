@@ -12,7 +12,6 @@ import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.Accolades;
 import com.soapboxrace.jaxb.http.EnumRewardType;
 import com.soapboxrace.jaxb.http.TeamEscapeArbitrationPacket;
-import org.apache.commons.lang3.RandomUtils;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -28,6 +27,9 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
     
     @EJB
     private LeaderboardBO leaderboardBO;
+
+    @EJB
+    private RankingBO rankingBO;
 
     public Accolades getAccolades(Long activePersonaId,
                                   TeamEscapeArbitrationPacket teamEscapeArbitrationPacket,
@@ -77,6 +79,7 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, teamEscapeArbitrationPacket, eventSessionEntity, eventDataEntity); 
+        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, teamEscapeArbitrationPacket, rewardVO);
     }

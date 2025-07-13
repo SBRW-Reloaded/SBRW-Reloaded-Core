@@ -6,6 +6,7 @@
 
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.bo.util.RacerStatus;
 import com.soapboxrace.core.dao.EventDAO;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.EventSessionDAO;
@@ -68,6 +69,8 @@ public class EventBO {
         eventDataEntity.setServerTimeStarted(System.currentTimeMillis());
         eventDataEntity.setCarClassHash(carEntity.getCarClassHash());
         eventDataEntity.setCarRating(carEntity.getRating());
+        eventDataEntity.setLeftRace(false);
+        eventDataEntity.setRacerStatus(RacerStatus.IN_RACE);
         eventDataDao.insert(eventDataEntity);
     }
 

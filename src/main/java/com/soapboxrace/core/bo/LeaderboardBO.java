@@ -14,7 +14,6 @@ import com.soapboxrace.core.bo.util.HelpingTools;
 import com.soapboxrace.core.dao.BanDAO;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
-import com.soapboxrace.core.jpa.BanEntity;
 import com.soapboxrace.core.jpa.EventDataEntity;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
@@ -106,6 +105,10 @@ public class LeaderboardBO {
                                 }
                                 current_ranking++;
                             }
+
+                            sorted_ranking = null;
+                            map = null;
+                            unsorted_ranking = null;
                         }
                     }
                 }, (2000)

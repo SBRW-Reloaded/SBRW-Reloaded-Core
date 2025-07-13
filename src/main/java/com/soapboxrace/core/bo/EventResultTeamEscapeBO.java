@@ -63,17 +63,16 @@ public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitration
         xmppTeamEscapeResult.setFinishReason(teamEscapeArbitrationPacket.getFinishReason());
         xmppTeamEscapeResult.setPersonaId(activePersonaId);
 
-        XMPP_ResponseTypeTeamEscapeEntrantResult teamEscapeEntrantResultResponse =
-                new XMPP_ResponseTypeTeamEscapeEntrantResult();
+        XMPP_ResponseTypeTeamEscapeEntrantResult teamEscapeEntrantResultResponse = new XMPP_ResponseTypeTeamEscapeEntrantResult();
         teamEscapeEntrantResultResponse.setTeamEscapeEntrantResult(xmppTeamEscapeResult);
 
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
         if (eventDataEntity.getFinishReason() != 0) {
-            throw new EngineException("Session already completed.", EngineExceptionCode.SecurityKickedArbitration, true);
+            return new TeamEscapeEventResult();
         }
 
-        prepareBasicEventData(eventDataEntity, activePersonaId, teamEscapeArbitrationPacket);
+        prepareBasicEventData(eventDataEntity, activePersonaId, teamEscapeArbitrationPacket, eventSessionEntity);
         eventDataEntity.setBustedCount(teamEscapeArbitrationPacket.getBustedCount());
         eventDataEntity.setCopsDeployed(teamEscapeArbitrationPacket.getCopsDeployed());
         eventDataEntity.setCopsDisabled(teamEscapeArbitrationPacket.getCopsDisabled());
