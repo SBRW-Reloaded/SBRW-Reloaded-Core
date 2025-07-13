@@ -42,7 +42,7 @@ public class Catalog {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
         List<ProductEntity> productsInCategory = productBO.productsInCategory(categoryName, clientProductType,
                 activePersonaId);
-        List<ProductTrans> productTransList = productBO.getProductTransList(productsInCategory);
+        List<ProductTrans> productTransList = productBO.getProductTransList(productsInCategory, activePersonaId);
         arrayOfProductTrans.getProductTrans().addAll(productTransList);
         return arrayOfProductTrans;
     }

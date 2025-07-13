@@ -443,6 +443,11 @@ public class BasketBO {
                 return false;
             }
 
+            // Check if persona has sufficient level to purchase this item (unless they have prestige > 0)
+            if (personaEntity.getPrestige() == 0 && personaEntity.getLevel() < productEntity.getMinLevel()) {
+                return false;
+            }
+
             float price = valueOverride == -1 ? productEntity.getPrice() : valueOverride;
 
             switch (productEntity.getCurrency()) {

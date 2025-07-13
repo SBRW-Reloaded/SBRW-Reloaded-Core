@@ -151,6 +151,12 @@ public class CommerceBO {
                             return commerceSessionResultTrans;
                         }
 
+                        // Check if persona has sufficient level to purchase this item (unless they have prestige > 0)
+                        if (personaEntity.getPrestige() == 0 && personaEntity.getLevel() < productEntity.getMinLevel()) {
+                            commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_PERSONA_NOT_RIGHT_LEVEL);
+                            return commerceSessionResultTrans;
+                        }
+
                         if (productEntity.getCurrency().equals("CASH"))
                             removeCash += (int) productEntity.getPrice();
                         else

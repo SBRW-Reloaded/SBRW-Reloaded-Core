@@ -169,7 +169,9 @@ public class LiveryCommand {
 
                 Integer howManyLayers = new Random().nextInt(30) + 1;
 
-                List<VinylProductEntity> vinylProductEntity = vinylProductDAO.getAllByLevelEnabled(personaEntity.getLevel(), true, personaEntity.getUser().isPremium());
+                // Si le joueur a un prestige supérieur à 0, utiliser le niveau 60 pour débloquer tous les vinyls
+                int effectiveLevel = personaEntity.getPrestige() > 0 ? 60 : personaEntity.getLevel();
+                List<VinylProductEntity> vinylProductEntity = vinylProductDAO.getAllByLevelEnabled(effectiveLevel, true, personaEntity.getUser().isPremium());
 
                 for (int i = 0; i < howManyLayers; ++i) {
                     Integer hash = vinylProductEntity.get(new Random().nextInt(vinylProductEntity.size())).getHash();

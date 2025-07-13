@@ -47,7 +47,27 @@ public class ProductBO {
         return productTransList;
     }
 
+    public List<ProductTrans> getProductTransList(List<ProductEntity> productEntities, Long personaId) {
+        List<ProductTrans> productTransList = new ArrayList<>();
+        boolean hasPrestige = false;
+
+        if (personaId != null && !personaId.equals(0L)) {
+            PersonaEntity personaEntity = personaDao.find(personaId);
+            hasPrestige = personaEntity.getPrestige() > 0;
+        }
+
+        for (ProductEntity productEntity : productEntities) {
+            productTransList.add(productEntityToProductTrans(productEntity, hasPrestige));
+        }
+
+        return productTransList;
+    }
+
     private ProductTrans productEntityToProductTrans(ProductEntity productEntity) {
+        return productEntityToProductTrans(productEntity, false);
+    }
+
+    private ProductTrans productEntityToProductTrans(ProductEntity productEntity, boolean hasPrestige) {
         ProductTrans productTrans = new ProductTrans();
         productTrans.setBundleItems(new ArrayOfProductTrans());
         productTrans.setCurrency(productEntity.getCurrency());
@@ -56,7 +76,8 @@ public class ProductBO {
         productTrans.setHash(productEntity.getHash());
         productTrans.setIcon(productEntity.getIcon());
         productTrans.setSecondaryIcon(productEntity.getSecondaryIcon());
-        productTrans.setLevel(productEntity.getLevel());
+        // Si le joueur a un prestige, définir le niveau requis à 1 pour éviter les blocages côté client
+        productTrans.setLevel(hasPrestige ? 1 : productEntity.getLevel());
         productTrans.setLongDescription(productEntity.getLongDescription());
         productTrans.setPrice(productEntity.getPrice());
         productTrans.setPriority(productEntity.getPriority());
@@ -70,7 +91,7 @@ public class ProductBO {
         productTrans.setWebLocation(productEntity.getWebLocation());
 
         for (ProductEntity bundledProductEntity : productEntity.getBundleItems()) {
-            productTrans.getBundleItems().getProductTrans().add(productEntityToProductTrans(bundledProductEntity));
+            productTrans.getBundleItems().getProductTrans().add(productEntityToProductTrans(bundledProductEntity, hasPrestige));
         }
 
         return productTrans;
@@ -84,7 +105,12 @@ public class ProductBO {
             PersonaEntity personaEntity = personaDao.find(personaId);
             premium = personaEntity.getUser().isPremium();
             admin = personaEntity.getUser().isAdmin();
-            level = personaEntity.getLevel();
+            // Si le joueur a un prestige supérieur à 0, considérer qu'il est niveau 60 pour débloquer tous les items
+            if (personaEntity.getPrestige() > 0) {
+                level = 60;
+            } else {
+                level = personaEntity.getLevel();
+            }
         }
         List<ProductEntity> productEntities = productDAO.findByLevelEnabled(categoryName, productType, level, true, premium, admin);
 
@@ -128,11 +154,18 @@ public class ProductBO {
 
     public ArrayOfProductTrans getVinylByCategory(CategoryEntity categoryEntity, Long personaId) {
         boolean premium = false;
+        boolean hasPrestige = false;
         int level = 1;
         if (personaId != null && !personaId.equals(0L)) {
             PersonaEntity personaEntity = personaDao.find(personaId);
             premium = personaEntity.getUser().isPremium();
-            level = personaEntity.getLevel();
+            hasPrestige = personaEntity.getPrestige() > 0;
+            // Si le joueur a un prestige supérieur à 0, considérer qu'il est niveau 60 pour débloquer tous les items
+            if (hasPrestige) {
+                level = 60;
+            } else {
+                level = personaEntity.getLevel();
+            }
         }
         ArrayOfProductTrans arrayOfProductTrans = new ArrayOfProductTrans();
         List<VinylProductEntity> vinylProductEntity = vinylProductDao.findByCategoryLevelEnabled(categoryEntity,
@@ -144,7 +177,8 @@ public class ProductBO {
             productTrans.setHash(entity.getHash());
             productTrans.setIcon(entity.getIcon());
             productTrans.setSecondaryIcon(entity.getSecondaryIcon());
-            productTrans.setLevel(entity.getLevel());
+            // Si le joueur a un prestige, définir le niveau requis à 1 pour éviter les blocages côté client
+            productTrans.setLevel(hasPrestige ? 1 : entity.getLevel());
             productTrans.setPrice(entity.getPrice());
             productTrans.setPriority(entity.getPriority());
             productTrans.setProductId(entity.getProductId());
