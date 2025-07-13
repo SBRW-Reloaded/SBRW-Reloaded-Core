@@ -134,7 +134,6 @@ public class Event {
         
         return arbitrationRedirect.isEmpty() ? "" : arbitrationRedirect;
     }
-    }
 
     @PUT
     @Secured

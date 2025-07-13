@@ -91,16 +91,8 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         eventDataEntity.setFinishReason(packet.getFinishReason());
         eventDataEntity.setHacksDetected(packet.getHacksDetected());
 
-        if(parameterBo.getBoolParam("SBRWR_DISABLE_CALCULATEDRANK")) {
-            if(eventSessionEntity.getLobby() != null) {
-                matchmakingBO.setRankForEventSessionId(eventDataEntity.getEventSessionId(), activePersonaId);
-                eventDataEntity.setRank(Math.toIntExact(matchmakingBO.getRankForEventSessionId(eventDataEntity.getEventSessionId())));
-            } else {
-                eventDataEntity.setRank(packet.getRank()); 
-            }
-        } else {
-            eventDataEntity.setRank(packet.getRank()); 
-        }
+        // Utiliser directement le rang du packet
+        eventDataEntity.setRank(packet.getRank());
         
         eventDataEntity.setPersonaId(activePersonaId);
         eventDataEntity.setEventModeId(eventDataEntity.getEvent().getEventModeId());
