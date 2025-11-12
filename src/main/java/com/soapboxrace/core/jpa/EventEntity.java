@@ -30,6 +30,8 @@ public class EventEntity {
     private int minCarClassRating;
     private int maxCarClassRating;
     private int maxPlayers;
+    @Column(length = 500)
+    private String carRestriction;
     @Column(columnDefinition = "BIT DEFAULT 1", nullable = false)
     private boolean isEnabled;
     @Column(columnDefinition = "BIT DEFAULT 0", nullable = false)
@@ -273,5 +275,13 @@ public class EventEntity {
 
     public void setRankMax(int rankMax) {
         this.rankMax = rankMax;
+    }
+
+    public String getCarRestriction() {
+        return carRestriction;
+    }
+
+    public void setCarRestriction(String carRestriction) {
+        this.carRestriction = carRestriction;
     }
 }

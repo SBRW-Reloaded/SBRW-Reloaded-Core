@@ -57,12 +57,15 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
                                              DragArbitrationPacket dragArbitrationPacket) {
         Long eventSessionId = eventSessionEntity.getId();
 
+        // Calculer un rang temporaire pour XMPP (sera recalculé plus tard)
+        int temporaryRank = calculateTemporaryRank(eventSessionEntity, activePersonaId, dragArbitrationPacket.getEventDurationInMilliseconds());
+
         XMPP_DragEntrantResultType xmppDragResult = new XMPP_DragEntrantResultType();
         xmppDragResult.setEventDurationInMilliseconds(dragArbitrationPacket.getEventDurationInMilliseconds());
         xmppDragResult.setEventSessionId(eventSessionId);
         xmppDragResult.setFinishReason(dragArbitrationPacket.getFinishReason());
         xmppDragResult.setPersonaId(activePersonaId);
-        xmppDragResult.setRanking(dragArbitrationPacket.getRank());
+        xmppDragResult.setRanking(temporaryRank); // Utiliser le rang temporaire
         xmppDragResult.setTopSpeed(dragArbitrationPacket.getTopSpeed());
 
         XMPP_ResponseTypeDragEntrantResult dragEntrantResultResponse = new XMPP_ResponseTypeDragEntrantResult();
@@ -98,7 +101,7 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
             if (!racer.getPersonaId().equals(activePersonaId)) {
                 XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
                 xmppEvent.sendDragEnd(dragEntrantResultResponse);
-                if (dragArbitrationPacket.getFinishReason() == 22 && dragArbitrationPacket.getRank() == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
+                if (dragArbitrationPacket.getFinishReason() == 22 && temporaryRank == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
                     xmppEvent.sendEventTimingOut(eventSessionEntity);
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
@@ -108,6 +111,9 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
         AchievementTransaction transaction = achievementBO.createTransaction(activePersonaId);
         DragEventResult dragEventResult = new DragEventResult();
+        
+        // Utiliser le rang temporaire pour les récompenses au lieu du rang 0 de la BDD
+        dragArbitrationPacket.setRank(temporaryRank);
         dragEventResult.setAccolades(rewardDragBO.getAccolades(activePersonaId, dragArbitrationPacket,
                 eventDataEntity, eventSessionEntity, transaction));
         dragEventResult.setDurability(carDamageBO.induceCarDamage(activePersonaId, dragArbitrationPacket,
@@ -116,12 +122,18 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
         dragEventResult.setEventId(eventDataEntity.getEvent().getId());
         dragEventResult.setEventSessionId(eventSessionId);
         dragEventResult.setPersonaId(activePersonaId);
-        prepareRaceAgain(eventSessionEntity, dragEventResult);
+        prepareRaceAgain(eventSessionEntity, dragEventResult, dragArbitrationPacket);
         updateEventAchievements(eventDataEntity, eventSessionEntity, activePersonaId, dragArbitrationPacket, transaction);
-        achievementBO.commitTransaction(personaEntity, transaction);
+        // NE PAS committer les achievements ici - attendre le recalcul des rangs finaux
 
         eventSessionDao.update(eventSessionEntity);
         eventDataDao.update(eventDataEntity);
+
+        // Recalculer tous les rangs maintenant que tous les résultats sont finalisés
+        recalculateAllRanks(eventSessionEntity);
+        
+        // Maintenant que les rangs finaux sont calculés, committer les achievements
+        commitEventAchievementsWithFinalRank(eventDataEntity, activePersonaId, transaction);
 
         if (eventSessionEntity.getLobby() != null && !eventSessionEntity.getLobby().getIsPrivate()) {
             matchmakingBO.resetIgnoredEvents(activePersonaId);

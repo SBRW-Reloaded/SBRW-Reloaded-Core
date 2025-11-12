@@ -1,12 +1,17 @@
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.TokenSessionEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 
+import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 
 @RequestScoped
 public class RequestSessionInfo {
+
+    @EJB
+    private UserDAO userDAO;
 
     private TokenSessionEntity tokenSessionEntity;
 
@@ -19,7 +24,10 @@ public class RequestSessionInfo {
     }
 
     public UserEntity getUser() {
-        return tokenSessionEntity.getUserEntity();
+        // Always get fresh user data from database to avoid stale cached values
+        // Use detached entity to prevent automatic saves with default values
+        UserEntity cachedUser = tokenSessionEntity.getUserEntity();
+        return userDAO.findDetached(cachedUser.getId());
     }
 
     public boolean isAdmin() {

@@ -60,18 +60,32 @@ public class Events {
         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
 
         for (EventEntity eventEntity : availableAtLevel) {
-            if (carClassHash == 0 || (eventEntity.getCarClassHash() != 607077938 && carClassHash != eventEntity.getCarClassHash())) {
-                eventEntity.setLocked(true);
+            boolean isLocked = false;
+            
+            // 1. Vérification des restrictions de voitures spécifiques (PRIORITÉ)
+            if (eventEntity.getCarRestriction() != null && !eventEntity.getCarRestriction().trim().isEmpty()) {
+                // S'il y a une restriction spécifique, elle remplace la restriction de classe
+                if (!eventBO.hasAllowedCarForEvent(activePersonaId, eventEntity)) {
+                    isLocked = true;
+                }
+            } else {
+                // 2. Vérification de classe de voiture (seulement si pas de restriction spécifique)
+                if (carClassHash == 0 || (eventEntity.getCarClassHash() != 607077938 && carClassHash != eventEntity.getCarClassHash())) {
+                    isLocked = true;
+                }
             }
 
+            // 3. Vérification du mode classé (peut override les autres)
             if (eventEntity.isRankedMode()) {
                 if (eventEntity.getRankMin() <= personaEntity.getRankingPoints() && personaEntity.getRankingPoints() <= eventEntity.getRankMax()) {
                     System.out.println(personaEntity.getName() + " is within the rank range for " + eventEntity.getName() + ".");
-                    eventEntity.setLocked(false);
+                    isLocked = false;  // Le rang correct déverrouille
                 } else {
-                    eventEntity.setLocked(true);
+                    isLocked = true;
                 }
             }
+            
+            eventEntity.setLocked(isLocked);
 
             arrayOfEventDefinition.getEventDefinition().add(getEventDefinitionWithId(eventEntity));
         }

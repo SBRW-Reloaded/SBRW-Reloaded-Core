@@ -56,8 +56,7 @@ public class LaunchFilter implements ContainerRequestFilter {
 
         UserEntity userEntity = userDao.findByEmail(email);
         if (userEntity != null) {
-            userEntity.setHwid(hwid);
-            userDao.update(userEntity);
+            userDao.updateHwid(userEntity.getId(), hwid);
         }
 
         if (parameterBO.getBoolParam("ENABLE_WHITELISTED_LAUNCHERS_ONLY")) {

@@ -45,7 +45,7 @@ public class PersonaAchievementEntity {
     private Long currentValue;
 
     @OneToMany(mappedBy = "personaAchievementEntity", targetEntity = PersonaAchievementRankEntity.class, cascade =
-            CascadeType.DETACH, orphanRemoval = true)
+            {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.DETACH}, orphanRemoval = true)
     @LazyCollection(LazyCollectionOption.FALSE)
     @Fetch(FetchMode.SUBSELECT)
     private List<PersonaAchievementRankEntity> ranks = new ArrayList<>();

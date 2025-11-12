@@ -29,6 +29,10 @@ public class EventSessionEntity {
     @JoinColumn(name = "NEXTLOBBYID", referencedColumnName = "ID", foreignKey = @ForeignKey(name = "FK_EVENT_SESSION_LOBBY_NEXTLOBBYID"))
     private LobbyEntity nextLobby;
 
+    @ManyToOne
+    @JoinColumn(name = "NEXTEVENTID", referencedColumnName = "ID", foreignKey = @ForeignKey(name = "FK_EVENT_SESSION_EVENT_NEXTEVENTID"))
+    private EventEntity nextEvent;
+
     @Column(name = "STARTED")
     private Long started;
 
@@ -92,5 +96,13 @@ public class EventSessionEntity {
 
     public void setNopuMode(boolean nopuMode) { 
         this.nopuMode = nopuMode;
+    }
+
+    public EventEntity getNextEvent() {
+        return nextEvent;
+    }
+
+    public void setNextEvent(EventEntity nextEvent) {
+        this.nextEvent = nextEvent;
     }
 }

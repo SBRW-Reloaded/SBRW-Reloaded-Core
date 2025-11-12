@@ -10,7 +10,7 @@ import javax.xml.bind.annotation.*;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "XMPP_LobbyInviteType", propOrder = {"eventId", "inviteLifetimeInMilliseconds", "invitedByPersonaId",
-        "isPrivate", "lobbyInviteId"})
+        "isPrivate", "lobbyInviteId", "carClassHash"})
 @XmlRootElement(name = "LobbyInvite")
 public class XMPP_LobbyInviteType {
 
@@ -24,6 +24,8 @@ public class XMPP_LobbyInviteType {
     protected boolean isPrivate = false;
     @XmlElement(name = "LobbyInviteId")
     protected long lobbyInviteId;
+    @XmlElement(name = "CarClassHash")
+    protected Integer carClassHash;
 
     public long getEventId() {
         return eventId;
@@ -63,6 +65,14 @@ public class XMPP_LobbyInviteType {
 
     public void setLobbyInviteId(long lobbyInviteId) {
         this.lobbyInviteId = lobbyInviteId;
+    }
+
+    public Integer getCarClassHash() {
+        return carClassHash;
+    }
+
+    public void setCarClassHash(Integer carClassHash) {
+        this.carClassHash = carClassHash;
     }
 
 }

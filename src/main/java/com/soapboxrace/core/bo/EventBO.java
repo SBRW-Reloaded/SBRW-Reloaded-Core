@@ -11,6 +11,7 @@ import com.soapboxrace.core.dao.EventDAO;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.EventSessionDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
+import com.soapboxrace.core.dao.CarDAO;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
@@ -40,6 +41,9 @@ public class EventBO {
     private PersonaDAO personaDao;
 
     @EJB
+    private CarDAO carDAO;
+
+    @EJB
     private PersonaBO personaBO;
 
     @Inject
@@ -56,6 +60,67 @@ public class EventBO {
      */
     public List<EventEntity> getAllEvents() {
         return eventDao.findAll();
+    }
+
+    /**
+     * Vérifie si le joueur possède une voiture autorisée pour l'événement
+     * @param personaId ID du persona
+     * @param eventEntity L'événement à vérifier
+     * @return true si le joueur peut participer, false sinon
+     */
+    public boolean hasAllowedCarForEvent(Long personaId, EventEntity eventEntity) {
+        String carRestriction = eventEntity.getCarRestriction();
+        
+        // Pas de restriction = accès libre
+        if (carRestriction == null || carRestriction.trim().isEmpty()) {
+            logger.debug("No car restriction for event {}, access granted", eventEntity.getId());
+            return true;
+        }
+
+        // Option 1: Vérifier toutes les voitures possédées (comportement actuel)
+        // List<CarEntity> playerCars = carDAO.findByPersonaId(personaId);
+        
+        // Option 2: Vérifier seulement la voiture active/par défaut
+        CarEntity defaultCar = personaBO.getDefaultCarEntity(personaId);
+        List<CarEntity> playerCars = new java.util.ArrayList<>();
+        if (defaultCar != null) {
+            playerCars.add(defaultCar);
+        }
+        
+        logger.debug("Event {} has car restriction: '{}', checking ACTIVE car only: {}", 
+            eventEntity.getId(), carRestriction, 
+            defaultCar != null ? defaultCar.getName() : "none");
+        
+        // Séparer les noms de voitures autorisées
+        String[] allowedCarNames = carRestriction.split(",");
+        logger.debug("Allowed car names: {}", java.util.Arrays.toString(allowedCarNames));
+        
+        // Afficher toutes les voitures du joueur
+        for (CarEntity playerCar : playerCars) {
+            String playerCarName = playerCar.getName();
+            logger.debug("Player has car: '{}' (ID: {})", playerCarName, playerCar.getId());
+        }
+        
+        // Vérifier si le joueur possède au moins une voiture autorisée
+        for (CarEntity playerCar : playerCars) {
+            String playerCarName = playerCar.getName();
+            if (playerCarName != null) {
+                for (String allowedCarName : allowedCarNames) {
+                    String trimmedAllowed = allowedCarName.trim();
+                    String trimmedPlayer = playerCarName.trim();
+                    logger.debug("Comparing '{}' vs '{}' (ignoreCase)", trimmedPlayer, trimmedAllowed);
+                    if (trimmedAllowed.equalsIgnoreCase(trimmedPlayer)) {
+                        logger.info("Car restriction match found! Player car '{}' matches allowed car '{}'", 
+                            trimmedPlayer, trimmedAllowed);
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        logger.warn("Car restriction failed for PersonaId={}, Event={}, restriction='{}' - no matching cars found", 
+            personaId, eventEntity.getId(), carRestriction);
+        return false;
     }
 
     public void createEventDataSession(Long personaId, Long eventSessionId) {
@@ -94,6 +159,13 @@ public class EventBO {
             logger.warn("Level restriction violation blocked: PersonaId={} (Level={}) tried to launch EventId={} (MinLevel={}, MaxLevel={})", 
                 activePersonaId, personaEntity.getLevel(), eventId, eventEntity.getMinLevel(), eventEntity.getMaxLevel());
             throw new EngineException(EngineExceptionCode.InvalidEntrantEventSession, true);
+        }
+
+        // SÉCURITÉ : Vérifier les restrictions de voitures spécifiques
+        if (!hasAllowedCarForEvent(activePersonaId, eventEntity)) {
+            logger.warn("Car restriction violation blocked: PersonaId={} tried to launch EventId={} but doesn't own required cars ({})", 
+                activePersonaId, eventId, eventEntity.getCarRestriction());
+            throw new EngineException(EngineExceptionCode.CarDataInvalid, true);
         }
 
         CarEntity carEntity = personaBO.getDefaultCarEntity(activePersonaId);

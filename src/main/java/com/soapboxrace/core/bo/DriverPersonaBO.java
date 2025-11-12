@@ -163,6 +163,9 @@ public class DriverPersonaBO {
         profileData.setRep(personaEntity.getRep());
         profileData.setRepAtCurrentLevel(personaEntity.getRepAtCurrentLevel());
         profileData.setScore(personaEntity.getScore());
+        
+
+        
         return profileData;
     }
 
@@ -250,8 +253,8 @@ public class DriverPersonaBO {
             personaDao.update(personaEntity);
         }
 
-        user.setSelectedPersonaIndex(Math.max(0, user.getSelectedPersonaIndex() - 1));
-        userDao.update(user);
+        int newIndex = Math.max(0, user.getSelectedPersonaIndex() - 1);
+        userDao.updateSelectedPersonaIndex(user.getId(), newIndex);
     }
 
     public PersonaPresence getPersonaPresenceByName(String name) {
@@ -321,5 +324,7 @@ public class DriverPersonaBO {
         treasureHuntEntity.setThDate(LocalDate.now());
         treasureHuntDAO.insert(treasureHuntEntity);
     }
+
+
 
 }

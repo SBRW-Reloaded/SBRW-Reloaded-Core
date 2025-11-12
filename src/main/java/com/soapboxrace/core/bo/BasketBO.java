@@ -133,8 +133,8 @@ public class BasketBO {
                 return CommerceResultStatus.FAIL_MAX_ALLOWED_PURCHASES_FOR_THIS_PRODUCT;
             }
 
-            userEntity.setMaxCarSlots(userEntity.getMaxCarSlots() + parameterBO.getIntParam("CAR_SLOTS_ADD", 1));
-            userDao.update(userEntity);
+            int newMaxCarSlots = userEntity.getMaxCarSlots() + parameterBO.getIntParam("CAR_SLOTS_ADD", 1);
+            userDao.updateMaxCarSlots(userEntity.getId(), newMaxCarSlots);
             performPersonaTransaction(personaEntity, powerupProduct);
             return CommerceResultStatus.SUCCESS;
         }
@@ -443,8 +443,9 @@ public class BasketBO {
                 return false;
             }
 
-            // Check if persona has sufficient level to purchase this item (unless they have prestige > 0)
-            if (personaEntity.getPrestige() == 0 && personaEntity.getLevel() < productEntity.getMinLevel()) {
+            // Check if persona has sufficient level to purchase this item (unless they have prestige > 0, then treat as level 60)
+            int effectiveLevel = personaEntity.getPrestige() > 0 ? 60 : personaEntity.getLevel();
+            if (effectiveLevel < productEntity.getMinLevel()) {
                 return false;
             }
 

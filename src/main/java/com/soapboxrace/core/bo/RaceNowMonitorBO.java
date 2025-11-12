@@ -65,10 +65,13 @@ public class RaceNowMonitorBO {
     @EJB
     private ParameterBO parameterBO;
     
+    @EJB
+    private EventBO eventBO;
+    
     @PostConstruct
     public void initialize() {
         try {
-            logger.info("========== INITIALIZING RACENOW MONITOR ==========");
+            // RaceNow monitor initializing...
             
             // Démarrer la surveillance toutes les 5 secondes par défaut
             TimerConfig timerConfig = new TimerConfig();
@@ -83,18 +86,14 @@ public class RaceNowMonitorBO {
             try {
                 int configInterval = parameterBO.getIntParam("SBRWR_RACENOW_MONITOR_INTERVAL");
                 interval = configInterval * 1000;
-                logger.info("RaceNow monitor interval configured from database: {}s", configInterval);
+                // Interval configured from database
             } catch (Exception e) {
-                logger.warn("Could not read SBRWR_RACENOW_MONITOR_INTERVAL parameter, using default 5s", e);
+                // Could not read SBRWR_RACENOW_MONITOR_INTERVAL parameter, using default 5s
             }
             
             timerService.createIntervalTimer(initialDelay, interval, timerConfig);
             
-            logger.info("RaceNow monitor initialized successfully:");
-            logger.info("  - Initial delay: {}ms", initialDelay);
-            logger.info("  - Interval: {}ms ({}s)", interval, interval/1000);
-            logger.info("  - Timer service: {}", timerService.getClass().getSimpleName());
-            logger.info("====================================================");
+            // RaceNow monitor initialized successfully
             
         } catch (Exception e) {
             logger.error("CRITICAL: Failed to initialize RaceNow monitor: {}", e.getMessage(), e);
@@ -113,11 +112,9 @@ public class RaceNowMonitorBO {
             boolean shouldLogDetails = (executionCounter % 10 == 0);
             
             if (shouldLogDetails) {
-                logger.info("========== RACENOW MONITOR HEARTBEAT #{} ==========", executionCounter);
-                logger.info("Timer execution at: {}", new java.util.Date());
-                logger.info("Timer info: {}", timer.getInfo());
+                // Heartbeat tick
             } else {
-                logger.debug("========== RACENOW MONITOR TICK #{} ==========", executionCounter);
+                // Monitor tick
             }
             
             // Vérifier si le système RaceNow persistant est activé
@@ -125,14 +122,14 @@ public class RaceNowMonitorBO {
             try {
                 isEnabled = parameterBO.getBoolParam("SBRWR_RACENOW_PERSISTENT_ENABLED");
                 if (shouldLogDetails) {
-                    logger.info("RaceNow persistent system enabled: {}", isEnabled);
+                    // RaceNow persistent system status checked
                 }
             } catch (Exception e) {
-                logger.warn("Could not read SBRWR_RACENOW_PERSISTENT_ENABLED parameter, assuming enabled", e);
+                // Could not read SBRWR_RACENOW_PERSISTENT_ENABLED parameter, assuming enabled
             }
             
             if (!isEnabled) {
-                logger.info("RaceNow persistent system is disabled, skipping monitoring");
+                // RaceNow persistent system is disabled
                 return; // Système désactivé
             }
             
@@ -141,8 +138,7 @@ public class RaceNowMonitorBO {
             
             // Debug: Afficher les détails de la queue récupérée
             if (!playersInQueue.isEmpty() || shouldLogDetails) {
-                logger.info("RACENOW MONITOR: Retrieved {} players from queue: {}", 
-                    playersInQueue.size(), playersInQueue);
+                // Queue data retrieved
             }
             
             // Vérifier s'il y a des joueurs à scanner immédiatement
@@ -153,40 +149,37 @@ public class RaceNowMonitorBO {
             if (!immediateScanPlayers.isEmpty()) {
                 // Ajouter les joueurs du scan immédiat (éviter les doublons avec addAll)
                 allPlayersToProcess.addAll(immediateScanPlayers);
-                logger.info("Processing {} immediate scan requests for players: {}", 
-                    immediateScanPlayers.size(), immediateScanPlayers);
+                // Processing immediate scan requests
             }
             
             // Si il y a des joueurs en file, toujours logger les détails
             if (!allPlayersToProcess.isEmpty()) {
                 shouldLogDetails = true;
-                logger.info("========== RACENOW MONITOR ACTIVE #{} ==========", executionCounter);
+                // Monitor active
             }
             
-            logger.info("RaceNow queue status: {} players waiting ({} immediate scans)", 
-                playersInQueue.size(), immediateScanPlayers.size());
+            // Queue status logging removed to reduce log noise
             
             if (allPlayersToProcess.isEmpty()) {
                 if (shouldLogDetails) {
-                    logger.info("No players in RaceNow queue, nothing to do");
+                    // No players in queue
                 }
                 return; // Rien à faire
             }
             
-            logger.info("Processing {} total players ({} in queue + {} immediate):", 
-                allPlayersToProcess.size(), playersInQueue.size(), immediateScanPlayers.size());
+            // Processing players from queue
             
             int playersProcessed = 0;
             for (String personaIdStr : allPlayersToProcess) {
                 try {
                     Long personaId = Long.parseLong(personaIdStr);
-                    logger.info("  [{}] Processing PersonaId={}", ++playersProcessed, personaId);
+                    // Processing persona
                     checkForAvailableLobbies(personaId);
                 } catch (NumberFormatException e) {
-                    logger.warn("Invalid persona ID in RaceNow queue: {}", personaIdStr);
+                    // Invalid persona ID removed
                     try {
                         matchmakingBO.removePlayerFromRaceNowQueue(Long.parseLong(personaIdStr));
-                        logger.info("Removed invalid PersonaId from queue: {}", personaIdStr);
+                        // Invalid persona removed from queue
                     } catch (Exception ex) {
                         logger.error("Failed to remove invalid persona ID from queue: {}", personaIdStr);
                     }
@@ -194,8 +187,7 @@ public class RaceNowMonitorBO {
             }
             
             long duration = System.currentTimeMillis() - startTime;
-            logger.info("RaceNow monitor cycle completed in {}ms - processed {} players", duration, playersProcessed);
-            logger.info("========================================");
+            // RaceNow monitor cycle completed
             
         } catch (Exception e) {
             logger.error("CRITICAL ERROR in RaceNow monitor (execution #{}): {}", executionCounter, e.getMessage(), e);
@@ -203,9 +195,9 @@ public class RaceNowMonitorBO {
         } finally {
             long totalDuration = System.currentTimeMillis() - startTime;
             if (executionCounter % 10 == 0 || totalDuration > 1000) { // Log si c'est un heartbeat ou si l'exécution prend du temps
-                logger.info("RaceNow monitor tick #{} finished (total time: {}ms)", executionCounter, totalDuration);
+                // Monitor tick finished
             } else {
-                logger.debug("RaceNow monitor tick #{} finished (total time: {}ms)", executionCounter, totalDuration);
+                // Monitor tick finished
             }
         }
     }
@@ -219,7 +211,7 @@ public class RaceNowMonitorBO {
         try {
             Map<String, String> queueData = matchmakingBO.getRaceNowQueueData(personaId);
             if (queueData == null || queueData.isEmpty()) {
-                logger.debug("No queue data found for PersonaId={}, removing from queue", personaId);
+                // No queue data found, removing from queue
                 matchmakingBO.removePlayerFromRaceNowQueue(personaId);
                 return;
             }
@@ -228,18 +220,17 @@ public class RaceNowMonitorBO {
             Integer playerLevel = Integer.parseInt(queueData.get("level"));
             Long timestamp = Long.parseLong(queueData.get("timestamp"));
             
-            logger.debug("Checking lobbies for PersonaId={} (CarClass={}, Level={})", personaId, carClassHash, playerLevel);
+            // Checking lobbies for persona
             
             // Vérifier que le joueur n'attend pas depuis trop longtemps (éviter les timeouts)
             long maxWaitTime = 30 * 60 * 1000; // 30 minutes par défaut
             try {
                 maxWaitTime = parameterBO.getIntParam("SBRWR_RACENOW_MAX_WAIT_MINUTES") * 60 * 1000;
             } catch (Exception e) {
-                logger.warn("Could not read SBRWR_RACENOW_MAX_WAIT_MINUTES parameter, using default 30min", e);
+                // Using default 30min wait time
             }
             if (System.currentTimeMillis() - timestamp > maxWaitTime) {
-                logger.info("RaceNow timeout for PersonaId={} after {}min, removing from queue", 
-                    personaId, (System.currentTimeMillis() - timestamp) / (60 * 1000));
+                // RaceNow timeout, removing from queue
                 matchmakingBO.removePlayerFromRaceNowQueue(personaId);
                 return;
             }
@@ -254,8 +245,7 @@ public class RaceNowMonitorBO {
                 if (playerLevel >= event.getMinLevel() && playerLevel <= event.getMaxLevel()) {
                     levelVerifiedLobbies.add(lobby);
                 } else {
-                    logger.warn("RACENOW_MONITOR: SECURITY - SQL query returned inappropriate lobby: PersonaId={} (Level={}) got EventId={} (MinLevel={}, MaxLevel={})", 
-                               personaId, playerLevel, event.getId(), event.getMinLevel(), event.getMaxLevel());
+                    // Security: SQL query returned inappropriate lobby
                 }
             }
             
@@ -264,29 +254,54 @@ public class RaceNowMonitorBO {
                             levelVerifiedLobbies.size(), availableLobbies.size());
             }
             
-            logger.debug("Found {} level-verified lobbies for PersonaId={} (was {} from SQL)", levelVerifiedLobbies.size(), personaId, availableLobbies.size());
+            // Level-verified lobbies found
             
             if (!levelVerifiedLobbies.isEmpty()) {
                 PersonaEntity personaEntity = personaDAO.find(personaId);
                 if (personaEntity != null) {
-                    logger.info("Found {} available lobbies for RaceNow PersonaId={}, attempting to join directly", 
-                        levelVerifiedLobbies.size(), personaId);
-                    
+                    // Found available lobbies, attempting to join
                     // Faire rejoindre directement le joueur au lieu d'envoyer juste une invitation
                     boolean joinedSuccessfully = attemptToJoinLobbyDirectly(personaEntity, levelVerifiedLobbies);
                     
                     if (joinedSuccessfully) {
                         matchmakingBO.removePlayerFromRaceNowQueue(personaId);
-                        logger.info("PersonaId={} successfully auto-joined lobby via RaceNow monitor", personaId);
+                        // Successfully auto-joined lobby
                     } else {
-                        logger.debug("PersonaId={} could not join any lobby, staying in queue", personaId);
+                        // Could not join any lobby, staying in queue
                     }
                 } else {
-                    logger.warn("PersonaEntity not found for PersonaId={}, removing from RaceNow queue", personaId);
+                    // PersonaEntity not found, removing from queue
                     matchmakingBO.removePlayerFromRaceNowQueue(personaId);
                 }
             } else {
-                logger.debug("No available lobbies found for PersonaId={}", personaId);
+                // Aucun lobby disponible : vérifier si le joueur attend depuis assez longtemps
+                // pour créer automatiquement un lobby
+                long waitTime = System.currentTimeMillis() - timestamp;
+                long autoCreateDelay = 30 * 1000; // 30 secondes par défaut
+                
+                try {
+                    autoCreateDelay = parameterBO.getIntParam("SBRWR_RACENOW_AUTO_CREATE_DELAY") * 1000L;
+                } catch (Exception e) {
+                    logger.debug("Could not read SBRWR_RACENOW_AUTO_CREATE_DELAY parameter, using default 30s");
+                }
+                
+                if (waitTime >= autoCreateDelay) {
+                    logger.info("PersonaId={} has been waiting for {}s without finding a lobby, attempting to create one automatically", 
+                        personaId, waitTime / 1000);
+                    
+                    // Créer automatiquement un lobby
+                    boolean lobbyCreated = createAutoLobbyForPlayer(personaId, playerLevel, carClassHash);
+                    
+                    if (lobbyCreated) {
+                        logger.info("Successfully created auto-lobby for PersonaId={}", personaId);
+                        matchmakingBO.removePlayerFromRaceNowQueue(personaId);
+                    } else {
+                        logger.warn("Failed to create auto-lobby for PersonaId={}, player stays in queue", personaId);
+                    }
+                } else {
+                    logger.debug("PersonaId={} waiting for {}s (need {}s before auto-lobby creation)", 
+                        personaId, waitTime / 1000, autoCreateDelay / 1000);
+                }
             }
             
         } catch (Exception e) {
@@ -311,14 +326,21 @@ public class RaceNowMonitorBO {
                 
                 // Vérification de sécurité : niveau
                 if (personaEntity.getLevel() < event.getMinLevel() || personaEntity.getLevel() > event.getMaxLevel()) {
-                    logger.debug("PersonaId={} level {} not compatible with EventId={} (min={}, max={})", 
-                        personaEntity.getPersonaId(), personaEntity.getLevel(), event.getId(), event.getMinLevel(), event.getMaxLevel());
+                    // Level not compatible with event
                     continue;
+                }
+                
+                // Vérification des restrictions de voiture
+                if (event.getCarRestriction() != null && !event.getCarRestriction().trim().isEmpty()) {
+                    if (!eventBO.hasAllowedCarForEvent(personaEntity.getPersonaId(), event)) {
+                        // Does not have required car for event
+                        continue;
+                    }
                 }
                 
                 // Vérifier si l'événement est ignoré
                 if (matchmakingBO.isEventIgnored(personaEntity.getPersonaId(), event.getId())) {
-                    logger.debug("PersonaId={} has ignored EventId={}", personaEntity.getPersonaId(), event.getId());
+                    // Event ignored by player
                     continue;
                 }
 
@@ -335,8 +357,7 @@ public class RaceNowMonitorBO {
                             // Envoyer une invitation automatique que le client RaceNow devrait accepter
                             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
                             
-                            logger.info("RaceNow auto-invitation sent: PersonaId={} invited to LobbyId={} (EventId={}, {}/{} players)", 
-                                personaEntity.getPersonaId(), lobbyEntity.getId(), event.getId(), currentEntrants, maxEntrants);
+                            // RaceNow auto-invitation sent
                             
                             return true; // Invitation envoyée avec succès
                             
@@ -346,10 +367,10 @@ public class RaceNowMonitorBO {
                             continue; // Essayer le lobby suivant
                         }
                     } else {
-                        logger.debug("PersonaId={} already in LobbyId={}", personaEntity.getPersonaId(), lobbyEntity.getId());
+                        // Player already in lobby
                     }
                 } else {
-                    logger.debug("LobbyId={} is full ({}/{})", lobbyEntity.getId(), currentEntrants, maxEntrants);
+                    // Lobby is full
                 }
             }
             
@@ -362,8 +383,86 @@ public class RaceNowMonitorBO {
         }
     }
     
+    /**
+     * Crée automatiquement un lobby pour un joueur en attente RaceNow
+     * Sélectionne aléatoirement un événement parmi ceux éligibles (enabled=1, eventModeId 4 ou 9)
+     * et compatible avec la classe de voiture du joueur (OpenClass ou classe correspondante)
+     * 
+     * @param personaId ID du persona
+     * @param playerLevel Niveau du joueur
+     * @param carClassHash Classe de voiture du joueur
+     * @return true si le lobby a été créé avec succès
+     */
+    private boolean createAutoLobbyForPlayer(Long personaId, int playerLevel, int carClassHash) {
+        try {
+            // Récupérer les événements éligibles pour la création automatique de lobby
+            // Filtre par niveau, eventModeId (4 ou 9), et carClassHash (OpenClass ou classe du joueur)
+            List<EventEntity> eligibleEvents = eventDAO.findEligibleForAutoLobby(playerLevel, carClassHash);
+            
+            if (eligibleEvents.isEmpty()) {
+                logger.warn("No eligible events found for auto-lobby creation (PersonaId={}, Level={}, CarClass={})", 
+                    personaId, playerLevel, carClassHash);
+                return false;
+            }
+            
+            PersonaEntity personaEntity = personaDAO.find(personaId);
+            if (personaEntity == null) {
+                logger.error("PersonaEntity not found for PersonaId={}", personaId);
+                return false;
+            }
+            
+            // Filtrer les événements ignorés et ceux avec restriction de voiture
+            List<EventEntity> validEvents = new ArrayList<>();
+            for (EventEntity event : eligibleEvents) {
+                // Vérifier que l'événement n'est pas ignoré
+                if (matchmakingBO.isEventIgnored(personaId, event.getId())) {
+                    logger.debug("Event {} ignored by PersonaId={}, skipping", event.getId(), personaId);
+                    continue;
+                }
+                
+                // Vérifier les restrictions de voiture si elles existent
+                if (event.getCarRestriction() != null && !event.getCarRestriction().trim().isEmpty()) {
+                    if (!eventBO.hasAllowedCarForEvent(personaId, event)) {
+                        logger.debug("PersonaId={} does not have allowed car for Event {}, skipping", personaId, event.getId());
+                        continue;
+                    }
+                }
+                
+                validEvents.add(event);
+            }
+            
+            if (validEvents.isEmpty()) {
+                logger.warn("No valid events found for auto-lobby creation after filtering (PersonaId={})", personaId);
+                return false;
+            }
+            
+            // Sélectionner aléatoirement un événement parmi les valides
+            java.util.Random random = new java.util.Random();
+            EventEntity selectedEvent = validEvents.get(random.nextInt(validEvents.size()));
+            
+            logger.info("Creating auto-lobby for PersonaId={} on Event {} ({}) - CarClass={}", 
+                personaId, selectedEvent.getId(), selectedEvent.getName(), carClassHash);
+            
+            // Créer le lobby via LobbyBO (lobby public)
+            LobbyEntity createdLobby = lobbyBO.createLobby(personaId, selectedEvent.getId(), carClassHash, false);
+            
+            if (createdLobby != null) {
+                logger.info("Auto-lobby created successfully: LobbyId={}, EventId={}, PersonaId={}", 
+                    createdLobby.getId(), selectedEvent.getId(), personaId);
+                return true;
+            } else {
+                logger.error("Failed to create auto-lobby for PersonaId={}", personaId);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error creating auto-lobby for PersonaId={}: {}", personaId, e.getMessage(), e);
+            return false;
+        }
+    }
+    
     @PreDestroy
     public void cleanup() {
-        logger.info("RaceNow monitor shutting down");
+        // RaceNow monitor shutting down
     }
 }

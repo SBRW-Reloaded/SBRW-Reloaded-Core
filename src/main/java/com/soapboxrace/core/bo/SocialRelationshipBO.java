@@ -46,12 +46,12 @@ public class SocialRelationshipBO {
 
     @PostConstruct
     public void init() {
-        logger.info("Initialized social relationship system");
+        // Social relationship system initialized
     }
 
     @PreDestroy
     public void shutdown() {
-        logger.info("Shutdown social relationship system");
+        // Social relationship system shutdown
     }
 
     @Asynchronous

@@ -72,6 +72,9 @@ public class LobbyBO {
     @EJB
     private ParameterBO parameterBO;
 
+    @EJB
+    private EventBO eventBO;
+
     public void joinFastLobby(Long personaId, int carClassHash) {
         logger.info("JOINFAST: PersonaId={} attempting to join fast lobby with carClass={}", personaId, carClassHash);
         
@@ -108,12 +111,25 @@ public class LobbyBO {
         // Filtrer les lobbies pour exclure les événements ignorés
         List<LobbyEntity> availableLobbys = new ArrayList<>();
         for (LobbyEntity lobby : levelFilteredLobbys) {
-            if (!matchmakingBO.isEventIgnored(personaId, lobby.getEvent().getId())) {
-                availableLobbys.add(lobby);
-            } else {
+            EventEntity event = lobby.getEvent();
+            
+            // Vérifier si l'événement est ignoré par le joueur
+            if (matchmakingBO.isEventIgnored(personaId, event.getId())) {
                 logger.debug("JOINFAST: PersonaId={} - Skipping ignored event {} ({})", 
-                            personaId, lobby.getEvent().getId(), lobby.getEvent().getName());
+                            personaId, event.getId(), event.getName());
+                continue;
             }
+            
+            // Vérifier les restrictions de voiture
+            if (event.getCarRestriction() != null && !event.getCarRestriction().trim().isEmpty()) {
+                if (!eventBO.hasAllowedCarForEvent(personaId, event)) {
+                    logger.debug("JOINFAST: PersonaId={} - Skipping car-restricted event {} ({}) - restriction: {}", 
+                                personaId, event.getId(), event.getName(), event.getCarRestriction());
+                    continue;
+                }
+            }
+            
+            availableLobbys.add(lobby);
         }
         
         logger.info("JOINFAST: PersonaId={} - After filtering ignored events: {} available lobbies (was {} after level check, {} from SQL)", 
@@ -137,7 +153,16 @@ public class LobbyBO {
 
     public void joinQueueEvent(Long personaId, int eventId) {
         PersonaEntity personaEntity = personaDao.find(personaId);
+        if (personaEntity == null) {
+            logger.error("JOINQUEUE: PersonaEntity not found for PersonaId={}", personaId);
+            return;
+        }
+        
         EventEntity eventEntity = eventDao.find(eventId);
+        if (eventEntity == null) {
+            logger.error("JOINQUEUE: EventEntity not found for EventId={}", eventId);
+            return;
+        }
 
         // SÉCURITÉ : Vérifier le niveau du joueur AVANT de permettre l'accès à l'événement
         if (personaEntity.getLevel() < eventEntity.getMinLevel() || personaEntity.getLevel() > eventEntity.getMaxLevel()) {
@@ -145,8 +170,21 @@ public class LobbyBO {
                 personaEntity.getPersonaId(), personaEntity.getLevel(), eventId, eventEntity.getMinLevel(), eventEntity.getMaxLevel());
             return; // Ignorer silencieusement la demande
         }
+        
+        // SÉCURITÉ : Vérifier les restrictions de voiture
+        if (eventEntity.getCarRestriction() != null && !eventEntity.getCarRestriction().trim().isEmpty()) {
+            if (!eventBO.hasAllowedCarForEvent(personaId, eventEntity)) {
+                logger.info("Car restriction: PersonaId={} cannot access EventId={} (restriction: {}) - request ignored", 
+                    personaId, eventId, eventEntity.getCarRestriction());
+                return; // Ignorer silencieusement la demande
+            }
+        }
 
         CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
+        if (carEntity == null) {
+            logger.error("JOINQUEUE: CarEntity not found for PersonaId={}", personaId);
+            throw new EngineException(EngineExceptionCode.CarDataInvalid, true);
+        }
 
         if (carEntity.getCarClassHash() == 0 || (eventEntity.getCarClassHash() != 607077938 && carEntity.getCarClassHash() != eventEntity.getCarClassHash())) {
             // The client UI does not allow you to join events outside your current car's class
@@ -165,7 +203,16 @@ public class LobbyBO {
         List<Long> personaIdList = openFireRestApiCli.getAllPersonaByGroup(creatorPersonaId);
         
         EventEntity eventEntity = eventDao.find(eventId);
+        if (eventEntity == null) {
+            logger.error("PRIVATELOBBY: EventEntity not found for EventId={}", eventId);
+            throw new EngineException(EngineExceptionCode.InvalidEntrantEventSession, true);
+        }
+        
         PersonaEntity creatorPersonaEntity = personaDao.find(creatorPersonaId);
+        if (creatorPersonaEntity == null) {
+            logger.error("PRIVATELOBBY: CreatorPersonaEntity not found for PersonaId={}", creatorPersonaId);
+            throw new EngineException(EngineExceptionCode.InvalidEntrantEventSession, true);
+        }
         
         // SÉCURITÉ : Vérifier que le créateur peut accéder à cet événement selon son niveau
         if (creatorPersonaEntity.getLevel() < eventEntity.getMinLevel() || creatorPersonaEntity.getLevel() > eventEntity.getMaxLevel()) {
@@ -221,17 +268,57 @@ public class LobbyBO {
 
     public LobbyEntity createLobby(Long personaId, int eventId, int carClassHash, Boolean isPrivate) {
         EventEntity eventEntity = eventDao.find(eventId);
+        if (eventEntity == null) {
+            logger.error("CREATELOBBY: EventEntity not found for EventId={}", eventId);
+            throw new EngineException(EngineExceptionCode.InvalidEntrantEventSession, true);
+        }
 
         LobbyEntity lobbyEntity = new LobbyEntity();
         lobbyEntity.setEvent(eventEntity);
         lobbyEntity.setIsPrivate(isPrivate);
         lobbyEntity.setPersonaId(personaId);
         lobbyEntity.setStartedTime(LocalDateTime.now());
+        
+        // Verrouiller la classe de voiture si le paramètre est activé et que ce n'est pas le mode 22
+        boolean shouldLockCarClass = false;
+        try {
+            shouldLockCarClass = parameterBO.getBoolParam("SBRWR_LOCK_LOBBY_CAR_CLASS");
+        } catch (Exception e) {
+            logger.debug("Could not read SBRWR_LOCK_LOBBY_CAR_CLASS parameter, assuming false");
+        }
+        
+        if (shouldLockCarClass && eventEntity.getEventModeId() != 22) {
+            // Récupérer la voiture par défaut du joueur pour obtenir sa vraie classe
+            CarEntity playerCar = personaBO.getDefaultCarEntity(personaId);
+            if (playerCar != null) {
+                // Verrouiller le lobby à la classe de voiture réelle du créateur
+                lobbyEntity.setLockedCarClassHash(playerCar.getCarClassHash());
+                logger.info("CREATELOBBY: Lobby locked to car class {} for PersonaId={} on Event {} (mode {})", 
+                    playerCar.getCarClassHash(), personaId, eventId, eventEntity.getEventModeId());
+            } else {
+                logger.warn("CREATELOBBY: Could not get player car for PersonaId={}, car class lock disabled", personaId);
+                lobbyEntity.setLockedCarClassHash(null);
+            }
+        } else {
+            lobbyEntity.setLockedCarClassHash(null);
+            if (eventEntity.getEventModeId() == 22) {
+                logger.debug("CREATELOBBY: Car class lock disabled for mode 22 (Drag)");
+            }
+        }
 
         lobbyDao.insert(lobbyEntity);
 
         PersonaEntity personaEntity = personaDao.find(personaId);
+        if (personaEntity == null) {
+            logger.error("CREATELOBBY: PersonaEntity not found for PersonaId={}", personaId);
+            throw new EngineException(EngineExceptionCode.PersonaNotFound, true);
+        }
+        
         CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
+        if (carEntity == null) {
+            logger.error("CREATELOBBY: CarEntity not found for PersonaId={}", personaId);
+            throw new EngineException(EngineExceptionCode.CarDataInvalid, true);
+        }
         if(eventEntity.getCarClassHash() == 607077938 || carEntity.getCarClassHash() == eventEntity.getCarClassHash()) {
             lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
         }
@@ -246,7 +333,11 @@ public class LobbyBO {
                 if (!queuePersonaId.equals(-1L) && !matchmakingBO.isEventIgnored(queuePersonaId, eventId)) {
                     if (lobbyEntity.getEntrants().size() < lobbyEntity.getEvent().getMaxPlayers()) {
                         PersonaEntity queuePersona = personaDao.find(queuePersonaId);
-                        lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, queuePersona, eventEntity.getLobbyCountdownTime());
+                        if (queuePersona != null) {
+                            lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, queuePersona, eventEntity.getLobbyCountdownTime());
+                        } else {
+                            logger.warn("CREATELOBBY: QueuePersonaEntity not found for PersonaId={}", queuePersonaId);
+                        }
                     }
                 }
             }
@@ -352,6 +443,25 @@ public class LobbyBO {
                     personaEntity.getPersonaId(), personaEntity.getLevel(), event.getId(), event.getMinLevel(), event.getMaxLevel()));
                 continue;
             }
+            
+            // SECURITY CHECK: Vérifier les restrictions de voiture
+            if (event.getCarRestriction() != null && !event.getCarRestriction().trim().isEmpty()) {
+                if (!eventBO.hasAllowedCarForEvent(personaEntity.getPersonaId(), event)) {
+                    logger.warn("RaceNow car restriction bypass attempt blocked: PersonaId={} tried to join EventId={} (restriction: {})", 
+                        personaEntity.getPersonaId(), event.getId(), event.getCarRestriction());
+                    continue;
+                }
+            }
+            
+            // SECURITY CHECK: Vérifier le verrouillage de classe de voiture du lobby
+            if (lobbyEntityTmp.getLockedCarClassHash() != null) {
+                CarEntity playerCar = personaBO.getDefaultCarEntity(personaEntity.getPersonaId());
+                if (playerCar != null && playerCar.getCarClassHash() != lobbyEntityTmp.getLockedCarClassHash()) {
+                    logger.warn("RaceNow car class lock bypass attempt blocked: PersonaId={} (CarClass={}) tried to join lobby locked to CarClass={}", 
+                        personaEntity.getPersonaId(), playerCar.getCarClassHash(), lobbyEntityTmp.getLockedCarClassHash());
+                    continue;
+                }
+            }
 
             int maxEntrants = event.getMaxPlayers();
             List<LobbyEntrantEntity> lobbyEntrants = lobbyEntityTmp.getEntrants();
@@ -414,6 +524,16 @@ public class LobbyBO {
             logger.warn(String.format("Invitation level restriction bypass attempt blocked: PersonaId=%d (Level=%d) tried to accept invitation for EventId=%d (MinLevel=%d, MaxLevel=%d)", 
                 personaEntity.getPersonaId(), personaEntity.getLevel(), event.getId(), event.getMinLevel(), event.getMaxLevel()));
             throw new EngineException(EngineExceptionCode.GameLocked, false);
+        }
+        
+        // SECURITY CHECK: Vérifier le verrouillage de classe de voiture du lobby
+        if (lobbyEntity.getLockedCarClassHash() != null) {
+            CarEntity playerCar = personaBO.getDefaultCarEntity(personaId);
+            if (playerCar != null && playerCar.getCarClassHash() != lobbyEntity.getLockedCarClassHash()) {
+                logger.warn("Invitation car class lock bypass attempt blocked: PersonaId={} (CarClass={}) tried to accept invitation for lobby locked to CarClass={}", 
+                    personaId, playerCar.getCarClassHash(), lobbyEntity.getLockedCarClassHash());
+                throw new EngineException(EngineExceptionCode.GameLocked, false);
+            }
         }
 
         int eventId = lobbyEntity.getEvent().getId();

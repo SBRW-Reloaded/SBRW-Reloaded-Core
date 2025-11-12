@@ -14,6 +14,7 @@ import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.HardwareInfoEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 import com.soapboxrace.jaxb.http.HardwareInfo;
+import com.soapboxrace.jaxb.http.SocialSettings;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
 import com.soapboxrace.core.dao.HardwareInfoDAO;
@@ -50,14 +51,11 @@ public class Reporting {
         HardwareInfo hardwareInfo = JAXBUtility.unMarshal(is, HardwareInfo.class);
         HardwareInfoEntity hardwareInfoEntity = hardwareInfoBO.save(hardwareInfo);
         UserEntity user = requestSessionInfo.getUser();
-        user.setGameHardwareHash(hardwareInfoEntity.getHardwareHash());
-        user.setState("ONLINE");
-        userDAO.update(user);
+        userDAO.updateGameHardwareHashAndState(user.getId(), hardwareInfoEntity.getHardwareHash(), "ONLINE");
 
         HardwareInfoEntity checkBannedHWID = hardwareInfoDAO.findBannedByHardwareHash(hardwareInfoEntity.getHardwareHash());
         if(checkBannedHWID != null) {
-            user.setLocked(true);
-            userDAO.update(user);
+            userDAO.updateLocked(user.getId(), true);
             tokenBO.deleteByUserId(user.getId());
         }
         

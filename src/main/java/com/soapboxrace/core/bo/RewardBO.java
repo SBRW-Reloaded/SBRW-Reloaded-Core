@@ -341,6 +341,60 @@ public class RewardBO {
         rewardVO.add(rankRepResult, cashRepResult, EnumRewardCategory.BONUS, EnumRewardType.NONE);
     }
 
+    /**
+     * Version de setRankReward qui utilise le rang calculé côté serveur au lieu du rang client
+     * @param eventRewardEntity Configuration des récompenses de l'événement
+     * @param serverCalculatedRank Le rang calculé côté serveur (plus fiable que le client)
+     * @param rewardVO L'objet de récompense à modifier
+     */
+    public void setRankReward(EventRewardEntity eventRewardEntity, int serverCalculatedRank, RewardVO rewardVO) {
+        float rankRepMultiplier = 0f;
+        float rankCashMultiplier = 0f;
+        switch (serverCalculatedRank) {
+            case 1:
+                rankRepMultiplier = eventRewardEntity.getRank1RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank1CashMultiplier();
+                break;
+            case 2:
+                rankRepMultiplier = eventRewardEntity.getRank2RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank2CashMultiplier();
+                break;
+            case 3:
+                rankRepMultiplier = eventRewardEntity.getRank3RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank3CashMultiplier();
+                break;
+            case 4:
+                rankRepMultiplier = eventRewardEntity.getRank4RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank4CashMultiplier();
+                break;
+            case 5:
+                rankRepMultiplier = eventRewardEntity.getRank5RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank5CashMultiplier();
+                break;
+            case 6:
+                rankRepMultiplier = eventRewardEntity.getRank6RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank6CashMultiplier();
+                break;
+            case 7:
+                rankRepMultiplier = eventRewardEntity.getRank7RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank7CashMultiplier();
+                break;
+            case 8:
+                rankRepMultiplier = eventRewardEntity.getRank8RepMultiplier();
+                rankCashMultiplier = eventRewardEntity.getRank8CashMultiplier();
+                break;
+            default:
+                rankRepMultiplier = 1.0f;
+                rankCashMultiplier = 1.0f;
+                break;
+        }
+        float baseRep = rewardVO.getBaseRep();
+        float baseCash = rewardVO.getBaseCash();
+        int rankRepResult = (int) (baseRep * rankRepMultiplier);
+        int cashRepResult = (int) (baseCash * rankCashMultiplier);
+        rewardVO.add(rankRepResult, cashRepResult, EnumRewardCategory.BONUS, EnumRewardType.NONE);
+    }
+
     public void setPursitParamReward(float rewardValue, EnumRewardType enumRewardType, RewardVO rewardVO) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("PURSUIT_");

@@ -126,11 +126,14 @@ public class LegitRaceBO {
                 }
 
                 //Calc, wow
-                if ((pursuitArbitrationPacket.getAlternateEventDurationInMilliseconds()/1000)/pursuitArbitrationPacket.getCopsDeployed() >= parameterBO.getIntParam("SBRWR_COPS_THRESHOLD", 25)) {
+                if (pursuitArbitrationPacket.getCopsDeployed() > 0 && 
+                    (pursuitArbitrationPacket.getAlternateEventDurationInMilliseconds()/1000)/pursuitArbitrationPacket.getCopsDeployed() >= parameterBO.getIntParam("SBRWR_COPS_THRESHOLD", 25)) {
                     reportMessage = String.format("Invalid data received from pursuit outrun, over %d cops in %d seconds",
                         pursuitArbitrationPacket.getCopsDeployed(), pursuitArbitrationPacket.getAlternateEventDurationInMilliseconds()/1000);
 
                     reportCheating("INVALID_OUTRUN_DATA", reportMessage);
+                } else if (pursuitArbitrationPacket.getCopsDeployed() == 0) {
+                    reportCheating("NO_COPS_DEPLOYED", "No cops were deployed during pursuit event");
                 }
 
                 if(pursuitArbitrationPacket.getTopSpeed() == 0) {

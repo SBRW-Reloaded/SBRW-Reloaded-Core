@@ -151,8 +151,23 @@ public class CommerceBO {
                             return commerceSessionResultTrans;
                         }
 
-                        // Check if persona has sufficient level to purchase this item (unless they have prestige > 0)
-                        if (personaEntity.getPrestige() == 0 && personaEntity.getLevel() < productEntity.getMinLevel()) {
+                        // Check if persona has sufficient level to purchase this item
+                        // Pour les pièces de performance, skill mod parts et preset rides, permettre aux joueurs avec prestige > 0 d'acheter sans restriction de niveau
+                        int effectiveLevel = personaEntity.getLevel();
+                        if (personaEntity.getPrestige() > 0) {
+                            if ("NFSW_NA_EP_PERFORMANCEPARTS".equals(productEntity.getCategoryName()) || 
+                                "NFSW_NA_EP_SKILLMODPARTS".equals(productEntity.getCategoryName())) {
+                                effectiveLevel = 100; // Traiter comme niveau max pour les pièces de performance et skill mods
+                            } else if ("NFSW_NA_EP_PRESET_RIDES_ALL_Category".equals(productEntity.getCategoryName())) {
+                                // Pour les preset rides, seulement si le niveau de la voiture ne dépasse pas 100
+                                if (productEntity.getLevel() <= 100) {
+                                    effectiveLevel = 100; // Débloquer les voitures de niveau ≤ 100
+                                }
+                                // Sinon, garder le niveau réel pour les voitures de niveau > 100
+                            }
+                        }
+                        
+                        if (effectiveLevel < productEntity.getMinLevel()) {
                             commerceSessionResultTrans.setStatus(CommerceResultStatus.FAIL_PERSONA_NOT_RIGHT_LEVEL);
                             return commerceSessionResultTrans;
                         }

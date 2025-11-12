@@ -111,11 +111,7 @@ public class TokenSessionBO {
             removeSession(sessionKey);
 
             //and delete status for this persona in db:
-            UserEntity userEntity = userDAO.find(userId);
-            if(userEntity != null) {
-                userEntity.setState("OFFLINE");
-                userDAO.update(userEntity);
-            }
+            userDAO.updateUserState(userId, "OFFLINE");
         }
     }
 
@@ -124,7 +120,7 @@ public class TokenSessionBO {
             throw new AuthException("Invalid email or password");
         }
 
-        UserEntity userEntity = userDAO.findByEmail(email);
+        UserEntity userEntity = userDAO.findByEmailWithFreshData(email);
         if (userEntity == null) {
             throw new AuthException("Invalid email or password");
         }
@@ -147,9 +143,9 @@ public class TokenSessionBO {
             throw new AuthException(banInfoVO);
         }
 
-        userEntity.setLastLogin(LocalDateTime.now());
-        userDAO.update(userEntity);
         Long userId = userEntity.getId();
+        userDAO.updateLastLogin(userId, LocalDateTime.now());
+        // DON'T modify the managed entity - it would trigger automatic save with default values!
         deleteByUserId(userId);
         String randomUUID = createToken(userEntity, httpRequest.getRemoteHost());
 

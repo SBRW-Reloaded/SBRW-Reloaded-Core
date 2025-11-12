@@ -50,6 +50,9 @@ public class Personas {
     @EJB
     private InventoryBO inventoryBO;
 
+    @EJB
+    private AchievementBO achievementBO;
+
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
@@ -268,6 +271,58 @@ public class Personas {
         sessionBO.verifyPersonaOwnership(requestSessionInfo.getTokenSessionEntity(), personaId);
         personaBO.changeDefaultCar(personaId, carId);
         return "";
+    }
+
+    /**
+     * API endpoint administrateur pour corriger les données d'achievements corrompues d'un persona
+     * 
+     * Utilisation: POST /personas/admin/fixAchievements?personaId=123456&adminAuth=your_admin_token
+     * 
+     * @param personaId L'ID du persona à corriger
+     * @param adminToken Token d'authentification admin
+     * @return Rapport XML des corrections effectuées
+     */
+    @POST
+    @Path("/admin/fixAchievements")
+    @Produces(MediaType.APPLICATION_XML)
+    public String fixPersonaAchievements(@QueryParam("personaId") Long personaId, 
+                                         @QueryParam("adminAuth") String adminToken) {
+        // Vérification du token admin
+        String configuredAdminToken = parameterBO.getStrParam("ADMIN_AUTH");
+        
+        if (configuredAdminToken == null) {
+            return "<error>Server configuration missing ADMIN_AUTH parameter</error>";
+        }
+        
+        if (adminToken == null || !configuredAdminToken.equals(adminToken)) {
+            return "<error>Invalid or missing admin authentication</error>";
+        }
+        
+        if (personaId == null) {
+            return "<error>Missing personaId parameter</error>";
+        }
+        
+        try {
+            // Appeler la méthode de réparation dans AchievementBO
+            java.util.Map<String, Object> result = achievementBO.fixCorruptedAchievements(personaId);
+            
+            // Construire la réponse XML
+            StringBuilder response = new StringBuilder();
+            response.append("<achievementRepair>\n");
+            response.append("  <personaId>").append(result.get("personaId")).append("</personaId>\n");
+            response.append("  <totalFixed>").append(result.get("totalFixed")).append("</totalFixed>\n");
+            response.append("  <status>").append(result.get("status")).append("</status>\n");
+            
+            if (result.containsKey("error")) {
+                response.append("  <error>").append(result.get("error")).append("</error>\n");
+            }
+            
+            response.append("</achievementRepair>\n");
+            return response.toString();
+            
+        } catch (Exception e) {
+            return "<error>Exception during repair: " + e.getMessage() + "</error>";
+        }
     }
 
 }

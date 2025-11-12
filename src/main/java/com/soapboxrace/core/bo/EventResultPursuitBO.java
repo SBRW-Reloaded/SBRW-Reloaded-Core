@@ -76,7 +76,7 @@ public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket
         eventDataEntity.setTopSpeed(pursuitArbitrationPacket.getTopSpeed());
         eventSessionEntity.setEnded(System.currentTimeMillis());
 
-        pursuitArbitrationPacket.setRank(1); // there's only ever 1 player, and the game sets rank to 0... idk why
+        pursuitArbitrationPacket.setRank(1); // there's only ever 1 player in pursuit mode, so rank is always 1
 
         boolean isBusted = pursuitArbitrationPacket.getFinishReason() == 266;
 
@@ -99,13 +99,18 @@ public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket
             updateEventAchievements(eventDataEntity, eventSessionEntity, activePersonaId, pursuitArbitrationPacket, transaction);
         }
 
-        achievementBO.commitTransaction(personaEntity, transaction);
-
+        // Mettre à jour les données d'abord, puis committer les achievements
         CarEntity carEntity = personaBO.getDefaultCarEntity(activePersonaId);
         carEntity.setHeat(isBusted ? 1 : pursuitArbitrationPacket.getHeat());
         carDAO.update(carEntity);
         eventDataDao.update(eventDataEntity);
         eventSessionDao.update(eventSessionEntity);
+        
+        // Recalculer les rangs (même si il n'y a qu'un joueur en Pursuit pour la cohérence)
+        recalculateAllRanks(eventSessionEntity);
+        
+        // Committer les achievements après toutes les mises à jour et le recalcul des rangs
+        achievementBO.commitTransaction(personaEntity, transaction);
 
         return pursuitEventResult;
     }

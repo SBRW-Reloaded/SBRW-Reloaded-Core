@@ -199,11 +199,19 @@ public class AchievementBO {
                 personaAchievementRankDAO.findByPersonaIdAndAchievementRankId(personaId, achievementRankId);
 
         if (personaAchievementRankEntity == null) {
-            throw new IllegalArgumentException(personaId + " does not have " + achievementRankId);
+            throw new IllegalArgumentException(personaId + " does not have achievement rank " + achievementRankId);
         }
 
-        if (!"RewardWaiting".equals(personaAchievementRankEntity.getState())) {
-            throw new IllegalArgumentException(personaId + " has no reward for " + achievementRankId);
+        // Diagnostic détaillé de l'état de l'achievement
+        String currentState = personaAchievementRankEntity.getState();
+        if (!"RewardWaiting".equals(currentState)) {
+            // Log détaillé pour le diagnostic
+            Long achievementId = personaAchievementRankEntity.getPersonaAchievementEntity().getAchievementEntity().getId();
+            String achievementName = personaAchievementRankEntity.getPersonaAchievementEntity().getAchievementEntity().getBadgeDefinitionEntity().getName();
+            
+            throw new IllegalArgumentException(String.format(
+                "PersonaId=%d has no reward for AchievementRankId=%d (Achievement: %s, ID: %d, CurrentState: %s, Expected: RewardWaiting)", 
+                personaId, achievementRankId, achievementName, achievementId, currentState));
         }
 
         AchievementRewards achievementRewards = new AchievementRewards();
@@ -226,6 +234,73 @@ public class AchievementBO {
         personaAchievementRankDAO.update(personaAchievementRankEntity);
 
         return achievementRewards;
+    }
+
+    /**
+     * Corrige les données d'achievements corrompues pour un persona spécifique
+     * 
+     * Cette méthode identifie et corrige les PersonaAchievementRankEntity qui sont dans un état incohérent :
+     * - Ils ont une date achievedOn (indiquant qu'ils ont été atteints)
+     * - Mais leur état n'est ni "Completed" ni "RewardWaiting" 
+     * 
+     * Ces incohérences sont généralement causées par des bugs dans les versions antérieures
+     * du système de cascade JPA.
+     * 
+     * @param personaId L'ID du persona à corriger
+     * @return Map contenant les informations de réparation (nombre de corrections, détails)
+     */
+    public Map<String, Object> fixCorruptedAchievements(Long personaId) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> fixedRanks = new ArrayList<>();
+        int totalFixed = 0;
+
+        try {
+            // Récupérer tous les PersonaAchievementEntity pour ce persona
+            List<PersonaAchievementEntity> personaAchievements = personaAchievementDAO.findAllByPersonaId(personaId);
+            
+            for (PersonaAchievementEntity personaAchievement : personaAchievements) {
+                List<PersonaAchievementRankEntity> ranks = personaAchievement.getRanks();
+                
+                for (PersonaAchievementRankEntity rank : ranks) {
+                    String currentState = rank.getState();
+                    
+                    // Identifier les ranks corrompus : ils existent mais ne sont ni "Completed" ni "RewardWaiting"
+                    // Et ils ont une date d'achievement (ce qui indique qu'ils ont été atteints)
+                    if (rank.getAchievedOn() != null && 
+                        !"Completed".equals(currentState) && 
+                        !"RewardWaiting".equals(currentState)) {
+                        
+                        // Fixer l'état : si achievedOn existe, cela devrait être "RewardWaiting"
+                        String oldState = currentState;
+                        rank.setState("RewardWaiting");
+                        personaAchievementRankDAO.update(rank);
+                        
+                        // Collecter les informations de réparation
+                        Map<String, Object> fixInfo = new HashMap<>();
+                        fixInfo.put("achievementId", personaAchievement.getAchievementEntity().getId());
+                        fixInfo.put("achievementName", personaAchievement.getAchievementEntity().getBadgeDefinitionEntity().getName());
+                        fixInfo.put("rankNumber", rank.getAchievementRankEntity().getRank());
+                        fixInfo.put("oldState", oldState);
+                        fixInfo.put("newState", "RewardWaiting");
+                        fixInfo.put("achievedOn", rank.getAchievedOn().format(RANK_COMPLETED_AT_FORMATTER));
+                        
+                        fixedRanks.add(fixInfo);
+                        totalFixed++;
+                    }
+                }
+            }
+            
+            result.put("personaId", personaId);
+            result.put("totalFixed", totalFixed);
+            result.put("fixedRanks", fixedRanks);
+            result.put("status", totalFixed > 0 ? "SUCCESS" : "NO_CORRUPTION_FOUND");
+            
+        } catch (Exception e) {
+            result.put("error", "Exception during achievement fix: " + e.getMessage());
+            result.put("status", "ERROR");
+        }
+
+        return result;
     }
 
     private void sendUpdateMessage(PersonaEntity personaEntity, List<AchievementUpdateInfo> achievementUpdateInfoList, List<BadgePacket> badgePacketList) {
@@ -322,8 +397,10 @@ public class AchievementBO {
                 Boolean shouldUpdate = (Boolean) scriptingBO.eval(achievementEntity.getUpdateTrigger(),
                         properties);
                 if (shouldUpdate) {
-                    if (insert)
+                    if (insert) {
                         personaAchievementDAO.insert(personaAchievementEntity);
+                        // Avec CascadeType.PERSIST, les PersonaAchievementRankEntity sont automatiquement sauvegardés
+                    }
                     AchievementUpdateInfo achievementUpdateInfo = updateAchievement(achievementEntity, properties, personaAchievementEntity);
                     newScore += achievementUpdateInfo.getPointsGiven();
                     achievementUpdateInfoList.add(achievementUpdateInfo);
@@ -441,6 +518,7 @@ public class AchievementBO {
                 personaAchievementEntity.setCurrentValue(newVal);
                 personaAchievementEntity.setCanProgress(newVal < maxVal.getAsInt());
                 personaAchievementDAO.update(personaAchievementEntity);
+                // Avec CascadeType.PERSIST, les PersonaAchievementRankEntity sont automatiquement sauvegardés
             }
 
             achievementUpdateInfo.setPointsGiven(pointsAdded);
@@ -466,7 +544,7 @@ public class AchievementBO {
         rankEntity.setState("Locked");
         rankEntity.setPersonaAchievementEntity(personaAchievementEntity);
         rankEntity.setAchievementRankEntity(achievementRankEntity);
-        personaAchievementRankDAO.insert(rankEntity);
+        // Avec CascadeType.PERSIST, cette entité sera automatiquement sauvegardée avec PersonaAchievementEntity
         personaAchievementEntity.getRanks().add(rankEntity);
         return rankEntity;
     }

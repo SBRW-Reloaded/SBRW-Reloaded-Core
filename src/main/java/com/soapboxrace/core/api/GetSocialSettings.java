@@ -7,9 +7,13 @@
 package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.api.util.Secured;
+import com.soapboxrace.core.bo.RequestSessionInfo;
+import com.soapboxrace.core.jpa.UserEntity;
 import com.soapboxrace.jaxb.http.SocialSettings;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
+import java.util.logging.Logger;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -17,18 +21,25 @@ import javax.ws.rs.core.MediaType;
 @Path("/getsocialsettings")
 public class GetSocialSettings {
 
+    private static final Logger LOGGER = Logger.getLogger(GetSocialSettings.class.getName());
+
+    @Inject
+    RequestSessionInfo requestSessionInfo;
+
     @GET
     @Secured
     @Produces(MediaType.APPLICATION_XML)
     public SocialSettings getSocialSettings() {
+        UserEntity userEntity = requestSessionInfo.getUser();
+        
         SocialSettings socialSettings = new SocialSettings();
-        socialSettings.setAppearOffline(false);
-        socialSettings.setDeclineGroupInvite(0);
-        socialSettings.setDeclineIncommingFriendRequests(false);
-        socialSettings.setDeclinePrivateInvite(0);
-        socialSettings.setHideOfflineFriends(false);
-        socialSettings.setShowNewsOnSignIn(false);
-        socialSettings.setShowOnlyPlayersInSameChatChannel(false);
+        socialSettings.setAppearOffline(userEntity.isAppearOffline());
+        socialSettings.setDeclineGroupInvite(userEntity.getDeclineGroupInvite());
+        socialSettings.setDeclineIncommingFriendRequests(userEntity.isDeclineIncommingFriendRequests());
+        socialSettings.setDeclinePrivateInvite(userEntity.getDeclinePrivateInvite());
+        socialSettings.setHideOfflineFriends(userEntity.isHideOfflineFriends());
+        socialSettings.setShowNewsOnSignIn(userEntity.isShowNewsOnSignIn());
+        socialSettings.setShowOnlyPlayersInSameChatChannel(userEntity.isShowOnlyPlayersInSameChatChannel());
         return socialSettings;
     }
 }

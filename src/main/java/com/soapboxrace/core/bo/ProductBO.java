@@ -76,8 +76,19 @@ public class ProductBO {
         productTrans.setHash(productEntity.getHash());
         productTrans.setIcon(productEntity.getIcon());
         productTrans.setSecondaryIcon(productEntity.getSecondaryIcon());
-        // Si le joueur a un prestige, définir le niveau requis à 1 pour éviter les blocages côté client
-        productTrans.setLevel(hasPrestige ? 1 : productEntity.getLevel());
+        // Pour les joueurs prestigés, appliquer la même logique que pour les voitures aux pièces de performance
+        if (hasPrestige) {
+            if ("NFSW_NA_EP_PRESET_RIDES_ALL_Category".equals(productEntity.getCategoryName()) && productEntity.getLevel() <= 100) {
+                productTrans.setLevel(1); // Afficher niveau 1 au client pour les voitures ≤ niveau 100
+            } else if ("NFSW_NA_EP_PERFORMANCEPARTS".equals(productEntity.getCategoryName()) || 
+                       "NFSW_NA_EP_SKILLMODPARTS".equals(productEntity.getCategoryName())) {
+                productTrans.setLevel(1); // Afficher niveau 1 au client pour les pièces de performance et skill mods
+            } else {
+                productTrans.setLevel(productEntity.getLevel()); // Niveau réel pour les autres cas
+            }
+        } else {
+            productTrans.setLevel(productEntity.getLevel()); // Niveau réel pour les joueurs sans prestige
+        }
         productTrans.setLongDescription(productEntity.getLongDescription());
         productTrans.setPrice(productEntity.getPrice());
         productTrans.setPriority(productEntity.getPriority());
@@ -177,8 +188,8 @@ public class ProductBO {
             productTrans.setHash(entity.getHash());
             productTrans.setIcon(entity.getIcon());
             productTrans.setSecondaryIcon(entity.getSecondaryIcon());
-            // Si le joueur a un prestige, définir le niveau requis à 1 pour éviter les blocages côté client
-            productTrans.setLevel(hasPrestige ? 1 : entity.getLevel());
+            // Toujours envoyer le niveau réel du produit au client
+            productTrans.setLevel(entity.getLevel());
             productTrans.setPrice(entity.getPrice());
             productTrans.setPriority(entity.getPriority());
             productTrans.setProductId(entity.getProductId());

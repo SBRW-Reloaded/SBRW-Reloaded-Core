@@ -58,13 +58,16 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
                                               RouteArbitrationPacket routeArbitrationPacket) {
         Long eventSessionId = eventSessionEntity.getId();
 
+        // Calculer un rang temporaire pour XMPP (sera recalculé plus tard)
+        int temporaryRank = calculateTemporaryRank(eventSessionEntity, activePersonaId, routeArbitrationPacket.getEventDurationInMilliseconds());
+
         XMPP_RouteEntrantResultType xmppRouteResult = new XMPP_RouteEntrantResultType();
         xmppRouteResult.setBestLapDurationInMilliseconds(routeArbitrationPacket.getBestLapDurationInMilliseconds());
         xmppRouteResult.setEventDurationInMilliseconds(routeArbitrationPacket.getEventDurationInMilliseconds());
         xmppRouteResult.setEventSessionId(eventSessionEntity.getId());
         xmppRouteResult.setFinishReason(routeArbitrationPacket.getFinishReason());
         xmppRouteResult.setPersonaId(activePersonaId);
-        xmppRouteResult.setRanking(routeArbitrationPacket.getRank());
+        xmppRouteResult.setRanking(temporaryRank); // Utiliser le rang temporaire pour XMPP
         xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
 
         XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
@@ -103,7 +106,7 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
                 XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
                 xmppEvent.sendRaceEnd(routeEntrantResultResponse);
 
-                if ((routeArbitrationPacket.getFinishReason() == 22) && routeArbitrationPacket.getRank() == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
+                if ((routeArbitrationPacket.getFinishReason() == 22) && temporaryRank == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
                     xmppEvent.sendEventTimingOut(eventSessionEntity);
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
@@ -113,6 +116,9 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
         AchievementTransaction transaction = achievementBO.createTransaction(activePersonaId);
         RouteEventResult routeEventResult = new RouteEventResult();
+        
+        // Utiliser le rang temporaire pour les récompenses au lieu du rang 0 de la BDD
+        routeArbitrationPacket.setRank(temporaryRank);
         routeEventResult.setAccolades(rewardRouteBO.getAccolades(activePersonaId, routeArbitrationPacket,
                 eventDataEntity, eventSessionEntity, transaction));
         routeEventResult.setDurability(carDamageBO.induceCarDamage(activePersonaId, routeArbitrationPacket,
@@ -121,13 +127,19 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         routeEventResult.setEventId(eventDataEntity.getEvent().getId());
         routeEventResult.setEventSessionId(eventSessionId);
         routeEventResult.setPersonaId(activePersonaId);
-        prepareRaceAgain(eventSessionEntity, routeEventResult);
+        prepareRaceAgain(eventSessionEntity, routeEventResult, routeArbitrationPacket);
 
         updateEventAchievements(eventDataEntity, eventSessionEntity, activePersonaId, routeArbitrationPacket, transaction);
-        achievementBO.commitTransaction(personaEntity, transaction);
+        // NE PAS committer les achievements ici - attendre le recalcul des rangs finaux
 
         eventSessionDao.update(eventSessionEntity);
         eventDataDao.update(eventDataEntity);
+
+        // Recalculer tous les rangs maintenant que tous les résultats sont finalisés
+        recalculateAllRanks(eventSessionEntity);
+        
+        // Maintenant que les rangs finaux sont calculés, committer les achievements
+        commitEventAchievementsWithFinalRank(eventDataEntity, activePersonaId, transaction);
 
         if (eventSessionEntity.getLobby() != null && !eventSessionEntity.getLobby().getIsPrivate()) {
             matchmakingBO.resetIgnoredEvents(activePersonaId);

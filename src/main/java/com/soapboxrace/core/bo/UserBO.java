@@ -78,6 +78,16 @@ public class UserBO {
         userEntity.setCreated(LocalDateTime.now());
         userEntity.setLastLogin(LocalDateTime.now());
         userEntity.setState("OFFLINE");
+        
+        // Initialize social settings with default values
+        userEntity.setAppearOffline(false);
+        userEntity.setDeclineGroupInvite(0);
+        userEntity.setDeclineIncommingFriendRequests(false);
+        userEntity.setDeclinePrivateInvite(0);
+        userEntity.setHideOfflineFriends(false);
+        userEntity.setShowNewsOnSignIn(false);
+        userEntity.setShowOnlyPlayersInSameChatChannel(false);
+        
         userDao.insert(userEntity);
         return userEntity;
     }
@@ -136,8 +146,7 @@ public class UserBO {
                 transaction.add("LOGIN", Map.of("persona", personaEntity));
                 achievementBO.commitTransaction(personaEntity, transaction);
                 int index = Iterables.indexOf(user.getPersonas(), p -> p != null && p.getPersonaId().equals(personaId));
-                user.setSelectedPersonaIndex(index);
-                userDao.update(user);
+                userDao.updateSelectedPersonaIndex(user.getId(), index);
             }
         }
     }

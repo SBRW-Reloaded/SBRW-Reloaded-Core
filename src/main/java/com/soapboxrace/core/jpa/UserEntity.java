@@ -21,8 +21,7 @@ import java.util.List;
         @NamedQuery(name = "UserEntity.findByEmail", query = "SELECT obj FROM UserEntity obj WHERE obj.email = :email"), //
         @NamedQuery(name = "UserEntity.findByIpAddress", query = "SELECT obj FROM UserEntity obj WHERE obj.ipAddress = :ipAddress"), //
         @NamedQuery(name = "UserEntity.countUsers", query = "SELECT COUNT(obj) FROM UserEntity obj WHERE obj.lastLogin IS NOT NULL"), //
-        @NamedQuery(name = "UserEntity.countUsersByIpAddress", query = "SELECT COUNT(obj) FROM UserEntity obj WHERE obj.ipAddress = :ipAddress"), //
-        @NamedQuery(name = "UserEntity.updateOnlineState", query = "UPDATE UserEntity SET state = :state")
+        @NamedQuery(name = "UserEntity.countUsersByIpAddress", query = "SELECT COUNT(obj) FROM UserEntity obj WHERE obj.ipAddress = :ipAddress")
 })
 public class UserEntity {
 
@@ -81,6 +80,28 @@ public class UserEntity {
 
     @Column(columnDefinition = "integer default 0")
     private Integer selectedPersonaIndex = 0;
+
+    // Social settings columns
+    @Column(name = "appearOffline")
+    private boolean appearOffline = false;
+
+    @Column(name = "declineGroupInvite")
+    private int declineGroupInvite = 0;
+
+    @Column(name = "declineIncommingFriendRequests")
+    private boolean declineIncommingFriendRequests = false;
+
+    @Column(name = "declinePrivateInvite")
+    private int declinePrivateInvite = 0;
+
+    @Column(name = "hideOfflineFriends")
+    private boolean hideOfflineFriends = false;
+
+    @Column(name = "showNewsOnSignIn")
+    private boolean showNewsOnSignIn = false;
+
+    @Column(name = "showOnlyPlayersInSameChatChannel")
+    private boolean showOnlyPlayersInSameChatChannel = false;
 
     public Long getId() {
         return this.id;
@@ -225,5 +246,62 @@ public class UserEntity {
 
 	public void setState(String state) {
 		this.state = state;
+	}
+
+	// Social settings getters and setters
+	public boolean isAppearOffline() {
+		return appearOffline;
+	}
+
+	public void setAppearOffline(boolean appearOffline) {
+		this.appearOffline = appearOffline;
+	}
+
+	public int getDeclineGroupInvite() {
+		return declineGroupInvite;
+	}
+
+	public void setDeclineGroupInvite(int declineGroupInvite) {
+		this.declineGroupInvite = declineGroupInvite;
+	}
+
+	public boolean isDeclineIncommingFriendRequests() {
+		return declineIncommingFriendRequests;
+	}
+
+	public void setDeclineIncommingFriendRequests(boolean declineIncommingFriendRequests) {
+		this.declineIncommingFriendRequests = declineIncommingFriendRequests;
+	}
+
+	public int getDeclinePrivateInvite() {
+		return declinePrivateInvite;
+	}
+
+	public void setDeclinePrivateInvite(int declinePrivateInvite) {
+		this.declinePrivateInvite = declinePrivateInvite;
+	}
+
+	public boolean isHideOfflineFriends() {
+		return hideOfflineFriends;
+	}
+
+	public void setHideOfflineFriends(boolean hideOfflineFriends) {
+		this.hideOfflineFriends = hideOfflineFriends;
+	}
+
+	public boolean isShowNewsOnSignIn() {
+		return showNewsOnSignIn;
+	}
+
+	public void setShowNewsOnSignIn(boolean showNewsOnSignIn) {
+		this.showNewsOnSignIn = showNewsOnSignIn;
+	}
+
+	public boolean isShowOnlyPlayersInSameChatChannel() {
+		return showOnlyPlayersInSameChatChannel;
+	}
+
+	public void setShowOnlyPlayersInSameChatChannel(boolean showOnlyPlayersInSameChatChannel) {
+		this.showOnlyPlayersInSameChatChannel = showOnlyPlayersInSameChatChannel;
 	}
 }

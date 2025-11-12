@@ -24,11 +24,13 @@ public class Main {
         System.setProperty("user.timezone", parameterBO.getStrParam("SBRWR_TIMEZONE", "Europe/Paris"));
         System.out.println("Using timezone: " + parameterBO.getStrParam("SBRWR_TIMEZONE", "Europe/Paris"));
 
-        userDao.updateOnlineState("OFFLINE"); 
+        // TODO: Cette requête cause des problèmes avec les social settings - à corriger
+        // userDao.updateOnlineState("OFFLINE"); 
     }
 
     @PreDestroy
 	public void terminate() {
-        userDao.updateOnlineState("OFFLINE");
+        // TODO: Cette requête cause des problèmes avec les social settings - à corriger
+        // userDao.updateOnlineState("OFFLINE");
 	}
 }
