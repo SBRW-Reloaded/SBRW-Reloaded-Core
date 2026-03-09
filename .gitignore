@@ -10,3 +10,9 @@ project-*.yml
 src/main/java/com/soapboxrace/core/bo/BenchmarkingBO.java
 *.patch
 .vscode/settings.json
+*.bat
+dist-linux/config/project-defaults.yml
+dist-linux/core-thorntail.jar
+dist-linux/README.md
+dist-linux/sbrw-core.service
+dist-linux/start.sh
