@@ -12,10 +12,8 @@ import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.LobbyEntity;
 
 import javax.annotation.Resource;
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
-import javax.ejb.TransactionManagement;
-import javax.ejb.TransactionManagementType;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.transaction.UserTransaction;
@@ -27,8 +25,7 @@ import java.util.logging.Logger;
  * Service pour gérer la création atomique des lobbies Race Again.
  * Garantit que tous les joueurs d'une même session rejoignent LE MÊME lobby sur LE MÊME événement.
  */
-@Stateless
-@TransactionManagement(TransactionManagementType.BEAN)
+@ApplicationScoped
 public class RaceAgainBO {
     
     private static final Logger logger = Logger.getLogger(RaceAgainBO.class.getName());
@@ -40,10 +37,10 @@ public class RaceAgainBO {
     @Resource
     private UserTransaction userTransaction;
     
-    @EJB
+    @Inject
     private LobbyBO lobbyBO;
     
-    @EJB
+    @Inject
     private EventDAO eventDAO;
     
     /**

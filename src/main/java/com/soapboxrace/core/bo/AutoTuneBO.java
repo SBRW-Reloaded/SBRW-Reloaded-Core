@@ -119,7 +119,7 @@ public class AutoTuneBO {
             StringBuilder sb = new StringBuilder();
             for (CarClassListEntity cls : allClassList) {
                 classListByName.put(cls.getName(), cls);
-                if (sb.length() > 0) sb.append(", ");
+                if (sb.length() > 0) sb.append(" ");
                 sb.append(cls.getName());
             }
             availableClassNamesStr = sb.toString();
@@ -161,7 +161,7 @@ public class AutoTuneBO {
             StringBuilder sb = new StringBuilder();
             for (CarClassListEntity cls : allClassList) {
                 classListByName.put(cls.getName(), cls);
-                if (sb.length() > 0) sb.append(", ");
+                if (sb.length() > 0) sb.append(" ");
                 sb.append(cls.getName());
             }
             availableClassNamesStr = sb.toString();
@@ -310,6 +310,11 @@ public class AutoTuneBO {
         CarClassesEntity carClass = carClassesByHash.get(carEntity.getPhysicsProfileHash());
         if (carClass == null) {
             sendMessage(openFireSoapBoxCli, personaId, "SBRWR_TUNE_NOPHYSICS");
+            return;
+        }
+
+        if (carClass.isPerfLocked()) {
+            sendMessage(openFireSoapBoxCli, personaId, "SBRWR_TUNE_PERFLOCKED");
             return;
         }
 
@@ -1224,12 +1229,15 @@ public class AutoTuneBO {
 
         List<CarClassListEntity> allClasses = allClassList;
 
-        // Deduplicate by physics hash
+        // Deduplicate by physics hash (skip perfLocked cars)
         Map<Integer, CarClassesEntity> uniqueCars = new LinkedHashMap<>();
         for (CarClassesEntity car : matchedCars) {
-            if (car.getHash() != null && car.getTsStock() != null) {
+            if (car.getHash() != null && car.getTsStock() != null && !car.isPerfLocked()) {
                 uniqueCars.putIfAbsent(car.getHash(), car);
             }
+        }
+        if (uniqueCars.isEmpty()) {
+            return "ERROR: Matched cars have no physics data or are performance-locked";
         }
 
         AtomicInteger generated = new AtomicInteger(0);
@@ -1377,10 +1385,11 @@ public class AutoTuneBO {
         List<CarClassListEntity> allClasses = allClassList;
 
         // Deduplicate cars by physics hash — many car models share identical physics
+        // Skip perfLocked cars (performance modifications not allowed)
         Map<Integer, CarClassesEntity> uniqueCars = new LinkedHashMap<>();
         Map<Integer, List<String>> carNamesByHash = new LinkedHashMap<>();
         for (CarClassesEntity car : allCars) {
-            if (car.getHash() != null && car.getTsStock() != null) {
+            if (car.getHash() != null && car.getTsStock() != null && !car.isPerfLocked()) {
                 uniqueCars.putIfAbsent(car.getHash(), car);
                 carNamesByHash.computeIfAbsent(car.getHash(), k -> new ArrayList<>()).add(car.getFullName());
             }

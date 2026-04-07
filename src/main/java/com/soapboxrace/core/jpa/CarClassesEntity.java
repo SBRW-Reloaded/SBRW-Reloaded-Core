@@ -62,6 +62,9 @@ public class CarClassesEntity implements Serializable {
     @Column(name = "ha_var3")
     private Integer haVar3;
 
+    @Column(name = "perf_locked", nullable = false)
+    private boolean perfLocked = false;
+
     public String getStoreName() {
         return this.storeName;
     }
@@ -204,6 +207,14 @@ public class CarClassesEntity implements Serializable {
 
     public void setProductId(String productId) {
         this.productId = productId;
+    }
+
+    public boolean isPerfLocked() {
+        return perfLocked;
+    }
+
+    public void setPerfLocked(boolean perfLocked) {
+        this.perfLocked = perfLocked;
     }
 
 }
