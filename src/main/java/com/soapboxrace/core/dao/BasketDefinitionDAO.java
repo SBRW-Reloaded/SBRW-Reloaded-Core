@@ -9,9 +9,12 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.StringKeyedDAO;
 import com.soapboxrace.core.jpa.BasketDefinitionEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class BasketDefinitionDAO extends StringKeyedDAO<BasketDefinitionEntity> {
 
     public BasketDefinitionDAO() {

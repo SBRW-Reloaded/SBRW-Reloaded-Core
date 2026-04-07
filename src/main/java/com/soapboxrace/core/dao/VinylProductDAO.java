@@ -10,11 +10,14 @@ import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.CategoryEntity;
 import com.soapboxrace.core.jpa.VinylProductEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class VinylProductDAO extends LongKeyedDAO<VinylProductEntity> {
 
     public VinylProductDAO() {

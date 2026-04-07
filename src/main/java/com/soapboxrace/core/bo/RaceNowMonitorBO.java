@@ -5,10 +5,19 @@
  */
 
 package com.soapboxrace.core.bo;
+import javax.inject.Inject;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
+import javax.ejb.Timer;
+import javax.ejb.TimerConfig;
+import javax.ejb.TimerService;
+import javax.ejb.Timeout;
 
+import com.soapboxrace.core.dao.CarClassListDAO;
 import com.soapboxrace.core.dao.EventDAO;
 import com.soapboxrace.core.dao.LobbyDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
+import com.soapboxrace.core.jpa.CarClassListEntity;
 import com.soapboxrace.core.jpa.EventEntity;
 import com.soapboxrace.core.jpa.LobbyEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
@@ -18,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
-import javax.ejb.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -32,9 +40,8 @@ import java.util.Set;
  * 
  * @author SBRW Core Team
  */
-@Singleton
 @Startup
-@Lock(LockType.READ)
+@Singleton
 public class RaceNowMonitorBO {
     private static final Logger logger = LoggerFactory.getLogger(RaceNowMonitorBO.class);
     
@@ -44,29 +51,32 @@ public class RaceNowMonitorBO {
     @Resource
     private TimerService timerService;
     
-    @EJB
+    @Inject
     private MatchmakingBO matchmakingBO;
     
-    @EJB
+    @Inject
     private LobbyDAO lobbyDAO;
     
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
     
-    @EJB
+    @Inject
     private EventDAO eventDAO;
     
-    @EJB
+    @Inject
     private LobbyBO lobbyBO;
     
-    @EJB
+    @Inject
     private LobbyMessagingBO lobbyMessagingBO;
     
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
     
-    @EJB
+    @Inject
     private EventBO eventBO;
+
+    @Inject
+    private CarClassListDAO carClassListDAO;
     
     @PostConstruct
     public void initialize() {
@@ -102,8 +112,7 @@ public class RaceNowMonitorBO {
     }
     
     @Timeout
-    @Lock(LockType.WRITE)
-    public void monitorRaceNowQueue(Timer timer) {
+        public void monitorRaceNowQueue(Timer timer) {
         long startTime = System.currentTimeMillis();
         executionCounter++;
         
@@ -235,26 +244,63 @@ public class RaceNowMonitorBO {
                 return;
             }
             
-            // Rechercher des lobbies disponibles
-            List<LobbyEntity> availableLobbies = lobbyDAO.findAllOpen(carClassHash, playerLevel);
+            // Rechercher des lobbies disponibles par niveau uniquement
+            List<LobbyEntity> availableLobbies = lobbyDAO.findAllOpenByLevel(playerLevel);
             
-            // SÉCURITÉ : Double-vérification des niveaux après la requête SQL
-            List<LobbyEntity> levelVerifiedLobbies = new ArrayList<>();
+            // Vérifier si les classes adjacentes sont autorisées (configurable)
+            boolean allowAdjacentClasses = false;
+            try {
+                allowAdjacentClasses = parameterBO.getBoolParam("SBRWR_ALLOW_ADJACENT_CAR_CLASSES");
+            } catch (Exception e) {
+                // Valeur par défaut : false (désactivé)
+            }
+            
+            // Filtrer par compatibilité de classe de voiture (inclut classes adjacentes si activé)
+            List<LobbyEntity> compatibleLobbies = new ArrayList<>();
             for (LobbyEntity lobby : availableLobbies) {
                 EventEntity event = lobby.getEvent();
-                if (playerLevel >= event.getMinLevel() && playerLevel <= event.getMaxLevel()) {
-                    levelVerifiedLobbies.add(lobby);
-                } else {
-                    // Security: SQL query returned inappropriate lobby
+                Integer eventCarClass = event.getCarClassHash();
+                Integer lobbyLockedClass = lobby.getLockedCarClassHash();
+                
+                // CRITICAL FIX: Vérifier TOUJOURS la classe de l'événement ET le lock du lobby
+                // Un joueur ne peut rejoindre que si :
+                // 1. L'événement est OpenClass (607077938) OU la classe de l'événement correspond
+                // 2. ET le lobby n'a pas de lock OU le lock correspond
+                
+                boolean eventClassOK = (eventCarClass == 607077938) || (eventCarClass.equals(carClassHash));
+                boolean lobbyLockOK = (lobbyLockedClass == null) || (lobbyLockedClass == 607077938) || (lobbyLockedClass.equals(carClassHash));
+                
+                // Vérifier les deux conditions
+                if (eventClassOK && lobbyLockOK) {
+                    compatibleLobbies.add(lobby);
+                    continue;
+                }
+                
+                // Si les classes ne correspondent pas exactement, vérifier l'adjacence (seulement si activé)
+                if (allowAdjacentClasses && !eventClassOK) {
+                    try {
+                        CarClassListEntity playerClass = carClassListDAO.findByHash(carClassHash);
+                        CarClassListEntity eventClass = carClassListDAO.findByHash(eventCarClass);
+                        
+                        if (playerClass != null && eventClass != null) {
+                            int idDifference = Math.abs(playerClass.getId() - eventClass.getId());
+                            if (idDifference == 1 && lobbyLockOK) {
+                                compatibleLobbies.add(lobby);
+                                logger.debug("RACENOW_MONITOR: Adjacent car class accepted for PersonaId={}: Player class {} (id={}) joining event class {} (id={})",
+                                    personaId, playerClass.getName(), playerClass.getId(), eventClass.getName(), eventClass.getId());
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Ignorer les erreurs de recherche de classe
+                    }
                 }
             }
             
+            List<LobbyEntity> levelVerifiedLobbies = compatibleLobbies;
             if (levelVerifiedLobbies.size() != availableLobbies.size()) {
-                logger.error("RACENOW_MONITOR: CRITICAL - SQL level filtering failed! Expected {} lobbies, got {} after level verification", 
-                            levelVerifiedLobbies.size(), availableLobbies.size());
+                logger.debug("Found {} class-compatible lobbies from {} available (PersonaId={})", 
+                    levelVerifiedLobbies.size(), availableLobbies.size(), personaId);
             }
-            
-            // Level-verified lobbies found
             
             if (!levelVerifiedLobbies.isEmpty()) {
                 PersonaEntity personaEntity = personaDAO.find(personaId);
@@ -344,18 +390,37 @@ public class RaceNowMonitorBO {
                     continue;
                 }
 
+                // Refetch le lobby depuis la DB pour avoir les données les plus récentes
+                // (évite les race conditions où le lobby devient complet entre la récupération et maintenant)
+                LobbyEntity freshLobby = lobbyDAO.find(lobbyEntity.getId());
+                if (freshLobby == null || !freshLobby.getIsActive()) {
+                    logger.debug("RACENOW_MONITOR: Lobby {} no longer exists or is inactive", lobbyEntity.getId());
+                    continue;
+                }
+
                 int maxEntrants = event.getMaxPlayers();
-                int currentEntrants = lobbyEntity.getEntrants().size();
+                int currentEntrants = freshLobby.getEntrants().size();
 
                 if (currentEntrants < maxEntrants) {
+                    // Vérifier que le lobby a au moins 10 secondes restantes pour éviter les lobbies sur le point d'expirer
+                    // SAUF pour les lobbies en attente (< 2 entrants) : ils n'ont pas de countdown actif,
+                    // donc le "remaining time" est calculé sur startedTime qui est rafraîchi périodiquement
+                    // et ne représente PAS un vrai countdown. Les skiper serait incorrect.
+                    int remainingTime = freshLobby.getLobbyCountdownInMilliseconds(event.getLobbyCountdownTime());
+                    if (currentEntrants >= 2 && remainingTime < 10000) {
+                        logger.debug("RACENOW_MONITOR: Skipping lobby {} for PersonaId={} - only {}ms remaining (minimum 10000ms required)",
+                            freshLobby.getId(), personaEntity.getPersonaId(), remainingTime);
+                        continue; // Passer au lobby suivant
+                    }
+                    
                     // Vérifier que le joueur n'est pas déjà dans ce lobby
-                    boolean alreadyInLobby = lobbyEntity.getEntrants().stream()
+                    boolean alreadyInLobby = freshLobby.getEntrants().stream()
                         .anyMatch(entrant -> entrant.getPersona().getPersonaId().equals(personaEntity.getPersonaId()));
                     
                     if (!alreadyInLobby) {
                         try {
                             // Envoyer une invitation automatique que le client RaceNow devrait accepter
-                            lobbyMessagingBO.sendLobbyInvitation(lobbyEntity, personaEntity, 10000);
+                            lobbyMessagingBO.sendLobbyInvitation(freshLobby, personaEntity, 10000);
                             
                             // RaceNow auto-invitation sent
                             
@@ -363,13 +428,15 @@ public class RaceNowMonitorBO {
                             
                         } catch (Exception e) {
                             logger.error("Failed to join PersonaId={} to LobbyId={}: {}", 
-                                personaEntity.getPersonaId(), lobbyEntity.getId(), e.getMessage(), e);
+                                personaEntity.getPersonaId(), freshLobby.getId(), e.getMessage(), e);
                             continue; // Essayer le lobby suivant
                         }
                     } else {
                         // Player already in lobby
                     }
                 } else {
+                    logger.debug("RACENOW_MONITOR: Skipping lobby {} for PersonaId={} - lobby is full ({}/{})",
+                        freshLobby.getId(), personaEntity.getPersonaId(), currentEntrants, maxEntrants);
                     // Lobby is full
                 }
             }

@@ -3,11 +3,14 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.LiveryStoreDataEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.List;
 import javax.persistence.TypedQuery;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class LiveryStoreDataDAO extends LongKeyedDAO<LiveryStoreDataEntity> {
 
     public LiveryStoreDataDAO() {

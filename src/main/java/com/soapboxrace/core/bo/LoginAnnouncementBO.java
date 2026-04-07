@@ -10,22 +10,19 @@ import com.soapboxrace.core.dao.LoginAnnouncementDAO;
 import com.soapboxrace.core.jpa.LoginAnnouncementEntity;
 import com.soapboxrace.jaxb.http.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Lock;
-import javax.ejb.LockType;
-import javax.ejb.Singleton;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Singleton
-@Lock(LockType.READ)
+@ApplicationScoped
 public class LoginAnnouncementBO {
 
-    @EJB
+    @Inject
     private LoginAnnouncementDAO loginAnnouncementDao;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     private final ConcurrentMap<String, LoginAnnouncementsDefinition> announcementsCache = new ConcurrentHashMap<>();

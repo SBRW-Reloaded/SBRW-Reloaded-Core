@@ -6,6 +6,7 @@
 
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.bo.util.CardDecks;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.EventSessionDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
@@ -15,7 +16,6 @@ import com.soapboxrace.core.jpa.EventDataEntity;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
-import com.soapboxrace.core.xmpp.XmppEvent;
 import com.soapboxrace.jaxb.http.ArrayOfDragEntrantResult;
 import com.soapboxrace.jaxb.http.DragArbitrationPacket;
 import com.soapboxrace.jaxb.http.DragEntrantResult;
@@ -23,55 +23,60 @@ import com.soapboxrace.jaxb.http.DragEventResult;
 import com.soapboxrace.jaxb.xmpp.XMPP_DragEntrantResultType;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeDragEntrantResult;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, DragEventResult> {
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDao;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private RewardDragBO rewardDragBO;
 
-    @EJB
+    @Inject
     private CarDamageBO carDamageBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private DNFTimerBO dnfTimerBO;
 
     protected DragEventResult handleInternal(EventSessionEntity eventSessionEntity, Long activePersonaId,
                                              DragArbitrationPacket dragArbitrationPacket) {
         Long eventSessionId = eventSessionEntity.getId();
 
-        // Calculer un rang temporaire pour XMPP (sera recalculé plus tard)
-        int temporaryRank = calculateTemporaryRank(eventSessionEntity, activePersonaId, dragArbitrationPacket.getEventDurationInMilliseconds());
+        EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
+        
+        // If no event data exists, return empty result (player aborted before joining)
+        if (eventDataEntity == null) {
+            return new DragEventResult();
+        }
 
         XMPP_DragEntrantResultType xmppDragResult = new XMPP_DragEntrantResultType();
         xmppDragResult.setEventDurationInMilliseconds(dragArbitrationPacket.getEventDurationInMilliseconds());
         xmppDragResult.setEventSessionId(eventSessionId);
         xmppDragResult.setFinishReason(dragArbitrationPacket.getFinishReason());
         xmppDragResult.setPersonaId(activePersonaId);
-        xmppDragResult.setRanking(temporaryRank); // Utiliser le rang temporaire
+        xmppDragResult.setRanking(eventDataEntity.getRank());
         xmppDragResult.setTopSpeed(dragArbitrationPacket.getTopSpeed());
 
         XMPP_ResponseTypeDragEntrantResult dragEntrantResultResponse = new XMPP_ResponseTypeDragEntrantResult();
         dragEntrantResultResponse.setDragEntrantResult(xmppDragResult);
-
-        EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
         if (eventDataEntity.getFinishReason() != 0) {
             return new DragEventResult();
@@ -99,10 +104,9 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
             arrayOfDragEntrantResult.getDragEntrantResult().add(dragEntrantResult);
 
             if (!racer.getPersonaId().equals(activePersonaId)) {
-                XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
-                xmppEvent.sendDragEnd(dragEntrantResultResponse);
-                if (dragArbitrationPacket.getFinishReason() == 22 && temporaryRank == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
-                    xmppEvent.sendEventTimingOut(eventSessionEntity);
+                asyncXmppBO.sendMessage(dragEntrantResultResponse, racer.getPersonaId());
+                if (dragArbitrationPacket.getFinishReason() == 22 && eventDataEntity.getRank() == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
+                    asyncXmppBO.sendEventTimingOut(eventSessionEntity.getId(), eventSessionEntity.getEvent().getDnfTimerTime(), racer.getPersonaId());
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
             }
@@ -112,8 +116,9 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
         AchievementTransaction transaction = achievementBO.createTransaction(activePersonaId);
         DragEventResult dragEventResult = new DragEventResult();
         
-        // Utiliser le rang temporaire pour les récompenses au lieu du rang 0 de la BDD
-        dragArbitrationPacket.setRank(temporaryRank);
+        eventSessionDao.update(eventSessionEntity);
+        eventDataDao.update(eventDataEntity);
+
         dragEventResult.setAccolades(rewardDragBO.getAccolades(activePersonaId, dragArbitrationPacket,
                 eventDataEntity, eventSessionEntity, transaction));
         dragEventResult.setDurability(carDamageBO.induceCarDamage(activePersonaId, dragArbitrationPacket,
@@ -122,17 +127,13 @@ public class EventResultDragBO extends EventResultBO<DragArbitrationPacket, Drag
         dragEventResult.setEventId(eventDataEntity.getEvent().getId());
         dragEventResult.setEventSessionId(eventSessionId);
         dragEventResult.setPersonaId(activePersonaId);
-        prepareRaceAgain(eventSessionEntity, dragEventResult, dragArbitrationPacket);
+        prepareRaceAgain(eventSessionEntity, activePersonaId, dragEventResult, dragArbitrationPacket);
         updateEventAchievements(eventDataEntity, eventSessionEntity, activePersonaId, dragArbitrationPacket, transaction);
-        // NE PAS committer les achievements ici - attendre le recalcul des rangs finaux
 
-        eventSessionDao.update(eventSessionEntity);
-        eventDataDao.update(eventDataEntity);
+        if (dragEventResult.getAccolades() != null && dragEventResult.getAccolades().getLuckyDrawInfo() != null) {
+            dragEventResult.getAccolades().getLuckyDrawInfo().setCardDeck(CardDecks.forRank(eventDataEntity.getRank()));
+        }
 
-        // Recalculer tous les rangs maintenant que tous les résultats sont finalisés
-        recalculateAllRanks(eventSessionEntity);
-        
-        // Maintenant que les rangs finaux sont calculés, committer les achievements
         commitEventAchievementsWithFinalRank(eventDataEntity, activePersonaId, transaction);
 
         if (eventSessionEntity.getLobby() != null && !eventSessionEntity.getLobby().getIsPrivate()) {

@@ -9,7 +9,7 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.jaxb.http.RegionInfo;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import com.soapboxrace.core.bo.ParameterBO;
 
 import javax.ws.rs.GET;
@@ -19,7 +19,7 @@ import javax.ws.rs.core.MediaType;
 
 @Path("/getregioninfo")
 public class GetRegionInfo {
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @GET

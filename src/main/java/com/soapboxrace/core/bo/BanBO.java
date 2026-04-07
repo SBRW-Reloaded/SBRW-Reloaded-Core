@@ -7,20 +7,23 @@ import com.soapboxrace.core.jpa.HardwareInfoEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ejb.Schedule;
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class BanBO {
 
-    @EJB
+    @Inject
     private BanDAO banDAO;
 
-    @EJB
+    @Inject
     private HardwareInfoDAO hardwareInfoDAO;
 
     @Schedule(minute = "*", hour = "*")

@@ -4,7 +4,7 @@ import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.UserEntity;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -17,7 +17,7 @@ public class TestSqlValues {
 
     private static final Logger LOGGER = Logger.getLogger(TestSqlValues.class.getName());
 
-    @EJB
+    @Inject
     UserDAO userDAO;
 
     @GET

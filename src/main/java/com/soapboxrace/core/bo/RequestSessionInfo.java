@@ -4,13 +4,13 @@ import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.TokenSessionEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.enterprise.context.RequestScoped;
 
 @RequestScoped
 public class RequestSessionInfo {
 
-    @EJB
+    @Inject
     private UserDAO userDAO;
 
     private TokenSessionEntity tokenSessionEntity;
@@ -48,5 +48,9 @@ public class RequestSessionInfo {
 
     public String getRelayCryptoTicket() {
         return tokenSessionEntity.getRelayCryptoTicket();
+    }
+
+    public String getSecurityToken() {
+        return tokenSessionEntity.getSecurityToken();
     }
 }

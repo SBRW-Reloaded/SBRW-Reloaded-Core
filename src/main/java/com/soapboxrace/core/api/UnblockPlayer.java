@@ -10,7 +10,7 @@ import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.SocialRelationshipBO;
 import com.soapboxrace.core.bo.TokenSessionBO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -18,10 +18,10 @@ import javax.ws.rs.core.Response;
 @Path("/unblockplayer")
 public class UnblockPlayer {
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenSessionBO;
 
-    @EJB
+    @Inject
     private SocialRelationshipBO socialRelationshipBO;
 
     @GET

@@ -15,44 +15,47 @@ import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class CommerceBO {
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private ProductDAO productDAO;
 
-    @EJB
+    @Inject
     private VinylProductDAO vinylProductDAO;
 
-    @EJB
+    @Inject
     private InventoryItemDAO inventoryItemDAO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
 
-    @EJB
+    @Inject
     private PerformanceBO performanceBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
     public CommerceSessionResultTrans doCommerce(CommerceSessionTrans commerceSessionTrans, Long personaId) {
@@ -127,7 +130,7 @@ public class CommerceBO {
                         return commerceSessionResultTrans;
                     }
         
-                    if (vinylProductEntity.getCurrency().equals("CASH"))
+                    if ("CASH".equals(vinylProductEntity.getCurrency()))
                         removeCash += (int) vinylProductEntity.getPrice();
                     else
                         removeBoost += (int) vinylProductEntity.getPrice();
@@ -172,7 +175,7 @@ public class CommerceBO {
                             return commerceSessionResultTrans;
                         }
 
-                        if (productEntity.getCurrency().equals("CASH"))
+                        if ("CASH".equals(productEntity.getCurrency()))
                             removeCash += (int) productEntity.getPrice();
                         else
                             removeBoost += (int) productEntity.getPrice();
@@ -189,7 +192,7 @@ public class CommerceBO {
                 ProductEntity productEntity = productDAO.findByHash(removedItem.getKey());
 
                 if (productEntity != null) {
-                    if (productEntity.getCurrency().equals("CASH"))
+                    if ("CASH".equals(productEntity.getCurrency()))
                         addCash.addAndGet((int) productEntity.getResalePrice());
                     else
                         addBoost += (int) productEntity.getResalePrice();
@@ -197,7 +200,8 @@ public class CommerceBO {
             }
         }
 
-        if (commerceSessionTrans.getEntitlementsToSell().getItems() != null) {
+        if (commerceSessionTrans.getEntitlementsToSell() != null 
+                && commerceSessionTrans.getEntitlementsToSell().getItems() != null) {
             commerceSessionTrans.getEntitlementsToSell().getItems().getEntitlementItemTrans().forEach(e -> {
                 InventoryItemEntity inventoryItemEntity = inventoryItemDAO.findByPersonaIdAndEntitlementTag(personaId, e.getEntitlementId());
 

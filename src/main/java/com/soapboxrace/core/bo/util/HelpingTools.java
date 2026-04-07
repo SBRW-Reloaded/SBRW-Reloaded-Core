@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
@@ -28,10 +28,10 @@ import java.time.ZoneId;
 public class HelpingTools {
     private static final Logger logger = LoggerFactory.getLogger(HelpingTools.class);
     
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
     
     public static Boolean isNullOrEmptyCheck(String string) {

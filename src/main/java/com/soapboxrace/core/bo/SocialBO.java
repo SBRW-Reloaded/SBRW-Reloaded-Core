@@ -11,27 +11,30 @@ import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.dao.ReportDAO;
 import com.soapboxrace.core.jpa.ReportEntity;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
 import com.soapboxrace.core.bo.util.DiscordWebhook;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class SocialBO {
 
-    @EJB
+    @Inject
     private ReportDAO reportDao;
 
-    @EJB
+    @Inject
 	private ParameterBO parameterBO;
 
-	@EJB
+	@Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
 	private DiscordWebhook discord;
 
     public void sendReport(Long personaId, Long abuserPersonaId, Integer petitionType, String description,

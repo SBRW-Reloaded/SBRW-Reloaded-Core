@@ -20,9 +20,13 @@ public enum CardDecks {
     }
 
     public static String forRank(Integer rank) {
+        if (rank == null) {
+            return Blue.getCardDeckType();
+        }
+        
         switch (rank) {
             case 0:
-                return GoldCar.getCardDeckType();
+                return GoldCar.getCardDeckType(); // Special rank for specific events
             case 1:
                 return Gold.getCardDeckType();
             case 2:

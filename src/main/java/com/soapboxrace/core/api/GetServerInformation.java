@@ -9,7 +9,7 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.bo.GetServerInformationBO;
 import com.soapboxrace.core.bo.util.ServerInformationVO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -18,7 +18,7 @@ import javax.ws.rs.core.MediaType;
 @Path("/GetServerInformation")
 public class GetServerInformation {
 
-    @EJB
+    @Inject
     private GetServerInformationBO bo;
 
     @GET

@@ -10,12 +10,15 @@ import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class CarDAO extends LongKeyedDAO<CarEntity> {
 
     public CarDAO() {

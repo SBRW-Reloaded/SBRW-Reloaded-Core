@@ -12,22 +12,25 @@ import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.EventEntity;
 import com.soapboxrace.core.jpa.InventoryItemEntity;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class CarDamageBO {
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PerformanceBO performanceBO;
 
-    @EJB
+    @Inject
     private InventoryItemDAO inventoryItemDAO;
 
     public Integer induceCarDamage(Long personaId, ArbitrationPacket arbitrationPacket, EventEntity eventEntity) {

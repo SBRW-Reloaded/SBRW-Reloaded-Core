@@ -16,21 +16,24 @@ import com.soapboxrace.core.jpa.KCrewMemberEntity;
 import com.soapboxrace.jaxb.http.ArrayOfChatRoom;
 import com.soapboxrace.jaxb.http.ChatRoom;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class SessionBO {
 
-    @EJB
+    @Inject
     private ChatRoomDAO chatRoomDao;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
         
-    @EJB
+    @Inject
     private KCrewMemberDAO kCrewMemberDAO;
 
     public ArrayOfChatRoom getAllChatRoom(String userId, String ip) {

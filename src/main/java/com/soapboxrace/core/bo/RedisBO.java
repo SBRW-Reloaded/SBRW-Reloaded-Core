@@ -14,16 +14,15 @@ import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
-import javax.inject.Inject;
 
 @Startup
 @Singleton
 public class RedisBO {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @Inject

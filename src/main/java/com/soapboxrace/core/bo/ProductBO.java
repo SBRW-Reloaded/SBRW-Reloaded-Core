@@ -17,24 +17,27 @@ import com.soapboxrace.core.jpa.VinylProductEntity;
 import com.soapboxrace.jaxb.http.ArrayOfProductTrans;
 import com.soapboxrace.jaxb.http.ProductTrans;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class ProductBO {
 
-    @EJB
+    @Inject
     private ProductDAO productDAO;
 
-    @EJB
+    @Inject
     private CategoryDAO categoryDao;
 
-    @EJB
+    @Inject
     private VinylProductDAO vinylProductDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
     public List<ProductTrans> getProductTransList(List<ProductEntity> productEntities) {

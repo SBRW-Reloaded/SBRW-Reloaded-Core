@@ -4,12 +4,15 @@ import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.VinylEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.List;
 import javax.persistence.TypedQuery;
 import javax.persistence.Query;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class VinylDAO extends LongKeyedDAO<VinylEntity> {
     public VinylDAO() {
         super(VinylEntity.class);

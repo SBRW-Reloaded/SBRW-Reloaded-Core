@@ -52,7 +52,6 @@ public class PersonaEntity {
 
     private int prestige = 0;
     private LocalDateTime deleted_at;
-    private int rankingPoints;
 
     public double getBoost() {
         return boost;
@@ -210,13 +209,5 @@ public class PersonaEntity {
 
     public void setDeletedAt(LocalDateTime deleted_at) {
         this.deleted_at = deleted_at;
-    }
-
-    public int getRankingPoints() {
-        return rankingPoints;
-    }
-
-    public void setRankingPoints(int rankingPoints) {
-        this.rankingPoints = rankingPoints;
     }
 }

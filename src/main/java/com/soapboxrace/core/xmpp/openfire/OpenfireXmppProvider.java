@@ -15,8 +15,9 @@ import org.igniterealtime.restclient.entity.MUCRoomEntity;
 import org.igniterealtime.restclient.entity.UserEntity;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
-import javax.ejb.Singleton;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -31,7 +32,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Singleton
+@ApplicationScoped
+@Named("OpenfireXmppProvider")
 public class OpenfireXmppProvider implements XmppProvider {
     private static final Logger logger = LoggerFactory.getLogger(OpenfireXmppProvider.class);
     
@@ -39,13 +41,13 @@ public class OpenfireXmppProvider implements XmppProvider {
     private String openFireAddress;
     private String xmppIp;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private ChatRoomDAO chatRoomDAO;
 
-    @EJB
+    @Inject
     private OpenFireConnector openFireConnector;
 
     @PostConstruct
@@ -123,6 +125,39 @@ public class OpenfireXmppProvider implements XmppProvider {
             return clusterSessions - 1;
         }
         return 0;
+    }
+
+    @Override
+    public boolean isPersonaOnline(long personaId) {
+        try {
+            String userName = parameterBO.getStrParam("SBRWR_XMPP_APPEND", "sbrw") + "." + personaId;
+            Builder builder = getBuilder("users/" + userName + "/sessions");
+            
+            // Si l'utilisateur a des sessions actives, l'API renvoie 200 avec une liste
+            // Si pas de sessions, l'API peut renvoyer 200 avec liste vide ou 404
+            Response response = builder.get();
+            
+            if (response.getStatus() == 200) {
+                // Lire la réponse pour vérifier s'il y a des sessions
+                String responseBody = response.readEntity(String.class);
+                // Si la réponse contient des sessions, le joueur est en ligne
+                boolean hasActiveSessions = responseBody != null && 
+                                            !responseBody.trim().isEmpty() && 
+                                            !responseBody.contains("<sessions/>") &&
+                                            !responseBody.contains("\"sessions\":[]");
+                
+                logger.debug("Persona {} XMPP session check: {}", personaId, hasActiveSessions);
+                return hasActiveSessions;
+            } else {
+                // 404 ou autre erreur = pas de session
+                logger.debug("Persona {} has no XMPP sessions (status: {})", personaId, response.getStatus());
+                return false;
+            }
+        } catch (Exception e) {
+            // En cas d'erreur (réseau, etc.), supposer offline par sécurité
+            logger.debug("Error checking XMPP session for persona {}: {}", personaId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
@@ -207,4 +242,32 @@ public class OpenfireXmppProvider implements XmppProvider {
 
         builder.post(Entity.entity(mucRoomEntity, MediaType.APPLICATION_XML));
     }
+    
+    @Override
+    public void removePersonaFromRoom(long personaId, String roomName) {
+        String userName = parameterBO.getStrParam("SBRWR_XMPP_APPEND", "sbrw") + "." + personaId;
+        String userJid = userName + "@" + xmppIp + "/EA-Chat";
+        try {
+            Builder builder = getBuilder("chatrooms/" + roomName + "/occupants/" + userJid);
+            Response response = builder.delete();
+            int status = response.getStatus();
+            response.close();
+            if (status == 200 || status == 204) {
+                logger.info("XMPP: Removed persona {} from room {}", personaId, roomName);
+            } else if (status == 404) {
+                logger.debug("XMPP: Persona {} not in room {} or room gone", personaId, roomName);
+            } else {
+                logger.warn("XMPP: Failed to remove persona {} from room {} (status: {})", personaId, roomName, status);
+            }
+        } catch (Exception e) {
+            logger.warn("XMPP: Error removing persona {} from room {}: {}", personaId, roomName, e.getMessage());
+        }
+    }
+
+    @Override
+    public void kickOccupantFromRoom(long personaId, String roomName) {
+        // Openfire gère le retrait de présence via le DELETE de removePersonaFromRoom
+        removePersonaFromRoom(personaId, roomName);
+    }
+
 }

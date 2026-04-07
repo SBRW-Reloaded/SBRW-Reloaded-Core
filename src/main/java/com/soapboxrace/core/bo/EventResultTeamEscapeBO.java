@@ -6,6 +6,7 @@
 
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.bo.util.CardDecks;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.EventSessionDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
@@ -15,7 +16,6 @@ import com.soapboxrace.core.jpa.EventDataEntity;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
-import com.soapboxrace.core.xmpp.XmppEvent;
 import com.soapboxrace.jaxb.http.ArrayOfTeamEscapeEntrantResult;
 import com.soapboxrace.jaxb.http.TeamEscapeArbitrationPacket;
 import com.soapboxrace.jaxb.http.TeamEscapeEntrantResult;
@@ -23,42 +23,42 @@ import com.soapboxrace.jaxb.http.TeamEscapeEventResult;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeTeamEscapeEntrantResult;
 import com.soapboxrace.jaxb.xmpp.XMPP_TeamEscapeEntrantResultType;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitrationPacket, TeamEscapeEventResult> {
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDao;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private RewardTeamEscapeBO rewardTeamEscapeBO;
 
-    @EJB
+    @Inject
     private CarDamageBO carDamageBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private DNFTimerBO dnfTimerBO;
 
     protected TeamEscapeEventResult handleInternal(EventSessionEntity eventSessionEntity, Long activePersonaId,
                                                    TeamEscapeArbitrationPacket teamEscapeArbitrationPacket) {
         Long eventSessionId = eventSessionEntity.getId();
-
-        // Calculer un rang temporaire pour les conditions (sera recalculé plus tard)
-        int temporaryRank = calculateTemporaryRank(eventSessionEntity, activePersonaId, teamEscapeArbitrationPacket.getEventDurationInMilliseconds());
 
         XMPP_TeamEscapeEntrantResultType xmppTeamEscapeResult = new XMPP_TeamEscapeEntrantResultType();
         xmppTeamEscapeResult.setEventDurationInMilliseconds(teamEscapeArbitrationPacket.getEventDurationInMilliseconds());
@@ -70,6 +70,11 @@ public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitration
         teamEscapeEntrantResultResponse.setTeamEscapeEntrantResult(xmppTeamEscapeResult);
 
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
+        
+        // If no event data exists, return empty result (player aborted before joining)
+        if (eventDataEntity == null) {
+            return new TeamEscapeEventResult();
+        }
 
         if (eventDataEntity.getFinishReason() != 0) {
             return new TeamEscapeEventResult();
@@ -106,11 +111,10 @@ public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitration
             arrayOfTeamEscapeEntrantResult.getTeamEscapeEntrantResult().add(teamEscapeEntrantResult);
 
             if (!racer.getPersonaId().equals(activePersonaId)) {
-                XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
-                xmppEvent.sendTeamEscapeEnd(teamEscapeEntrantResultResponse);
+                asyncXmppBO.sendMessage(teamEscapeEntrantResultResponse, racer.getPersonaId());
                 if ((teamEscapeArbitrationPacket.getFinishReason() == 518 ||
-                        teamEscapeArbitrationPacket.getFinishReason() == 22) && temporaryRank == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
-                    xmppEvent.sendEventTimingOut(eventSessionEntity);
+                        teamEscapeArbitrationPacket.getFinishReason() == 22) && eventDataEntity.getRank() == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
+                    asyncXmppBO.sendEventTimingOut(eventSessionEntity.getId(), eventSessionEntity.getEvent().getDnfTimerTime(), racer.getPersonaId());
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
             }
@@ -120,8 +124,9 @@ public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitration
         AchievementTransaction transaction = achievementBO.createTransaction(activePersonaId);
         TeamEscapeEventResult teamEscapeEventResult = new TeamEscapeEventResult();
         
-        // Utiliser le rang temporaire pour les récompenses au lieu du rang 0 de la BDD
-        teamEscapeArbitrationPacket.setRank(temporaryRank);
+        eventSessionDao.update(eventSessionEntity);
+        eventDataDao.update(eventDataEntity);
+
         teamEscapeEventResult.setAccolades(rewardTeamEscapeBO.getAccolades(activePersonaId,
                 teamEscapeArbitrationPacket, eventDataEntity, eventSessionEntity, transaction));
         teamEscapeEventResult
@@ -131,20 +136,16 @@ public class EventResultTeamEscapeBO extends EventResultBO<TeamEscapeArbitration
         teamEscapeEventResult.setEventId(eventDataEntity.getEvent().getId());
         teamEscapeEventResult.setEventSessionId(eventSessionId);
         teamEscapeEventResult.setPersonaId(activePersonaId);
-        prepareRaceAgain(eventSessionEntity, teamEscapeEventResult, teamEscapeArbitrationPacket);
+        prepareRaceAgain(eventSessionEntity, activePersonaId, teamEscapeEventResult, teamEscapeArbitrationPacket);
 
         if (teamEscapeArbitrationPacket.getBustedCount() == 0) {
             updateEventAchievements(eventDataEntity, eventSessionEntity, activePersonaId, teamEscapeArbitrationPacket, transaction);
         }
-        // NE PAS committer les achievements ici - attendre le recalcul des rangs finaux
 
-        eventSessionDao.update(eventSessionEntity);
-        eventDataDao.update(eventDataEntity);
-        
-        // Après la sauvegarde des données, recalculer les rangs finaux pour toute la course
-        recalculateAllRanks(eventSessionEntity);
-        
-        // Maintenant que les rangs finaux sont calculés, committer les achievements
+        if (teamEscapeEventResult.getAccolades() != null && teamEscapeEventResult.getAccolades().getLuckyDrawInfo() != null) {
+            teamEscapeEventResult.getAccolades().getLuckyDrawInfo().setCardDeck(CardDecks.forRank(eventDataEntity.getRank()));
+        }
+
         if (teamEscapeArbitrationPacket.getBustedCount() == 0) {
             commitEventAchievementsWithFinalRank(eventDataEntity, activePersonaId, transaction);
         }

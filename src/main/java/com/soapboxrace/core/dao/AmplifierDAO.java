@@ -9,10 +9,13 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.AmplifierEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class AmplifierDAO extends LongKeyedDAO<AmplifierEntity> {
 
     public AmplifierDAO() {

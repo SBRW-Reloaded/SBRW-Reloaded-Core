@@ -10,7 +10,7 @@ import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.SocialRelationshipBO;
 import com.soapboxrace.jaxb.http.PersonaFriendsList;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
@@ -20,7 +20,7 @@ import javax.ws.rs.core.MediaType;
 @Path("/getfriendlistfromuserid")
 public class GetFriendListFromUserId {
 
-    @EJB
+    @Inject
     private SocialRelationshipBO socialRelationshipBO;
 
     @GET

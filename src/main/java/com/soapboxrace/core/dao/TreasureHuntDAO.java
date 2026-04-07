@@ -10,10 +10,13 @@ import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.TreasureHuntEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.Query;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class TreasureHuntDAO extends LongKeyedDAO<TreasureHuntEntity> {
 
     public TreasureHuntDAO() {

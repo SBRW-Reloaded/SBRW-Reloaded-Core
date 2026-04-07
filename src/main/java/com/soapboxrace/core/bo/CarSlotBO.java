@@ -5,12 +5,17 @@
  */
 
 package com.soapboxrace.core.bo;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Schedule;
+import javax.ejb.Singleton;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 
 import com.soapboxrace.core.dao.CarDAO;
 import com.soapboxrace.core.jpa.CarEntity;
 import org.slf4j.Logger;
 
-import javax.ejb.*;
 import javax.inject.Inject;
 import java.util.List;
 
@@ -18,10 +23,10 @@ import java.util.List;
 @Lock(LockType.READ)
 public class CarSlotBO {
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private PerformanceBO performanceBO;
 
     @Inject
@@ -55,6 +60,7 @@ public class CarSlotBO {
         return ownedCarEntities;
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public int countPersonasCar(Long personaId) {
         return carDAO.findNumByPersonaId(personaId);
     }

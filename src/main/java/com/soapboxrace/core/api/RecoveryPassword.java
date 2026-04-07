@@ -8,7 +8,7 @@ package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.bo.RecoveryPasswordBO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -18,7 +18,7 @@ import javax.ws.rs.core.MediaType;
 @Path("/RecoveryPassword")
 public class RecoveryPassword {
 
-    @EJB
+    @Inject
     private RecoveryPasswordBO bo;
 
     @POST

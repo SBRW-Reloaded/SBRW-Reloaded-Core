@@ -15,31 +15,37 @@ import java.time.LocalDateTime;
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByPersonaId",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.personaEntity.personaId = " +
-                        ":personaId"),
+                        ":personaId AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByPersonaIdAndTag",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.personaEntity.personaId = " +
-                        ":personaId AND obj.productEntity.entitlementTag = :entitlementTag"),
+                        ":personaId AND obj.productEntity.entitlementTag = :entitlementTag " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByPersonaIdAndHash",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.personaEntity.personaId = " +
-                        ":personaId AND obj.productEntity.hash = :hash"),
+                        ":personaId AND obj.productEntity.hash = :hash " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByPersonaIdAndType",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.personaEntity.personaId = " +
-                        ":personaId AND obj.productEntity.productType = :productType"),
+                        ":personaId AND obj.productEntity.productType = :productType " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByInventoryAndTag",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.id = " +
-                        ":inventoryId AND obj.productEntity.entitlementTag = :entitlementTag"),
+                        ":inventoryId AND obj.productEntity.entitlementTag = :entitlementTag " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByInventoryAndHash",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.id = " +
-                        ":inventoryId AND obj.productEntity.hash = :hash"),
+                        ":inventoryId AND obj.productEntity.hash = :hash " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.findAllByInventoryAndType",
                 query = "SELECT obj FROM InventoryItemEntity obj WHERE obj.inventoryEntity.id = " +
-                        ":inventoryId AND obj.productEntity.productType = :productType"),
+                        ":inventoryId AND obj.productEntity.productType = :productType " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate >= current_timestamp)"),
         @NamedQuery(
                 name = "InventoryItemEntity.deleteAllExpiredItems",
                 query = "DELETE FROM InventoryItemEntity obj WHERE obj.expirationDate IS NOT NULL and obj.expirationDate < current_timestamp")

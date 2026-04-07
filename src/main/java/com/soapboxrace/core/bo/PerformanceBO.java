@@ -11,20 +11,23 @@ import com.soapboxrace.core.dao.ProductDAO;
 import com.soapboxrace.core.dao.CarClassListDAO;
 import com.soapboxrace.core.jpa.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.Set;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class PerformanceBO {
 
-    @EJB
+    @Inject
     private CarClassesDAO carClassesDAO;
 
-    @EJB
+    @Inject
     private ProductDAO productDAO;
 
-    @EJB
+    @Inject
     private CarClassListDAO carClassListDAO;
 
     public CarClassesEntity calcNewCarClass(CarEntity carEntity) {

@@ -13,7 +13,7 @@ import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.SocialRelationshipEntity;
 import org.slf4j.Logger;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -28,13 +28,13 @@ import java.util.List;
 @Path("/admin/friends-presence")
 public class FriendsPresenceAdmin {
 
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
-    @EJB
+    @Inject
     private SocialRelationshipBO socialRelationshipBO;
 
-    @EJB
+    @Inject
     private SocialRelationshipDAO socialRelationshipDAO;
 
     @Inject

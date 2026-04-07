@@ -103,6 +103,13 @@ public class UserEntity {
     @Column(name = "showOnlyPlayersInSameChatChannel")
     private boolean showOnlyPlayersInSameChatChannel = false;
 
+    // Race Again preferences
+    @Column(name = "raceAgainEnabled")
+    private boolean raceAgainEnabled = true;
+
+    @Column(name = "raceAgainMode")
+    private int raceAgainMode = 0; // 0 = RANDOM, 1 = REPEAT
+
     public Long getId() {
         return this.id;
     }
@@ -303,5 +310,22 @@ public class UserEntity {
 
 	public void setShowOnlyPlayersInSameChatChannel(boolean showOnlyPlayersInSameChatChannel) {
 		this.showOnlyPlayersInSameChatChannel = showOnlyPlayersInSameChatChannel;
+	}
+
+	// Race Again preferences getters and setters
+	public boolean isRaceAgainEnabled() {
+		return raceAgainEnabled;
+	}
+
+	public void setRaceAgainEnabled(boolean raceAgainEnabled) {
+		this.raceAgainEnabled = raceAgainEnabled;
+	}
+
+	public int getRaceAgainMode() {
+		return raceAgainMode;
+	}
+
+	public void setRaceAgainMode(int raceAgainMode) {
+		this.raceAgainMode = raceAgainMode;
 	}
 }

@@ -3,6 +3,9 @@ package com.soapboxrace.core.bo;
 import com.soapboxrace.core.bo.util.AchievementEventContext;
 import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
+import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
+import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
+import com.soapboxrace.core.xmpp.XmppEvent;
 import com.soapboxrace.jaxb.http.ArbitrationPacket;
 import com.soapboxrace.jaxb.http.ClientPhysicsMetrics;
 import com.soapboxrace.jaxb.http.EventResult;
@@ -11,69 +14,84 @@ import com.soapboxrace.core.bo.util.OwnedCarConverter;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 import com.soapboxrace.core.bo.util.HelpingTools;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Base class for {@link ArbitrationPacket} -> {@link EventResult} converters
- *
- * @param <TA> The type of {@link ArbitrationPacket} that this converter accepts
- * @param <TR> The type of {@link EventResult} that this converter produces
- */
 public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends EventResult> {
 
     private static final Logger logger = LoggerFactory.getLogger(EventResultBO.class);
+    
+    private static final java.util.concurrent.ConcurrentHashMap<String, RaceAgainLobbyInfo> raceAgainLobbies 
+        = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    private static class RaceAgainLobbyInfo {
+        final LobbyEntity lobby;
+        final EventEntity event;
+        final long createdAt;
+        
+        RaceAgainLobbyInfo(LobbyEntity lobby, EventEntity event) {
+            this.lobby = lobby;
+            this.event = event;
+            this.createdAt = System.currentTimeMillis();
+        }
+        
+        boolean isExpired() {
+            long age = System.currentTimeMillis() - createdAt;
+            return age > 300000;
+        }
+    }
 
-    @EJB
+    @Inject
     protected MatchmakingBO matchmakingBO;
 
-    @EJB
+    @Inject
     protected LobbyBO lobbyBO;
 
-    @EJB
+    @Inject
     protected ParameterBO parameterBo;
 
-    @EJB
+    @Inject
     protected PersonaBO personaBO;
 
-    @EJB
+    @Inject
     protected PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private EventDataSetupDAO eventDataSetupDAO;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDAO;
 
-    @EJB
+    @Inject
     protected AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     protected EventDAO eventDAO;
 
-    @EJB
+    @Inject
     protected LobbyDAO lobbyDAO;
 
-    @EJB
+    @Inject
     protected EventSessionDAO eventSessionDAO;
     
-    @EJB
-    protected RaceAgainBO raceAgainBO;
+    @Inject
+    protected TokenSessionBO tokenSessionBO;
     
-    /**
-     * Converts the given {@link TA} instance to a new {@link TR} instance.
-     *
-     * @param eventSessionEntity The {@link EventSessionEntity} associated with the arbitration packet
-     * @param activePersonaId    The ID of the current persona
-     * @param packet             The {@link TA} instance
-     * @return new {@link TR} instance
-     */
+    @Inject
+    protected OpenFireSoapBoxCli openFireSoapBoxCli;
+    
+    @Inject
+    protected OpenFireRestApiCli openFireRestApiCli;
+
+    @Inject
+    protected AsyncXmppBO asyncXmppBO;
+    
     public TR handle(EventSessionEntity eventSessionEntity, Long activePersonaId, TA packet) {
         logger.info("@@@ Thread {} - handle() called for EventSession {}, PersonaId {}, finishReason={}", 
             Thread.currentThread().getName(), 
@@ -87,29 +105,13 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         if(parameterBo.getBoolParam("SBRWR_DISABLE_8_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~8);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_16_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~16);
         if(parameterBo.getBoolParam("SBRWR_DISABLE_32_REPORTS")) packet.setHacksDetected(packet.getHacksDetected() & ~32);
-              
+
         return handleInternal(eventSessionEntity, activePersonaId, packet);
     }
 
-    /**
-     * Internal method to convert the given {@link TA} instance to a new {@link TR} instance.
-     *
-     * @param eventSessionEntity The {@link EventSessionEntity} associated with the arbitration packet
-     * @param activePersonaId    The ID of the current persona
-     * @param packet             The {@link TA} instance
-     * @return new {@link TR} instance
-     */
     protected abstract TR handleInternal(EventSessionEntity eventSessionEntity, Long activePersonaId, TA packet);
 
-    /**
-     * Sets some basic properties of the given {@link EventDataEntity}
-     *
-     * @param eventDataEntity the {@link EventDataEntity} instance
-     * @param activePersonaId the ID of the current persona
-     * @param packet          the {@link TA} instance
-     * @param eventSessionEntity the {@link EventSessionEntity} instance
-     */
-    protected final void prepareBasicEventData(EventDataEntity eventDataEntity, Long activePersonaId, TA packet, EventSessionEntity eventSessionEntity) {
+    protected void prepareBasicEventData(EventDataEntity eventDataEntity, Long activePersonaId, TA packet, EventSessionEntity eventSessionEntity) {
         ClientPhysicsMetrics clientPhysicsMetrics = packet.getPhysicsMetrics();
 
         eventDataEntity.setAlternateEventDurationInMilliseconds(packet.getAlternateEventDurationInMilliseconds());
@@ -118,8 +120,6 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         eventDataEntity.setFinishReason(packet.getFinishReason());
         eventDataEntity.setHacksDetected(packet.getHacksDetected());
 
-        // Sauvegarder temporairement rank = 0, le vrai calcul se fera après que tous les joueurs aient fini
-        // Car calculer maintenant donnerait des rangs incorrects (ex: plusieurs joueurs rank 1)
         eventDataEntity.setRank(packet.getRank());
         
         eventDataEntity.setPersonaId(activePersonaId);
@@ -136,7 +136,6 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
             eventDataEntity.setSpeedMedian(clientPhysicsMetrics.getSpeedMedian());
         }
 
-        //EVENT_DATA_SETUPS
         CarEntity carInfo = carDAO.find(packet.getCarId());
         String carHash = HelpingTools.calcHash(JAXBUtility.marshal(OwnedCarConverter.makeCarSetupTrans(carInfo)));
         EventDataSetupEntity carSetup = eventDataSetupDAO.findByHash(carHash);
@@ -157,118 +156,228 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         eventDataEntity.setEventDataSetupHash(carHash);
     }
 
-    /**
-     * Sets up Race Again and updates the info on the given {@link TR} instance
-     *
-     * @param eventSessionEntity the {@link EventSessionEntity} instance
-     * @param result             the {@link TR} instance
-     * @param packet             the {@link TA} arbitration packet (to check finishReason)
-     */
-    protected final void prepareRaceAgain(EventSessionEntity eventSessionEntity, TR result, TA packet) {
+    protected void prepareRaceAgain(EventSessionEntity eventSessionEntity, Long activePersonaId, TR result, TA packet) {
         ExitPath exitPath = ExitPath.EXIT_TO_FREEROAM;
         EventEntity eventEntity = eventSessionEntity.getEvent();
 
-        Long eventSessionId = eventSessionEntity.getId();
-        logger.info("@@@ Thread {} - prepareRaceAgain() called for EventSession {}, PersonaId {}, finishReason={}, lobby={}, raceAgainEnabled={}", 
-            Thread.currentThread().getName(), 
-            eventSessionId, 
-            eventSessionEntity.getLobby() != null ? eventSessionEntity.getLobby().getPersonaId() : "null",
-            packet.getFinishReason(),
-            eventSessionEntity.getLobby() != null ? eventSessionEntity.getLobby().getId() : "null",
-            eventEntity.isRaceAgainEnabled());
+        matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
+        logger.info("RACE_AGAIN: Removed persona {} from RaceNow queue after race completion", activePersonaId);
+        
+        if (Math.random() < 0.1) {
+            raceAgainLobbies.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        }
 
-        // Only set up Race Again if:
-        // 1. It's enabled for the event
-        // 2. The session was multiplayer
-        // REMOVED: 3. The player FINISHED the race (finishReason = 22) - TESTING WITHOUT THIS CHECK
         if (eventSessionEntity.getLobby() != null 
-            && eventEntity.isRaceAgainEnabled()) {
-            
-            logger.info("Thread {} - Race Again enabled for EventSession {}", 
-                Thread.currentThread().getName(), eventSessionId);
+            && eventEntity.isRaceAgainEnabled()
+            && packet.getFinishReason() == 22) {
             
             LobbyEntity oldLobby = eventSessionEntity.getLobby();
             
-            // Get the first entrant who joined the lobby (creator or first joiner)
-            LobbyEntrantEntity firstEntrant = null;
-            if (oldLobby.getEntrants() != null && !oldLobby.getEntrants().isEmpty()) {
-                firstEntrant = oldLobby.getEntrants().get(0);
-            }
-            
-            // Determine the car class hash and persona level for event selection
-            int carClassHash = oldLobby.getEvent().getCarClassHash(); // Fallback to event's class
-            int personaLevel = 10; // Default level
-            Long personaId = oldLobby.getPersonaId();
-            
-            if (firstEntrant != null) {
-                PersonaEntity firstPersona = personaDAO.find(firstEntrant.getPersona().getPersonaId());
-                if (firstPersona != null) {
-                    personaLevel = firstPersona.getLevel();
-                    personaId = firstPersona.getPersonaId();
-                    CarEntity firstCar = personaBO.getDefaultCarEntity(firstPersona.getPersonaId());
-                    if (firstCar != null) {
-                        carClassHash = firstCar.getCarClassHash();
-                    }
-                }
-            }
-            
-            int previousEventModeId = oldLobby.getEvent().getEventModeId();
-            
-            logger.info("RACE_AGAIN: Delegating to RaceAgainBO for EventSession {} (mode {}, class {}, level {})", 
-                eventSessionId, previousEventModeId, carClassHash, personaLevel);
-            
-            // Use RaceAgainBO to get or create lobby + select event atomically
-            // This ensures only ONE lobby is created per event session AND all players get same event
-            RaceAgainBO.RaceAgainResult raceAgainResult = raceAgainBO.getOrCreateRaceAgainLobby(
-                eventSessionEntity,
-                personaId,
-                carClassHash,
-                previousEventModeId,
-                personaLevel
-            );
-            
-            if (raceAgainResult == null || raceAgainResult.getLobby() == null || raceAgainResult.getEvent() == null) {
-                logger.error("RACE_AGAIN: Failed to get or create nextLobby for EventSession {}", eventSessionId);
+            if (oldLobby.getIsPrivate() != null && oldLobby.getIsPrivate()) {
+                logger.info("RACE_AGAIN: Skipping - lobby {} was PRIVATE (no Race Again for private lobbies)", oldLobby.getId());
                 result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
                 return;
             }
             
-            LobbyEntity nextLobbyEntity = raceAgainResult.getLobby();
-            EventEntity selectedEvent = raceAgainResult.getEvent();
-
-            int inviteLifetime = 0;
-
-            if(parameterBo.getIntParam("SBRWR_MINIMUMLOBBYTIME") == 0) {
-                inviteLifetime = nextLobbyEntity.getLobbyCountdownInMilliseconds(eventEntity.getLobbyCountdownTime());
-            } else {
-                inviteLifetime = parameterBo.getIntParam("SBRWR_MINIMUMLOBBYTIME");
+            try {
+                lobbyBO.removeEntrantFromLobby(activePersonaId, oldLobby.getId());
+                logger.info("RACE_AGAIN: Removed persona {} from old lobby {}", activePersonaId, oldLobby.getId());
+            } catch (Exception e) {
+                logger.debug("RACE_AGAIN: Persona {} not in old lobby {} ({})", 
+                    activePersonaId, oldLobby.getId(), e.getMessage());
             }
             
-            // lobby must have more than 6 seconds left
-            if (inviteLifetime > 6000) {
+            PersonaEntity activePersona = personaDAO.find(activePersonaId);
+            if (activePersona == null) {
+                logger.warn("RACE_AGAIN: Active persona {} not found", activePersonaId);
+                result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                return;
+            }
+            
+            UserEntity activeUser = activePersona.getUser();
+            if (activeUser == null) {
+                logger.warn("RACE_AGAIN: User for persona {} not found", activePersonaId);
+                result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                return;
+            }
+            
+            if (!activeUser.isRaceAgainEnabled()) {
+                logger.info("RACE_AGAIN: User {} (persona {}) has Race Again DISABLED", 
+                    activeUser.getId(), activePersonaId);
+                result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                return;
+            }
+            
+            int userRaceAgainMode = activeUser.getRaceAgainMode();
+            String modeKey = (userRaceAgainMode == 1) ? "REPEAT" : "RANDOM";
+            String lobbyKey = eventSessionEntity.getId() + "_" + modeKey;
+            
+            int personaLevel = activePersona.getLevel();
+            CarEntity playerCar = personaBO.getDefaultCarEntity(activePersonaId);
+            int carClassHash = (playerCar != null) ? playerCar.getCarClassHash() : oldLobby.getEvent().getCarClassHash();
+            
+            logger.info("RACE_AGAIN: Processing persona {} with mode {} (eventSessionId: {}, lobbyKey: {})", 
+                activePersonaId, modeKey, eventSessionEntity.getId(), lobbyKey);
+            
+            LobbyEntity nextLobbyEntity = null;
+            EventEntity selectedEvent = null;
+            
+            synchronized (lobbyKey.intern()) {
+                RaceAgainLobbyInfo lobbyInfo = raceAgainLobbies.get(lobbyKey);
+                
+                logger.info("RACE_AGAIN: Checking map for '{}': {}", 
+                    lobbyKey, lobbyInfo != null ? "found lobby " + lobbyInfo.lobby.getId() : "not found");
+                
+                if (lobbyInfo != null && !lobbyInfo.isExpired()) {
+                    nextLobbyEntity = lobbyInfo.lobby;
+                    selectedEvent = lobbyInfo.event;
+                    
+                    int currentEntrants = nextLobbyEntity.getEntrants() != null ? nextLobbyEntity.getEntrants().size() : 0;
+                    int maxPlayers = selectedEvent.getMaxPlayers();
+                    
+                    if (currentEntrants >= maxPlayers) {
+                        logger.info("RACE_AGAIN: {} lobby {} is full ({}/{}), creating new",
+                            modeKey, nextLobbyEntity.getId(), currentEntrants, maxPlayers);
+                        nextLobbyEntity = null;
+                        selectedEvent = null;
+                        raceAgainLobbies.remove(lobbyKey);
+                    } else {
+                        logger.info("RACE_AGAIN: {} - Reusing lobby {} for persona {} ({}/{} players)",
+                            modeKey, nextLobbyEntity.getId(), activePersonaId, currentEntrants, maxPlayers);
+                    }
+                }
+                
+                if (nextLobbyEntity == null) {
+                    if (userRaceAgainMode == 1) {
+                        selectedEvent = oldLobby.getEvent();
+                        
+                        if (selectedEvent == null || !selectedEvent.getIsEnabled() || !selectedEvent.isRaceAgainEnabled()) {
+                            logger.warn("RACE_AGAIN: REPEAT event {} not available", 
+                                selectedEvent != null ? selectedEvent.getId() : "null");
+                            result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                            return;
+                        }
+                        
+                        logger.info("RACE_AGAIN: REPEAT - reusing event {}", selectedEvent.getId());
+                    } else {
+                        int eventModeId = oldLobby.getEvent().getEventModeId();
+                        int previousEventId = oldLobby.getEvent().getId();
+                        
+                        List<EventEntity> eligibleEvents = eventDAO.findEligibleForRaceAgainByMode(
+                            personaLevel, carClassHash, eventModeId, previousEventId
+                        );
+                        
+                        if (eligibleEvents == null || eligibleEvents.isEmpty()) {
+                            logger.warn("RACE_AGAIN: No eligible events for RANDOM mode");
+                            result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                            return;
+                        }
+                        
+                        selectedEvent = eligibleEvents.get(new java.util.Random().nextInt(eligibleEvents.size()));
+                        logger.info("RACE_AGAIN: RANDOM - selected event {} from {} eligible",
+                            selectedEvent.getId(), eligibleEvents.size());
+                    }
+                    
+                    int eventCarClassHash = selectedEvent.getCarClassHash();
+                    if (eventCarClassHash != 607077938 && eventCarClassHash != carClassHash) {
+                        logger.error("RACE_AGAIN: {} event {} incompatible car class", modeKey, selectedEvent.getId());
+                        result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                        return;
+                    }
+                    
+                    nextLobbyEntity = lobbyBO.createLobby(
+                        activePersonaId,
+                        selectedEvent.getId(),
+                        carClassHash,
+                        false
+                    );
+                    
+                    if (nextLobbyEntity == null || nextLobbyEntity.getId() == null) {
+                        logger.error("RACE_AGAIN: Failed to create {} lobby", modeKey);
+                        result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                        return;
+                    }
+                    
+                    RaceAgainLobbyInfo newInfo = new RaceAgainLobbyInfo(nextLobbyEntity, selectedEvent);
+                    raceAgainLobbies.put(lobbyKey, newInfo);
+                    
+                    logger.info("RACE_AGAIN: {} - Created lobby {} for event {} (persona {}), stored in map",
+                        modeKey, nextLobbyEntity.getId(), selectedEvent.getId(), activePersonaId);
+                }
+            }
+            
+            if (nextLobbyEntity == null || selectedEvent == null) {
+                logger.error("RACE_AGAIN: Failed to get lobby/event for persona {}", activePersonaId);
+                result.setExitPath(ExitPath.EXIT_TO_FREEROAM);
+                return;
+            }
+            
+            int inviteLifetime = nextLobbyEntity.getLobbyCountdownInMilliseconds(selectedEvent.getLobbyCountdownTime());
+            int minimumRaceAgainTime = parameterBo.getIntParam("SBRWR_RACE_AGAIN_MIN_TIME", 20000);
+            
+            if (inviteLifetime > minimumRaceAgainTime) {
+                // NE PAS envoyer EventTimedOut ici !
+                // L'EventTimedOut dit au client de quitter l'événement et de se déconnecter du
+                // UDP relay IMMÉDIATEMENT, même si d'autres joueurs sont encore en course.
+                // Cela coupait la synchro avec le race server pour le joueur qui finit en premier.
+                // Le EXIT_TO_LOBBY dans la réponse HTTP suffit pour que le client sache qu'il doit
+                // transitionner vers le nouveau lobby. Le nettoyage XMPP se fera dans acceptInvite().
+                
                 result.setLobbyInviteId(nextLobbyEntity.getId());
                 result.setInviteLifetimeInMilliseconds(inviteLifetime);
-                // Set the new event ID so the client displays the correct event info
                 result.setEventId(selectedEvent.getId());
                 exitPath = ExitPath.EXIT_TO_LOBBY;
                 
-                logger.info("RACE_AGAIN: Sending result with EventId={} for lobby {}", 
-                    selectedEvent.getId(), nextLobbyEntity.getId());
+                logger.info("RACE_AGAIN: Sending persona {} to {} lobby {} (event {}, {}ms remaining)", 
+                    activePersonaId, modeKey, nextLobbyEntity.getId(), selectedEvent.getId(), inviteLifetime);
+            } else {
+                logger.info("RACE_AGAIN: Insufficient time ({}ms < {}ms) for persona {}", 
+                    inviteLifetime, minimumRaceAgainTime, activePersonaId);
             }
         }
 
         result.setExitPath(exitPath);
     }
+    
+    public static void cleanupRaceAgainLobby(Long lobbyId) {
+        if (lobbyId == null) return;
+        
+        raceAgainLobbies.entrySet().removeIf(entry -> {
+            if (entry.getValue().lobby.getId().equals(lobbyId)) {
+                logger.info("RACE_AGAIN: Cleaning up lobby {} from map", lobbyId);
+                return true;
+            }
+            return false;
+        });
+    }
+    
+    public static void cleanupExpiredRaceAgainLobbies() {
+        int removedCount = 0;
+        
+        for (java.util.Iterator<java.util.Map.Entry<String, RaceAgainLobbyInfo>> it = raceAgainLobbies.entrySet().iterator(); 
+             it.hasNext(); ) {
+            java.util.Map.Entry<String, RaceAgainLobbyInfo> entry = it.next();
+            RaceAgainLobbyInfo info = entry.getValue();
+            
+            if (info.isExpired()) {
+                it.remove();
+                removedCount++;
+                logger.info("RACE_AGAIN: Auto-cleanup removed lobby {} from map (expired)", info.lobby.getId());
+            }
+        }
+        
+        if (removedCount > 0) {
+            logger.info("RACE_AGAIN: Auto-cleanup removed {} expired lobby(ies) from map", removedCount);
+        }
+    }
+    
+    public static boolean isRaceAgainLobby(Long lobbyId) {
+        if (lobbyId == null) return false;
+        
+        return raceAgainLobbies.values().stream()
+            .anyMatch(info -> info.lobby.getId().equals(lobbyId));
+    }
 
-    /**
-     * Trigger an EVENT achievement progress update
-     *
-     * @param eventDataEntity    the {@link EventDataEntity} instance
-     * @param eventSessionEntity the {@link EventSessionEntity} instance
-     * @param activePersonaId    the active persona ID
-     * @param packet             the {@link TA} instance
-     * @param transaction        the {@link AchievementTransaction} instance
-     */
     protected void updateEventAchievements(EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity, Long activePersonaId, TA packet, AchievementTransaction transaction) {
         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
         EventEntity eventEntity = eventDataEntity.getEvent();
@@ -283,61 +392,17 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         ));
     }
 
-    /**
-     * Commite les achievements d'événement APRÈS que les rangs finaux aient été recalculés
-     * Ceci garantit que les achievements utilisent le bon rang final au lieu du rang temporaire
-     * 
-     * @param eventDataEntity Les données d'événement mises à jour avec le rang final
-     * @param activePersonaId L'ID du persona 
-     * @param transaction La transaction d'achievement à committer
-     */
     protected void commitEventAchievementsWithFinalRank(EventDataEntity eventDataEntity, Long activePersonaId, AchievementTransaction transaction) {
         PersonaEntity personaEntity = personaDAO.find(activePersonaId);
-        
-        // À ce stade, eventDataEntity.getRank() contient le rang final recalculé
-        // Les achievements peuvent maintenant utiliser les données correctes
-        
-        achievementBO.commitTransaction(personaEntity, transaction);
+        try {
+            achievementBO.commitTransaction(personaEntity, transaction);
+        } catch (Exception e) {
+            logger.warn("Achievement commit failed for PersonaId={} (likely deadlock, result preserved): {}",
+                activePersonaId, e.getMessage());
+        }
     }
 
-    /**
-     * Calcule le rang du joueur en fonction du temps de course par rapport aux autres participants
-     * @param eventSessionEntity La session de course
-     * @param personaId L'ID du persona du joueur
-     * @param raceTime Le temps de course du joueur en millisecondes
-     * @return Le rang calculé (1 = premier, 2 = deuxième, etc.)
-     */
     protected int calculateRankBasedOnTime(EventSessionEntity eventSessionEntity, Long personaId, long raceTime) {
-        // Récupère tous les entrants de la session
-        java.util.List<EventDataEntity> entrants = eventDataDAO.getRacers(eventSessionEntity.getId());
-        
-        // Compte combien de joueurs ont un temps meilleur (plus petit)
-        int rank = 1;
-        for (EventDataEntity entrant : entrants) {
-            // Ne pas se comparer à soi-même
-            if (entrant.getPersonaId().equals(personaId)) {
-                continue;
-            }
-            
-            // Si l'autre joueur a terminé la course (finishReason = 22) et a un temps meilleur
-            if (entrant.getFinishReason() == 22 && entrant.getEventDurationInMilliseconds() < raceTime) {
-                rank++;
-            }
-        }
-        
-        return rank;
-    }
-
-    /**
-     * Calcule un rang temporaire pour l'affichage XMPP (pas définitif)
-     * @param eventSessionEntity La session de course
-     * @param personaId L'ID du persona du joueur
-     * @param raceTime Le temps de course du joueur en millisecondes
-     * @return Le rang temporaire (sera recalculé plus tard)
-     */
-    protected int calculateTemporaryRank(EventSessionEntity eventSessionEntity, Long personaId, long raceTime) {
-        // Pour l'instant, utilise l'ancienne logique pour l'affichage temporaire
-        // Le vrai calcul se fera dans recalculateAllRanks()
         java.util.List<EventDataEntity> entrants = eventDataDAO.getRacers(eventSessionEntity.getId());
         
         int rank = 1;
@@ -354,24 +419,6 @@ public abstract class EventResultBO<TA extends ArbitrationPacket, TR extends Eve
         return rank;
     }
 
-    /**
-     * Recalcule tous les rangs d'une session après que tous les joueurs aient terminé
-     * Cela évite le problème où plusieurs joueurs se calculent comme étant 1er
-     * @param eventSessionEntity La session de course
-     */
-    protected void recalculateAllRanks(EventSessionEntity eventSessionEntity) {
-        // Récupère tous les participants qui ont terminé normalement
-        java.util.List<EventDataEntity> finishedRacers = eventDataDAO.getRacers(eventSessionEntity.getId())
-            .stream()
-            .filter(racer -> racer.getFinishReason() == 22)
-            .sorted((a, b) -> Long.compare(a.getEventDurationInMilliseconds(), b.getEventDurationInMilliseconds()))
-            .collect(java.util.stream.Collectors.toList());
-        
-        // Assigne les rangs dans l'ordre croissant des temps
-        for (int i = 0; i < finishedRacers.size(); i++) {
-            EventDataEntity racer = finishedRacers.get(i);
-            racer.setRank(i + 1); // Rang 1, 2, 3, etc.
-            eventDataDAO.update(racer);
-        }
-    }
 }
+
+

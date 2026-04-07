@@ -16,7 +16,7 @@ import com.soapboxrace.jaxb.http.ArrayOfLong;
 import com.soapboxrace.jaxb.http.ArrayOfString;
 import com.soapboxrace.jaxb.http.UserSettings;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -27,10 +27,10 @@ import java.util.stream.Collectors;
 
 @Path("/getusersettings")
 public class GetUserSettings {
-    @EJB
+    @Inject
     private GetServerInformationBO serverInformationBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @Inject

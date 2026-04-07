@@ -18,32 +18,36 @@ import com.soapboxrace.core.jpa.*;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 
 
-@Stateless
+@ApplicationScoped
+
+
+@Transactional
 public class EventBO {
 
-    @EJB
+    @Inject
     private EventDAO eventDao;
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDao;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
     @Inject
@@ -118,15 +122,29 @@ public class EventBO {
             }
         }
         
-        logger.warn("Car restriction failed for PersonaId={}, Event={}, restriction='{}' - no matching cars found", 
+        logger.debug("Car restriction failed for PersonaId={}, Event={}, restriction='{}' - no matching cars found", 
             personaId, eventEntity.getId(), carRestriction);
         return false;
     }
 
     public void createEventDataSession(Long personaId, Long eventSessionId) {
-        CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
+        EventDataEntity existingEventData = eventDataDao.findByPersonaAndEventSessionId(personaId, eventSessionId);
+        if (existingEventData != null) {
+            return;
+        }
 
+        CarEntity carEntity = personaBO.getDefaultCarEntity(personaId);
+        if (carEntity == null) {
+            logger.warn("EVENT_DATA_CREATE: Default car not found for PersonaId={}, EventSessionId={}", personaId, eventSessionId);
+            return;
+        }
+        
         EventSessionEntity eventSessionEntity = eventSessionDao.find(eventSessionId);
+        if (eventSessionEntity == null) {
+            logger.warn("EVENT_DATA_CREATE: EventSession not found for PersonaId={}, EventSessionId={}", personaId, eventSessionId);
+            return;
+        }
+
         EventDataEntity eventDataEntity = new EventDataEntity();
         eventDataEntity.setPersonaId(personaId);
         eventDataEntity.setEventSessionId(eventSessionId);
@@ -138,7 +156,7 @@ public class EventBO {
         eventDataEntity.setRacerStatus(RacerStatus.IN_RACE);
         eventDataDao.insert(eventDataEntity);
     }
-
+    
     public EventSessionEntity createEventSession(TokenSessionEntity tokenSessionEntity, int eventId) {
         Objects.requireNonNull(tokenSessionEntity);
 

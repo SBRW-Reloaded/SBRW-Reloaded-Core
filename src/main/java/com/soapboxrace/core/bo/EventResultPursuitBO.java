@@ -21,34 +21,37 @@ import com.soapboxrace.jaxb.http.ExitPath;
 import com.soapboxrace.jaxb.http.PursuitArbitrationPacket;
 import com.soapboxrace.jaxb.http.PursuitEventResult;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket, PursuitEventResult> {
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDao;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private RewardPursuitBO rewardPursuitBO;
 
-    @EJB
+    @Inject
     private CarDamageBO carDamageBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
     protected PursuitEventResult handleInternal(EventSessionEntity eventSessionEntity, Long activePersonaId,
@@ -56,6 +59,11 @@ public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket
         Long eventSessionId = eventSessionEntity.getId();
 
         EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
+        
+        // If no event data exists, return empty result (player aborted before joining)
+        if (eventDataEntity == null) {
+            return new PursuitEventResult();
+        }
 
         if (eventDataEntity.getFinishReason() != 0) {
             return new PursuitEventResult();
@@ -106,11 +114,7 @@ public class EventResultPursuitBO extends EventResultBO<PursuitArbitrationPacket
         eventDataDao.update(eventDataEntity);
         eventSessionDao.update(eventSessionEntity);
         
-        // Recalculer les rangs (même si il n'y a qu'un joueur en Pursuit pour la cohérence)
-        recalculateAllRanks(eventSessionEntity);
-        
-        // Committer les achievements après toutes les mises à jour et le recalcul des rangs
-        achievementBO.commitTransaction(personaEntity, transaction);
+        commitEventAchievementsWithFinalRank(eventDataEntity, activePersonaId, transaction);
 
         return pursuitEventResult;
     }

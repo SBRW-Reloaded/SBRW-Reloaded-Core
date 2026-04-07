@@ -9,12 +9,15 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.UserEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import java.util.logging.Logger;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class UserDAO extends LongKeyedDAO<UserEntity> {
 
     private static final Logger LOGGER = Logger.getLogger(UserDAO.class.getName());
@@ -91,7 +94,7 @@ public class UserDAO extends LongKeyedDAO<UserEntity> {
     }
     
     public void updateLocked(Long userId, boolean locked) {
-        entityManager.createQuery("UPDATE UserEntity SET locked = :locked WHERE id = :userId")
+        entityManager.createQuery("UPDATE UserEntity SET isLocked = :locked WHERE id = :userId")
                 .setParameter("locked", locked)
                 .setParameter("userId", userId)
                 .executeUpdate();

@@ -9,11 +9,14 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.BaseDAO;
 import com.soapboxrace.core.jpa.EventEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class EventDAO extends BaseDAO<EventEntity, Integer> {
 
     @Override
@@ -92,6 +95,10 @@ public class EventDAO extends BaseDAO<EventEntity, Integer> {
      * @return Liste des événements éligibles du même mode
      */
     public List<EventEntity> findEligibleForRaceAgainByMode(int level, int carClassHash, int eventModeId) {
+        return findEligibleForRaceAgainByMode(level, carClassHash, eventModeId, 0);
+    }
+
+    public List<EventEntity> findEligibleForRaceAgainByMode(int level, int carClassHash, int eventModeId, int previousEventId) {
         String modeFilter;
         
         // Si mode 4 (Circuit) ou 9 (Sprint), accepter les deux
@@ -101,9 +108,13 @@ public class EventDAO extends BaseDAO<EventEntity, Integer> {
             modeFilter = "obj.eventModeId = :eventModeId";
         }
         
+        // Construire le filtre d'exclusion de l'événement précédent
+        String excludeFilter = (previousEventId > 0) ? "AND obj.id != :previousEventId " : "";
+        
         TypedQuery<EventEntity> query = entityManager.createQuery(
             "SELECT obj FROM EventEntity obj WHERE obj.isEnabled = true " +
             "AND " + modeFilter + " " +
+            excludeFilter +
             "AND :level >= obj.minLevel AND :level <= obj.maxLevel " +
             "AND (obj.carClassHash = 607077938 OR obj.carClassHash = :carClassHash)",
             EventEntity.class
@@ -114,6 +125,11 @@ public class EventDAO extends BaseDAO<EventEntity, Integer> {
         // Seulement set eventModeId si ce n'est pas 4 ou 9
         if (eventModeId != 4 && eventModeId != 9) {
             query.setParameter("eventModeId", eventModeId);
+        }
+        
+        // Set previousEventId si fourni
+        if (previousEventId > 0) {
+            query.setParameter("previousEventId", previousEventId);
         }
         
         return query.getResultList();

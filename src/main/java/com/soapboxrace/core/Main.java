@@ -1,6 +1,6 @@
 package com.soapboxrace.core;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.annotation.PostConstruct;
@@ -13,10 +13,10 @@ import com.soapboxrace.core.dao.UserDAO;
 @Startup
 @Singleton
 public class Main {
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private UserDAO userDao;
 
     @PostConstruct

@@ -11,8 +11,11 @@ import com.soapboxrace.jaxb.xmpp.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -20,12 +23,16 @@ import java.util.List;
  *
  * @author coder
  */
-@Stateless
+@ApplicationScoped
+@Transactional
 public class LobbyMessagingBO {
     private static final Logger logger = LoggerFactory.getLogger(LobbyMessagingBO.class);
     
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
+
+    @Inject
+    private TokenSessionBO tokenSessionBO;
 
     /**
      * Prepares and sends a new {@link com.soapboxrace.jaxb.http.LobbyEntrantAdded} message
@@ -83,6 +90,16 @@ public class LobbyMessagingBO {
      */
     public void sendLobbyInvitation(LobbyEntity lobbyEntity, PersonaEntity recipientPersona, long inviteLifetime) {
         try {
+            // Ne pas envoyer d'invitations aux joueurs en course ou sur l'écran de récompenses
+            if (recipientPersona.getUser() != null) {
+                Long userId = recipientPersona.getUser().getId();
+                if (tokenSessionBO.isPlayerInEvent(userId)) {
+                    logger.debug("Skipping lobby invitation for PersonaId={} - player is in event/rewards screen", 
+                        recipientPersona.getPersonaId());
+                    return;
+                }
+            }
+            
             XMPP_LobbyInviteType lobbyInvite = new XMPP_LobbyInviteType();
             lobbyInvite.setEventId(lobbyEntity.getEvent().getId());
             lobbyInvite.setLobbyInviteId(lobbyEntity.getId());
@@ -97,15 +114,23 @@ public class LobbyMessagingBO {
             response.setLobbyInvite(lobbyInvite);
 
             openFireSoapBoxCli.send(response, recipientPersona.getPersonaId());
+            
+            logger.debug("Lobby invitation sent to PersonaId={} for LobbyId={}", 
+                        recipientPersona.getPersonaId(), lobbyEntity.getId());
         } catch (Exception e) {
             logger.error(String.format("Failed to send lobby invitation to PersonaId=%d: %s",
                     recipientPersona.getPersonaId(), e.getMessage()), e);
-            // Optionally re-throw or handle the exception based on requirements
         }
     }
 
     public void sendRelay(XMPP_LobbyLaunchedType lobbyLaunched, XMPP_CryptoTicketsType xMPP_CryptoTicketsType) {
+        xMPP_CryptoTicketsType.getP2PCryptoTicket().sort(
+                Comparator.comparing(XMPP_P2PCryptoTicketType::getPersonaId).reversed());
+
         List<LobbyEntrantInfo> lobbyEntrantInfo = lobbyLaunched.getEntrants().getLobbyEntrantInfo();
+        logger.info("RELAY_LAUNCH: Sending launch messages to {} players for lobby {}", 
+            lobbyEntrantInfo.size(), lobbyLaunched.getLobbyId());
+        
         for (LobbyEntrantInfo lobbyEntrantInfoType : lobbyEntrantInfo) {
             long personaId = lobbyEntrantInfoType.getPersonaId();
             XMPP_CryptoTicketsType cryptoTicketsTypeTmp = new XMPP_CryptoTicketsType();
@@ -120,9 +145,23 @@ public class LobbyMessagingBO {
                 lobbyLaunched.setUdpRelayHost(udpRaceHostIp);
             }
             lobbyLaunched.setCryptoTickets(cryptoTicketsTypeTmp);
+
+            // Send entrants with "self" last, others sorted descending by personaId.
+            List<LobbyEntrantInfo> customizedEntrants = new ArrayList<>(lobbyEntrantInfo);
+            customizedEntrants.sort(
+                    Comparator.<LobbyEntrantInfo, Boolean>comparing(
+                                    l -> l.getPersonaId() == personaId)
+                            .thenComparing(Comparator.comparing(LobbyEntrantInfo::getPersonaId).reversed()));
+            com.soapboxrace.jaxb.http.Entrants customizedEntrantsWrapper = new com.soapboxrace.jaxb.http.Entrants();
+            customizedEntrantsWrapper.getLobbyEntrantInfo().addAll(customizedEntrants);
+            lobbyLaunched.setEntrants(customizedEntrantsWrapper);
+
             XMPP_ResponseTypeLobbyLaunched responseType = new XMPP_ResponseTypeLobbyLaunched();
             responseType.setLobbyInvite(lobbyLaunched);
             openFireSoapBoxCli.send(responseType, personaId);
+            
+            logger.info("RELAY_LAUNCH: Sent launch message to PersonaId={} for lobby {}", 
+                personaId, lobbyLaunched.getLobbyId());
         }
     }
 }

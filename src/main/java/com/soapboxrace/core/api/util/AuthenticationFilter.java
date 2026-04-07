@@ -11,7 +11,7 @@ import com.soapboxrace.core.bo.TokenSessionBO;
 import com.soapboxrace.core.jpa.TokenSessionEntity;
 
 import javax.annotation.Priority;
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.Priorities;
@@ -28,7 +28,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenSessionBO;
 
     @Override

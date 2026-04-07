@@ -10,16 +10,15 @@ import com.soapboxrace.core.api.util.BuildInfo;
 import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
-import javax.inject.Inject;
 
-@Singleton
 @Startup
+@Singleton
 public class StartupBO {
 
-    @EJB
+    @Inject
     private OnlineUsersBO onlineUsersBO;
 
     @Inject

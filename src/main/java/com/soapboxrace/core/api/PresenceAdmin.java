@@ -9,7 +9,7 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.bo.PresenceBO;
 import org.slf4j.Logger;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -24,7 +24,7 @@ import javax.ws.rs.core.Response;
 @Path("/admin/presence")
 public class PresenceAdmin {
 
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
     @Inject

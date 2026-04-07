@@ -16,7 +16,7 @@ import com.soapboxrace.jaxb.http.ArrayOfProductTrans;
 import com.soapboxrace.jaxb.http.CategoryTrans;
 import com.soapboxrace.jaxb.http.ProductTrans;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -25,7 +25,7 @@ import java.util.List;
 @Path("/catalog")
 public class Catalog {
 
-    @EJB
+    @Inject
     private ProductBO productBO;
 
     @Inject

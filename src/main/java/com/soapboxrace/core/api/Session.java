@@ -12,7 +12,7 @@ import com.soapboxrace.core.bo.SessionBO;
 import com.soapboxrace.jaxb.http.ChatServer;
 import javax.servlet.http.HttpServletRequest;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -29,10 +29,10 @@ public class Session {
     @Context
     private HttpServletRequest httpRequest;
 
-    @EJB
+    @Inject
     private SessionBO bo;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @GET

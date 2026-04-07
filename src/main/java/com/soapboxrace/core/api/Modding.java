@@ -9,7 +9,7 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.bo.ModdingBO;
 import com.soapboxrace.core.vo.ModInfoVO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -19,7 +19,7 @@ import javax.ws.rs.core.Response;
 @Path("/Modding")
 public class Modding {
 
-    @EJB
+    @Inject
     private ModdingBO moddingBO;
 
     @GET

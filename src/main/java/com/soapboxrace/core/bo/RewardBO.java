@@ -11,51 +11,54 @@ import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.Map;
 import java.util.Set;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class RewardBO {
 
-    @EJB
+    @Inject
     private PersonaBO personaBo;
 
-    @EJB
+    @Inject
     private LevelRepDAO levelRepDao;
 
-    @EJB
+    @Inject
     private DropBO dropBO;
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private InventoryItemDAO inventoryItemDao;
 
-    @EJB
+    @Inject
     private ProductDAO productDAO;
 
-    @EJB
+    @Inject
     private ItemRewardBO itemRewardBO;
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
 
-    @EJB
+    @Inject
     private AmplifierDAO amplifierDAO;
 
-    @EJB
+    @Inject
     private OnlineUsersBO onlineUsersBO;
 
-    @EJB
+    @Inject
     private DiscordWebhook discord;
 
     public Float getPlayerLevelConst(int playerLevel, float levelCashRewardMultiplier) {
@@ -130,7 +133,7 @@ public class RewardBO {
 }
 
     public void setBaseReward(PersonaEntity personaEntity, EventEntity eventEntity, EventRewardEntity eventRewardEntity,
-                              ArbitrationPacket arbitrationPacket, RewardVO rewardVO) {
+                              EventDataEntity eventDataEntity, ArbitrationPacket arbitrationPacket, RewardVO rewardVO) {
         float baseRep = (float) eventRewardEntity.getBaseRepReward();
         float baseCash = (float) eventRewardEntity.getBaseCashReward();
         int level = personaEntity.getLevel();
@@ -140,7 +143,7 @@ public class RewardBO {
                 eventRewardEntity.getLevelRepRewardMultiplier()) + baselineLevelRep;
         float playerLevelCashConst = getPlayerLevelConst(level,
                 eventRewardEntity.getLevelCashRewardMultiplier()) + baselineLevelCash;
-        Float timeConst = getTimeConst(eventEntity.getRewardsTimeLimit(), arbitrationPacket.getEventDurationInMilliseconds());
+        Float timeConst = getTimeConst(eventEntity.getRewardsTimeLimit(), eventDataEntity.getServerTimeInMilliseconds());
         rewardVO.setBaseRep(getBaseReward(baseRep, playerLevelRepConst, timeConst, Math.round( getPlayerCountConst() * getHappyHour() )));
         rewardVO.setBaseCash(getBaseReward(baseCash, playerLevelCashConst, timeConst, Math.round( getPlayerCountConst() * getHappyHour() )));    
         rewardVO.setBaseRep(getBaseReward(baseRep, playerLevelRepConst, timeConst, parameterBO.getFloatParam("REP_REWARD_MULTIPLIER", 1.0f)));
@@ -457,6 +460,11 @@ public class RewardBO {
     private LuckyDrawItem getEventRewardItem(PersonaEntity personaEntity, EventRewardEntity eventRewardEntity, Integer rank) {
         if (eventRewardEntity == null) {
             return getRandomRewardItem(personaEntity);
+        }
+
+        // If rank is 0 or invalid (player aborted/didn't finish), return null
+        if (rank <= 0 || rank > 8) {
+            return null;
         }
 
         RewardTableEntity rewardTableEntity;

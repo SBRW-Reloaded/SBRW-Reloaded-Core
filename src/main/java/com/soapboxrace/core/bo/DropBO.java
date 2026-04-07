@@ -10,13 +10,16 @@ import com.soapboxrace.core.jpa.ProductEntity;
 import com.soapboxrace.jaxb.http.LuckyDrawItem;
 import org.apache.commons.codec.digest.DigestUtils;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.Random;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class DropBO {
-    @EJB
+    @Inject
     private ProductBO productBO;
 
     public ProductEntity getRandomProductItem() {

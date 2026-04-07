@@ -139,7 +139,6 @@ public enum EngineExceptionCode {
     PersonaCarIsNull(-782),
     PersonaMottoIsTooLong(-783),
     PersonaNotFound(-771),
-    PlayerNotRanked(-1670),
     PowerUpItemInfoDoesntExist(-206),
     PresetCarDoesntExist(-210),
     RecursiveCatalog(-354),

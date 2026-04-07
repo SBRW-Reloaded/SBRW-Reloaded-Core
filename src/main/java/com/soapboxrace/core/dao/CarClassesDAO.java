@@ -9,14 +9,23 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.StringKeyedDAO;
 import com.soapboxrace.core.jpa.CarClassesEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
+import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class CarClassesDAO extends StringKeyedDAO<CarClassesEntity> {
 
     public CarClassesDAO() {
         super(CarClassesEntity.class);
+    }
+
+    public List<CarClassesEntity> findAll() {
+        TypedQuery<CarClassesEntity> query = entityManager.createNamedQuery("CarClassesEntity.findAll", CarClassesEntity.class);
+        return query.getResultList();
     }
 
     public CarClassesEntity findByHash(int hash) {

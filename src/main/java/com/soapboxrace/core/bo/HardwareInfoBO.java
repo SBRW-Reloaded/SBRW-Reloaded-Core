@@ -12,12 +12,15 @@ import com.soapboxrace.core.jpa.HardwareInfoEntity;
 import com.soapboxrace.jaxb.http.HardwareInfo;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class HardwareInfoBO {
-    @EJB
+    @Inject
     private HardwareInfoDAO hardwareInfoDAO;
 
     public HardwareInfoEntity save(HardwareInfo hardwareInfo) {

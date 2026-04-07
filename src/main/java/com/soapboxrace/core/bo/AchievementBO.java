@@ -5,6 +5,13 @@
  */
 
 package com.soapboxrace.core.bo;
+import javax.inject.Inject;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Schedule;
+import javax.ejb.Singleton;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -23,7 +30,6 @@ import com.soapboxrace.jaxb.xmpp.AchievementsAwarded;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeAchievementsAwarded;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.*;
 import javax.script.ScriptException;
 
 import java.time.LocalDateTime;
@@ -35,31 +41,31 @@ import java.util.stream.Collectors;
 @Lock(LockType.READ)
 public class AchievementBO {
     public static final DateTimeFormatter RANK_COMPLETED_AT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'hh:mm:ss");
-    @EJB
+    @Inject
     private ItemRewardBO itemRewardBO;
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
-    @EJB
+    @Inject
     private ScriptingBO scriptingBO;
-    @EJB
+    @Inject
     private PersonaAchievementDAO personaAchievementDAO;
-    @EJB
+    @Inject
     private PersonaAchievementRankDAO personaAchievementRankDAO;
-    @EJB
+    @Inject
     private AchievementDAO achievementDAO;
-    @EJB
+    @Inject
     private AchievementRankDAO achievementRankDAO;
-    @EJB
+    @Inject
     private AchievementRewardDAO achievementRewardDAO;
-    @EJB
+    @Inject
     private BadgeDefinitionDAO badgeDefinitionDAO;
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
-    @EJB
+    @Inject
     private OpenFireRestApiCli openFireRestApiCli;
 
     private List<AchievementEntity> achievementEntities;
@@ -67,6 +73,7 @@ public class AchievementBO {
     private Multimap<String, AchievementEntity> achievementCategoryMap;
 
     @PostConstruct
+    @Lock(LockType.WRITE)
     public void loadData() {
         this.achievementEntities = achievementDAO.findAll();
         this.badgeDefinitionEntities = badgeDefinitionDAO.findAll();
@@ -75,6 +82,7 @@ public class AchievementBO {
     }
 
     @Schedule(minute = "*/30", hour = "*")
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public void updateRankRarities() {
         Long countPersonas = personaDAO.countPersonas();
 
@@ -99,14 +107,23 @@ public class AchievementBO {
 
     /**
      * Synchronously commits the changes for the given {@link AchievementTransaction} instance.
+     * Runs in its own transaction (REQUIRES_NEW) afin d'isoler les verrous d'achievements
+     * de la transaction appelante et d'éviter les deadlocks MySQL (SQL 1213) quand plusieurs
+     * joueurs soumettent leurs résultats de course simultanément.
      *
      * @param personaEntity the {@link PersonaEntity} instance
      * @param transaction   the {@link AchievementTransaction} instance
      */
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public void commitTransaction(PersonaEntity personaEntity, AchievementTransaction transaction) {
         List<AchievementUpdateInfo> achievementUpdateInfoList = new ArrayList<>();
         transaction.getEntries().forEach((k, v) -> v.forEach(m -> achievementUpdateInfoList.addAll(updateAchievements(personaEntity, getPersonaAchievementEntityMap(personaEntity.getPersonaId()), k, m))));
-        personaDAO.update(personaEntity);
+        // NOTE: personaDAO.update() is intentionally NOT called here.
+        // personaEntity is managed by the outer transaction's EntityManager (EM1).
+        // Any score changes made by updateAchievements() are tracked by EM1 via dirty-checking
+        // and will be flushed when the outer transaction commits.
+        // Calling update() here in REQUIRES_NEW would conflict with the outer transaction's
+        // exclusive row lock on the same persona row (MySQL error 1205).
         List<BadgePacket> badgePacketList = driverPersonaBO.getBadges(personaEntity.getPersonaId()).getBadgePacket();
 
         sendUpdateMessage(personaEntity, achievementUpdateInfoList, badgePacketList);
@@ -199,19 +216,18 @@ public class AchievementBO {
                 personaAchievementRankDAO.findByPersonaIdAndAchievementRankId(personaId, achievementRankId);
 
         if (personaAchievementRankEntity == null) {
-            throw new IllegalArgumentException(personaId + " does not have achievement rank " + achievementRankId);
+            AchievementRewards empty = new AchievementRewards();
+            empty.setAchievementRankId(achievementRankId);
+            empty.setStatus(CommerceResultStatus.FAIL_INVALID_BASKET);
+            return empty;
         }
 
-        // Diagnostic détaillé de l'état de l'achievement
         String currentState = personaAchievementRankEntity.getState();
         if (!"RewardWaiting".equals(currentState)) {
-            // Log détaillé pour le diagnostic
-            Long achievementId = personaAchievementRankEntity.getPersonaAchievementEntity().getAchievementEntity().getId();
-            String achievementName = personaAchievementRankEntity.getPersonaAchievementEntity().getAchievementEntity().getBadgeDefinitionEntity().getName();
-            
-            throw new IllegalArgumentException(String.format(
-                "PersonaId=%d has no reward for AchievementRankId=%d (Achievement: %s, ID: %d, CurrentState: %s, Expected: RewardWaiting)", 
-                personaId, achievementRankId, achievementName, achievementId, currentState));
+            AchievementRewards empty = new AchievementRewards();
+            empty.setAchievementRankId(achievementRankId);
+            empty.setStatus(CommerceResultStatus.FAIL_INVALID_BASKET);
+            return empty;
         }
 
         AchievementRewards achievementRewards = new AchievementRewards();

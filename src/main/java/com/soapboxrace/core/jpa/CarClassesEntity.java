@@ -18,7 +18,8 @@ import javax.persistence.*;
 @Table(name = "CAR_CLASSES")
 @NamedQueries({
     @NamedQuery(name = "CarClassesEntity.findByName", query = "SELECT obj FROM CarClassesEntity obj WHERE obj.storeName = :name"),
-    @NamedQuery(name = "CarClassesEntity.findByHash", query = "SELECT obj FROM CarClassesEntity obj WHERE obj.hash = :hash")
+    @NamedQuery(name = "CarClassesEntity.findByHash", query = "SELECT obj FROM CarClassesEntity obj WHERE obj.hash = :hash"),
+    @NamedQuery(name = "CarClassesEntity.findAll", query = "SELECT obj FROM CarClassesEntity obj")
 })
 public class CarClassesEntity implements Serializable {
     private static final long serialVersionUID = 1L;

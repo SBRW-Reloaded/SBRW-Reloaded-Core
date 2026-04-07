@@ -9,7 +9,7 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.bo.LoginAnnouncementBO;
 import com.soapboxrace.core.bo.ParameterBO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -19,10 +19,10 @@ import javax.ws.rs.core.MediaType;
 @Path("/ReloadLoginAnnouncements")
 public class ReloadLoginAnnouncements {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private LoginAnnouncementBO loginAnnouncementBO;
 
     @POST

@@ -16,10 +16,8 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 
-import javax.ejb.EJB;
-import javax.ejb.Lock;
-import javax.ejb.LockType;
-import javax.ejb.Singleton;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.security.cert.X509Certificate;
@@ -28,10 +26,10 @@ import java.security.cert.X509Certificate;
  * Interacts to OpenFire XMPP server using the Smack library.
  * Capable of sending messages.
  */
-@Singleton
+@ApplicationScoped
 public class OpenFireConnector {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     private XMPPTCPConnection connection;
@@ -86,8 +84,7 @@ public class OpenFireConnector {
      * @param msg       The message to send.
      * @param personaId The ID of the persona to send the message to.
      */
-    @Lock(LockType.READ)
-    public void send(String msg, Long personaId) {
+        public void send(String msg, Long personaId) {
         Message message = new Message();
         message.setSubject("1337733113377331");
         message.setStanzaId("JN_1234567");

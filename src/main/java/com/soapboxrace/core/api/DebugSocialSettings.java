@@ -6,7 +6,7 @@ import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.UserEntity;
 import com.soapboxrace.jaxb.http.SocialSettings;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -22,7 +22,7 @@ public class DebugSocialSettings {
     @Inject
     RequestSessionInfo requestSessionInfo;
     
-    @EJB
+    @Inject
     UserDAO userDAO;
 
     @GET

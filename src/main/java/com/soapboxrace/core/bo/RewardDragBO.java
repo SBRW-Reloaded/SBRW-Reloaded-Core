@@ -12,23 +12,24 @@ import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.Accolades;
 import com.soapboxrace.jaxb.http.DragArbitrationPacket;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Typed;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+@Typed(RewardDragBO.class)
+@Transactional
 public class RewardDragBO extends RewardEventBO<DragArbitrationPacket> {
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private LegitRaceBO legitRaceBO;
 
-    @EJB
+    @Inject
     private LeaderboardBO leaderboardBO;
-
-    @EJB
-    private RankingBO rankingBO;
 
     @Override
     public Accolades getAccolades(Long activePersonaId, DragArbitrationPacket dragArbitrationPacket,
@@ -43,7 +44,7 @@ public class RewardDragBO extends RewardEventBO<DragArbitrationPacket> {
         RewardVO rewardVO = getRewardVO(personaEntity);
         EventRewardEntity eventRewardEntity = getRewardConfiguration(eventSessionEntity);
 
-        setBaseReward(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, dragArbitrationPacket, rewardVO);
+        setBaseReward(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, eventDataEntity, dragArbitrationPacket, rewardVO);
         setRankReward(eventRewardEntity, dragArbitrationPacket, rewardVO);
         setPerfectStartReward(eventRewardEntity, dragArbitrationPacket.getPerfectStart(), rewardVO);
         setTopSpeedReward(eventRewardEntity, dragArbitrationPacket.getTopSpeed(), rewardVO);
@@ -55,7 +56,6 @@ public class RewardDragBO extends RewardEventBO<DragArbitrationPacket> {
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, dragArbitrationPacket, eventSessionEntity, eventDataEntity);
-        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, dragArbitrationPacket, rewardVO);
     }

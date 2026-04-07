@@ -11,11 +11,12 @@ import com.soapboxrace.core.bo.*;
 import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.PersonaEntity;
+import com.soapboxrace.core.jpa.TokenSessionEntity;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 import org.slf4j.Logger;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -28,16 +29,16 @@ public class DriverPersona {
 
     private final Pattern NAME_PATTERN = Pattern.compile("^[A-Z0-9]{3,15}$");
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
 
-    @EJB
+    @Inject
     private UserBO userBo;
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenSessionBo;
 
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
     @Inject

@@ -11,11 +11,14 @@ import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.TreasureHuntConfigEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class TreasureHuntConfigDAO extends LongKeyedDAO<TreasureHuntConfigEntity> {
 
     public TreasureHuntConfigDAO() {

@@ -6,7 +6,7 @@ import com.soapboxrace.core.dao.*;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.core.xmpp.*;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -16,41 +16,50 @@ import java.security.MessageDigest;
 
 @Path("/ofcmdhook")
 public class Commando {
-    @EJB 
+    @Inject 
     private ParameterBO parameterBO;
 
-    @EJB 
+    @Inject 
     private PersonaDAO personaDAO;
 
-    @EJB 
+    @Inject 
     private AdminBO adminBO;
 
-    @EJB 
+    @Inject 
     private PersonaBO personaBO;
 
-    @EJB 
+    @Inject 
     private TokenSessionBO tokenSessionBO;
 
-    @EJB 
+    @Inject 
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB 
+    @Inject 
     private LobbyDAO lobbyDAO;
 
-    @EJB 
+    @Inject 
     private LobbyEntrantDAO lobbyEntrantDAO;
 
-    @EJB
+    @Inject
     private LiveryStoreDAO liveryStoreDao;
 
-    @EJB
+    @Inject
     private VinylDAO vinylDao;
 
-    @EJB
+    @Inject
     private VinylProductDAO vinylProductDAO;
 
-    @EJB
+    @Inject
     private LiveryStoreDataDAO liveryStoreDataDao;
+
+    @Inject
+    private LobbyCountdownBO lobbyCountdownBO;
+
+    @Inject
+    private CarDAO carDAO;
+
+    @Inject
+    private AutoTuneBO autoTuneBO;
 
     @POST
     public Response openfireHook(@HeaderParam("Authorization") String token, @QueryParam("cmd") String command, @QueryParam("pid") long persona, @QueryParam("webhook") Boolean webHook) {        
@@ -77,6 +86,8 @@ public class Commando {
 
         //Switch between them
         switch(commandSplitted[0].trim()) {
+            case "r":           //short alias for ready
+            case "ready":       new ReadyCommand().Command(tokenSessionBO, parameterBO, personaEntity, lobbyDAO, openFireSoapBoxCli, lobbyCountdownBO); break;
             case "nopu":        new NoPowerups().Command(tokenSessionBO, parameterBO, personaEntity, lobbyDAO, openFireSoapBoxCli, lobbyEntrantDAO); break;
             case "debug":       new Debug().Commands(); break;
             case "ban":         //adopted from below
@@ -84,6 +95,18 @@ public class Commando {
             case "unban":       new AdminCommand().Command(adminBO, personaEntity, command, webHook, openFireSoapBoxCli); break;
             case "livery":      new LiveryCommand().Command(command, openFireSoapBoxCli, personaEntity, liveryStoreDao, vinylDao, liveryStoreDataDao, parameterBO, personaBO, vinylProductDAO); break;
             case "carid":       new CarIdCommand().Command(openFireSoapBoxCli, personaEntity, personaBO); break;
+            case "tune":
+                if (parameterBO.getBoolParam("SBRWR_ENABLE_AUTOTUNE")) {
+                    TokenSessionEntity tuneTokenData = tokenSessionBO.findByUserId(personaEntity.getUser().getId());
+                    if (tuneTokenData != null && tuneTokenData.isInSafehouse()) {
+                        openFireSoapBoxCli.send(XmppChat.createSystemMessage("AutoTune can only be used in freeroam."), personaEntity.getPersonaId());
+                    } else {
+                        new AutoTuneCommand().Command(command, openFireSoapBoxCli, personaEntity, autoTuneBO, tokenSessionBO);
+                    }
+                } else {
+                    openFireSoapBoxCli.send(XmppChat.createSystemMessage("AutoTune is disabled."), personaEntity.getPersonaId());
+                }
+                break;
             default:            new DefaultCommand().Command(openFireSoapBoxCli, personaEntity, commandSplitted[0].trim()); break;
         }
         return Response.noContent().build();

@@ -5,6 +5,10 @@
  */
 
 package com.soapboxrace.core.bo;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
 
 import com.soapboxrace.core.events.PersonaPresenceUpdated;
 import io.lettuce.core.KeyValue;
@@ -14,7 +18,7 @@ import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.ejb.*;
+import javax.ejb.Asynchronous;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import java.util.HashMap;
@@ -26,12 +30,6 @@ import com.soapboxrace.core.jpa.EventEntity;
 import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 
-
-import com.soapboxrace.core.jpa.EventEntity;
-import com.soapboxrace.core.xmpp.XmppChat;
-import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
-
-
 /**
  * Responsible for managing the multiplayer matchmaking system.
  * This deals with 2 classes of events: restricted and open.
@@ -42,18 +40,18 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
  *
  * @author heyitsleo
  */
-@Singleton
 @Startup
+@Singleton
 @Lock(LockType.READ)
 public class MatchmakingBO {
 
-    @EJB
+    @Inject
     private RedisBO redisBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
 	private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @Inject
@@ -85,7 +83,11 @@ public class MatchmakingBO {
      */
     public void addPlayerToQueue(Long personaId, Integer carClass) {
         if (this.redisConnection != null) {
-            this.redisConnection.sync().hset("matchmaking_queue", personaId.toString(), carClass.toString());
+            try {
+                this.redisConnection.sync().hset("matchmaking_queue", personaId.toString(), carClass.toString());
+            } catch (Exception e) {
+                logger.error("Redis error in addPlayerToQueue for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
     }
 
@@ -96,7 +98,11 @@ public class MatchmakingBO {
      */
     public void removePlayerFromQueue(Long personaId) {
         if (this.redisConnection != null) {
-            this.redisConnection.sync().hdel("matchmaking_queue", personaId.toString());
+            try {
+                this.redisConnection.sync().hdel("matchmaking_queue", personaId.toString());
+            } catch (Exception e) {
+                logger.error("Redis error in removePlayerFromQueue for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
     }
 
@@ -110,19 +116,24 @@ public class MatchmakingBO {
         if (this.redisConnection == null)
             return -1L;
 
-        ScanIterator<KeyValue<String, String>> iterator = ScanIterator.hscan(this.redisConnection.sync(), "matchmaking_queue");
-        long personaId = -1L;
+        try {
+            ScanIterator<KeyValue<String, String>> iterator = ScanIterator.hscan(this.redisConnection.sync(), "matchmaking_queue");
+            long personaId = -1L;
 
-        while (iterator.hasNext()) {
-            KeyValue<String, String> keyValue = iterator.next();
+            while (iterator.hasNext()) {
+                KeyValue<String, String> keyValue = iterator.next();
 
-            if (carClass == 607077938 || Integer.parseInt(keyValue.getValue()) == carClass) {
-                personaId = Long.parseLong(keyValue.getKey());
-                break;
+                if (carClass == 607077938 || Integer.parseInt(keyValue.getValue()) == carClass) {
+                    personaId = Long.parseLong(keyValue.getKey());
+                    break;
+                }
             }
-        }
 
-        return personaId;
+            return personaId;
+        } catch (Exception e) {
+            logger.error("Redis error in getPlayerFromQueue for carClass={}: {}", carClass, e.getMessage());
+            return -1L;
+        }
     }
 
     /**
@@ -133,11 +144,13 @@ public class MatchmakingBO {
      */
     public void ignoreEvent(long personaId, EventEntity EventEntity) {
         if (this.redisConnection != null) {
-            // Ajouter l'événement à la liste des ignorés sans condition restrictive
-            // Car un joueur peut décliner une invitation même s'il n'est pas dans une file d'attente
-            this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
-            logger.debug("PersonaId={} ignored EventId={} ({})", personaId, EventEntity.getId(), EventEntity.getName());
-            openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
+            try {
+                this.redisConnection.sync().sadd("ignored_events." + personaId, Long.toString(EventEntity.getId()));
+                logger.debug("PersonaId={} ignored EventId={} ({})", personaId, EventEntity.getId(), EventEntity.getName());
+                openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_MATCHMAKING_IGNOREDEVENT," + EventEntity.getName()), personaId);
+            } catch (Exception e) {
+                logger.error("Redis error in ignoreEvent for PersonaId={}, EventId={}: {}", personaId, EventEntity.getId(), e.getMessage());
+            }
         }
     }
 
@@ -148,9 +161,13 @@ public class MatchmakingBO {
      */
     public void resetIgnoredEvents(long personaId) {
         if (this.redisConnection != null) {
-            Set<String> ignoredEvents = this.redisConnection.sync().smembers("ignored_events." + personaId);
-            this.redisConnection.sync().del("ignored_events." + personaId);
-            logger.debug("PersonaId={} reset ignored events: {}", personaId, ignoredEvents);
+            try {
+                Set<String> ignoredEvents = this.redisConnection.sync().smembers("ignored_events." + personaId);
+                this.redisConnection.sync().del("ignored_events." + personaId);
+                logger.debug("PersonaId={} reset ignored events: {}", personaId, ignoredEvents);
+            } catch (Exception e) {
+                logger.error("Redis error in resetIgnoredEvents for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
     }
 
@@ -163,12 +180,50 @@ public class MatchmakingBO {
      */
     public boolean isEventIgnored(long personaId, long eventId) {
         if (this.redisConnection != null) {
-            boolean ignored = this.redisConnection.sync().sismember("ignored_events." + personaId, Long.toString(eventId));
-            logger.debug("PersonaId={} EventId={} ignored={}", personaId, eventId, ignored);
-            return ignored;
+            try {
+                String temporaryKey = "ignored_event." + personaId + "." + eventId;
+                String tempValue = this.redisConnection.sync().get(temporaryKey);
+                if (tempValue != null) {
+                    logger.debug("PersonaId={} EventId={} ignored=true (temporary key with TTL)", personaId, eventId);
+                    return true;
+                }
+                
+                boolean ignored = this.redisConnection.sync().sismember("ignored_events." + personaId, Long.toString(eventId));
+                logger.debug("PersonaId={} EventId={} ignored={} (legacy SET check)", personaId, eventId, ignored);
+                return ignored;
+            } catch (Exception e) {
+                logger.error("Redis error in isEventIgnored for PersonaId={}, EventId={}: {}", personaId, eventId, e.getMessage());
+            }
         }
 
         return false;
+    }
+
+    /**
+     * Ignore temporairement un événement pour un joueur (sans message de chat).
+     * Utilisé quand un joueur quitte explicitement un lobby : empêche un re-match immédiat
+     * sur le même événement si le client rappelle joinqueueracenow dans la foulée.
+     *
+     * @param personaId  ID du persona
+     * @param eventId    ID de l'événement à ignorer
+     * @param ttlSeconds Durée en secondes après laquelle l'ignore expire automatiquement
+     */
+    public void ignoreEventTemporarily(Long personaId, int eventId, int ttlSeconds) {
+        if (this.redisConnection != null) {
+            try {
+                String temporaryKey = "ignored_event." + personaId + "." + eventId;
+                this.redisConnection.sync().setex(temporaryKey, ttlSeconds, "1");
+                
+                String setKey = "ignored_events." + personaId;
+                this.redisConnection.sync().sadd(setKey, Integer.toString(eventId));
+                this.redisConnection.sync().expire(setKey, Math.max(ttlSeconds, 300));
+                
+                logger.info("PersonaId={} temporarily ignored EventId={} for {} seconds (expires automatically)", 
+                    personaId, eventId, ttlSeconds);
+            } catch (Exception e) {
+                logger.error("Redis error in ignoreEventTemporarily for PersonaId={}, EventId={}: {}", personaId, eventId, e.getMessage());
+            }
+        }
     }
 
     /**
@@ -179,7 +234,11 @@ public class MatchmakingBO {
      */
     public Set<String> getIgnoredEvents(long personaId) {
         if (this.redisConnection != null) {
-            return this.redisConnection.sync().smembers("ignored_events." + personaId);
+            try {
+                return this.redisConnection.sync().smembers("ignored_events." + personaId);
+            } catch (Exception e) {
+                logger.error("Redis error in getIgnoredEvents for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
         return new HashSet<>();
     }
@@ -234,9 +293,13 @@ public class MatchmakingBO {
      */
     public void removePlayerFromRaceNowQueue(Long personaId) {
         if (this.redisConnection != null) {
-            logger.debug("RACENOW: Removing PersonaId={} from RaceNow queue", personaId);
-            this.redisConnection.sync().del("racenow_queue:" + personaId);
-            this.redisConnection.sync().srem("racenow_active_players", personaId.toString());
+            try {
+                logger.debug("RACENOW: Removing PersonaId={} from RaceNow queue", personaId);
+                this.redisConnection.sync().del("racenow_queue:" + personaId);
+                this.redisConnection.sync().srem("racenow_active_players", personaId.toString());
+            } catch (Exception e) {
+                logger.error("Redis error in removePlayerFromRaceNowQueue for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
     }
 
@@ -248,7 +311,11 @@ public class MatchmakingBO {
      */
     public boolean isPlayerInRaceNowQueue(Long personaId) {
         if (this.redisConnection != null) {
-            return this.redisConnection.sync().sismember("racenow_active_players", personaId.toString());
+            try {
+                return this.redisConnection.sync().sismember("racenow_active_players", personaId.toString());
+            } catch (Exception e) {
+                logger.error("Redis error in isPlayerInRaceNowQueue for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
         return false;
     }
@@ -260,7 +327,11 @@ public class MatchmakingBO {
      */
     public Set<String> getRaceNowQueuePlayers() {
         if (this.redisConnection != null) {
-            return this.redisConnection.sync().smembers("racenow_active_players");
+            try {
+                return this.redisConnection.sync().smembers("racenow_active_players");
+            } catch (Exception e) {
+                logger.error("Redis error in getRaceNowQueuePlayers: {}", e.getMessage());
+            }
         }
         return new HashSet<>();
     }
@@ -273,7 +344,11 @@ public class MatchmakingBO {
      */
     public Map<String, String> getRaceNowQueueData(Long personaId) {
         if (this.redisConnection != null) {
-            return this.redisConnection.sync().hgetall("racenow_queue:" + personaId);
+            try {
+                return this.redisConnection.sync().hgetall("racenow_queue:" + personaId);
+            } catch (Exception e) {
+                logger.error("Redis error in getRaceNowQueueData for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
         return null;
     }
@@ -286,10 +361,13 @@ public class MatchmakingBO {
      */
     public void triggerImmediateScanForPlayer(Long personaId) {
         if (this.redisConnection != null) {
-            // Marquer ce joueur pour un scan immédiat
-            this.redisConnection.sync().sadd("racenow_immediate_scan", personaId.toString());
-            this.redisConnection.sync().expire("racenow_immediate_scan", 30); // Expirer après 30 secondes
-            logger.debug("PersonaId={} marked for immediate RaceNow scan", personaId);
+            try {
+                this.redisConnection.sync().sadd("racenow_immediate_scan", personaId.toString());
+                this.redisConnection.sync().expire("racenow_immediate_scan", 30);
+                logger.debug("PersonaId={} marked for immediate RaceNow scan", personaId);
+            } catch (Exception e) {
+                logger.error("Redis error in triggerImmediateScanForPlayer for PersonaId={}: {}", personaId, e.getMessage());
+            }
         }
     }
 
@@ -300,12 +378,16 @@ public class MatchmakingBO {
      */
     public Set<String> getAndClearImmediateScanPlayers() {
         if (this.redisConnection != null) {
-            Set<String> players = this.redisConnection.sync().smembers("racenow_immediate_scan");
-            if (!players.isEmpty()) {
-                this.redisConnection.sync().del("racenow_immediate_scan");
-                logger.debug("Found {} players for immediate scan: {}", players.size(), players);
+            try {
+                Set<String> players = this.redisConnection.sync().smembers("racenow_immediate_scan");
+                if (!players.isEmpty()) {
+                    this.redisConnection.sync().del("racenow_immediate_scan");
+                    logger.debug("Found {} players for immediate scan: {}", players.size(), players);
+                }
+                return players;
+            } catch (Exception e) {
+                logger.error("Redis error in getAndClearImmediateScanPlayers: {}", e.getMessage());
             }
-            return players;
         }
         return new HashSet<>();
     }
@@ -371,8 +453,7 @@ public class MatchmakingBO {
     }
 
     @Asynchronous
-    @Lock(LockType.READ)
-    public void handlePersonaPresenceUpdated(@Observes PersonaPresenceUpdated personaPresenceUpdated) {
+        public void handlePersonaPresenceUpdated(@Observes PersonaPresenceUpdated personaPresenceUpdated) {
         Long personaId = personaPresenceUpdated.getPersonaId();
         removePlayerFromQueue(personaId);
         // Nettoyer aussi la file RaceNow quand le joueur se déconnecte

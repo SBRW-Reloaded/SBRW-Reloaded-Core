@@ -13,43 +13,46 @@ import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.script.ScriptException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class ItemRewardBO {
 
     private final Random random = new Random();
 
-    @EJB
+    @Inject
     private ScriptingBO scriptingBO;
 
-    @EJB
+    @Inject
     private ProductDAO productDAO;
 
-    @EJB
+    @Inject
     private RewardTableDAO rewardTableDAO;
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
 
-    @EJB
+    @Inject
     private BasketBO basketBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private CardPackDAO cardPackDAO;
 
-    @EJB
+    @Inject
     private CarClassesDAO carClassesDAO;
 
     public RewardedItemsContainer getRewards(PersonaEntity personaEntity, String rewardScript) {

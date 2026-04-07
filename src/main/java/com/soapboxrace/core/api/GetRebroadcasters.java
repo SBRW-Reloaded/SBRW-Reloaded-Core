@@ -11,7 +11,7 @@ import com.soapboxrace.core.bo.ParameterBO;
 import com.soapboxrace.jaxb.http.ArrayOfUdpRelayInfo;
 import com.soapboxrace.jaxb.http.UdpRelayInfo;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -19,19 +19,26 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriInfo;
 
+import com.soapboxrace.core.bo.RequestSessionInfo;
+
 @Path("/getrebroadcasters")
 public class GetRebroadcasters {
 
     @Context
     UriInfo uri;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
+
+    @Inject
+    private RequestSessionInfo requestSessionInfo;
 
     @GET
     @Secured
     @Produces(MediaType.APPLICATION_XML)
     public ArrayOfUdpRelayInfo getRebroadcasters() {
+        // Player is connecting to UDP freeroam relay = definitely in the open world, not safehouse
+        requestSessionInfo.getTokenSessionEntity().setInSafehouse(false);
         ArrayOfUdpRelayInfo arrayOfUdpRelayInfo = new ArrayOfUdpRelayInfo();
         UdpRelayInfo udpRelayInfo = new UdpRelayInfo();
         udpRelayInfo.setHost(parameterBO.getStrParam("UDP_FREEROAM_IP"));

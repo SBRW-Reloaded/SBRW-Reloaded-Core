@@ -32,7 +32,7 @@ public class NoPowerups {
                 }
 
                 //Disable command execution for meetingplace and drag events
-                if(lobbyEntities.getEvent().getEventModeId() == 19 || lobbyEntities.getEvent().getEventModeId() == 22 || lobbyEntities.getEvent().isRankedMode()) {
+                if(lobbyEntities.getEvent().getEventModeId() == 19 || lobbyEntities.getEvent().getEventModeId() == 22) {
                     return Response.noContent().build();
                 }
 

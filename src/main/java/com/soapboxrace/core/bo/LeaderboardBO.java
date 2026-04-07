@@ -1,7 +1,8 @@
 package com.soapboxrace.core.bo;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
@@ -21,21 +22,23 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.*;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class LeaderboardBO {
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
     
-    @EJB
+    @Inject
     private EventDataDAO eventDataDAO;
 
-    @EJB 
+    @Inject 
     private PersonaDAO personaDAO;
     
-    @EJB 
+    @Inject 
     private BanDAO banDAO;
 
     public void setupLeaderboard(Long activePersonaId, ArbitrationPacket arbitrationPacket, EventSessionEntity sessionEntity, EventDataEntity dataEntity) {

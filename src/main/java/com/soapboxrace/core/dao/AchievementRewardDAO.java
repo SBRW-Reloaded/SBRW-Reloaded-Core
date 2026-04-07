@@ -9,9 +9,12 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.AchievementRewardEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class AchievementRewardDAO extends LongKeyedDAO<AchievementRewardEntity> {
 
     public AchievementRewardDAO() {

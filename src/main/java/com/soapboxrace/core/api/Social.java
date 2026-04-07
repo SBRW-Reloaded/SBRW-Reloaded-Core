@@ -11,7 +11,7 @@ import com.soapboxrace.core.bo.AdminBO;
 import com.soapboxrace.core.bo.RequestSessionInfo;
 import com.soapboxrace.core.bo.SocialBO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -19,10 +19,10 @@ import javax.ws.rs.core.MediaType;
 @Path("/Social")
 public class Social {
 
-    @EJB
+    @Inject
     private SocialBO bo;
 
-    @EJB
+    @Inject
     private AdminBO adminBo;
 
     @Inject

@@ -1,7 +1,8 @@
 package com.soapboxrace.core.bo.util;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
 import java.util.*; 
 
@@ -15,9 +16,11 @@ import com.mrpowergamerbr.temmiewebhook.DiscordEmbed;
 import com.mrpowergamerbr.temmiewebhook.DiscordMessage;
 import com.mrpowergamerbr.temmiewebhook.TemmieWebhook;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class DiscordWebhook {
-	@EJB
+	@Inject
 	private ParameterBO parameterBO;
 
 	public void sendMessage(String message, String webHookUrl, String botName, int color, Map<String, String> extra) {

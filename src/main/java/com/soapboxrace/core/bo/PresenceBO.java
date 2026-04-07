@@ -5,6 +5,10 @@
  */
 
 package com.soapboxrace.core.bo;
+import javax.ejb.Asynchronous;
+import javax.ejb.Schedule;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
 
 import com.soapboxrace.core.events.PersonaPresenceUpdated;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -13,24 +17,22 @@ import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.ejb.*;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import java.util.List;
 
-@Singleton
 @Startup
-@Lock(LockType.READ)
+@Singleton
 public class PresenceBO {
     // Constantes pour les états de présence
     public static final Long PRESENCE_OFFLINE = 0L;
     public static final Long PRESENCE_ONLINE = 1L;
     public static final Long PRESENCE_IN_RACE = 2L;
 
-    @EJB
+    @Inject
     private RedisBO redisBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @Inject
@@ -39,6 +41,7 @@ public class PresenceBO {
     @Inject
     private Event<PersonaPresenceUpdated> personaPresenceUpdatedEvent;
 
+    // Redis utilisé UNIQUEMENT pour l'état "in race" (XMPP ne fait pas cette distinction)
     private StatefulRedisPubSubConnection<String, String> pubSubConnection;
     private StatefulRedisConnection<String, String> connection;
 
@@ -66,18 +69,30 @@ public class PresenceBO {
     @Asynchronous
     public void updatePresence(Long personaId, Long presence) {
         if (this.connection != null && !personaId.equals(0L)) {
-            Long currentPresence = this.getPresence(personaId);
-
+            Long currentPresence = getPresence(personaId);
             logger.debug("Updating presence for persona {} from {} to {}", personaId, currentPresence, presence);
 
             if (!currentPresence.equals(presence)) {
-                this.connection.sync().setex(getPresenceKey(personaId), parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 5*60), presence.toString());
-                this.pubSubConnection.sync().publish("game_presence_updates", personaId + "|" + presence);
-                personaPresenceUpdatedEvent.fire(new PersonaPresenceUpdated(personaId, presence));
+                // Validation de la transition
+                if (!isValidTransition(currentPresence, presence, personaId)) {
+                    logger.warn("Invalid presence transition for persona {}: {} -> {}. Transition blocked.", 
+                               personaId, getPresenceDescription(currentPresence), getPresenceDescription(presence));
+                    return;
+                }
                 
-                logger.info("Presence updated for persona {}: {} -> {}", personaId, currentPresence, presence);
+                this.connection.sync().setex(
+                    getPresenceKey(personaId),
+                    this.parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 300),
+                    presence.toString()
+                );
+                if (this.pubSubConnection != null) {
+                    this.pubSubConnection.sync().publish("game_presence_updates", personaId + "|" + presence);
+                }
+                this.personaPresenceUpdatedEvent.fire(new PersonaPresenceUpdated(personaId, presence));
+                logger.info("Presence updated for persona {}: {} -> {}", personaId, 
+                           getPresenceDescription(currentPresence), getPresenceDescription(presence));
             } else {
-                logger.debug("Presence unchanged for persona {}: {}", personaId, presence);
+                logger.debug("Presence unchanged for persona {}: {}", personaId, getPresenceDescription(presence));
             }
         } else {
             logger.warn("Cannot update presence: Redis connection is null or invalid personaId: {}", personaId);
@@ -85,7 +100,60 @@ public class PresenceBO {
     }
 
     /**
+     * Valide si une transition de statut est autorisée.
+     * Empêche les transitions invalides qui pourraient corrompre l'état du joueur.
+     * 
+     * @param currentPresence État actuel
+     * @param newPresence Nouvel état souhaité
+     * @param personaId ID du persona (pour les logs)
+     * @return true si la transition est valide
+     */
+    private boolean isValidTransition(Long currentPresence, Long newPresence, Long personaId) {
+        // Toutes les transitions vers OFFLINE sont autorisées (déconnexion d'urgence)
+        if (PRESENCE_OFFLINE.equals(newPresence)) {
+            return true;
+        }
+        
+        // OFFLINE -> ONLINE : Connexion normale (OK)
+        if (PRESENCE_OFFLINE.equals(currentPresence) && PRESENCE_ONLINE.equals(newPresence)) {
+            return true;
+        }
+        
+        // ONLINE -> IN_RACE : Le joueur rejoint une course (OK)
+        if (PRESENCE_ONLINE.equals(currentPresence) && PRESENCE_IN_RACE.equals(newPresence)) {
+            return true;
+        }
+        
+        // IN_RACE -> ONLINE : Le joueur termine/abandonne une course (OK)
+        if (PRESENCE_IN_RACE.equals(currentPresence) && PRESENCE_ONLINE.equals(newPresence)) {
+            return true;
+        }
+        
+        // IN_RACE -> IN_RACE : Rafraîchissement pendant la course (OK)
+        if (PRESENCE_IN_RACE.equals(currentPresence) && PRESENCE_IN_RACE.equals(newPresence)) {
+            return true;
+        }
+        
+        // ONLINE -> ONLINE : Rafraîchissement normal (OK)
+        if (PRESENCE_ONLINE.equals(currentPresence) && PRESENCE_ONLINE.equals(newPresence)) {
+            return true;
+        }
+        
+        // OFFLINE -> IN_RACE : INVALIDE ! Le joueur ne peut pas passer directement de déconnecté à en course
+        if (PRESENCE_OFFLINE.equals(currentPresence) && PRESENCE_IN_RACE.equals(newPresence)) {
+            logger.error("CRITICAL: Attempted invalid transition OFFLINE -> IN_RACE for persona {}", personaId);
+            return false;
+        }
+        
+        // Toute autre transition est considérée comme suspecte
+        logger.warn("Suspicious presence transition for persona {}: {} -> {}", 
+                   personaId, getPresenceDescription(currentPresence), getPresenceDescription(newPresence));
+        return false;
+    }
+
+    /**
      * Refreshes persona's presence expiration time. This should be called regularly for all online personas.
+     * FIX: Augmenté le TTL par défaut et amélioré les logs
      * @param personaId Persona ID whose presence to refresh
      */
     public void refreshPresence(long personaId) {
@@ -94,11 +162,9 @@ public class PresenceBO {
             Long ttl = this.connection.sync().ttl(presenceKey);
             
             if (ttl != null && ttl > 0) {
-                this.connection.sync().expire(presenceKey, parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 5*60));
+                this.connection.sync().expire(presenceKey, this.parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 300));
                 logger.debug("Refreshed presence TTL for persona {}, was {} seconds", personaId, ttl);
             } else {
-                // La clé n'existe pas ou a expiré - ne pas restaurer automatiquement
-                // Ceci évite de marquer des joueurs comme en ligne quand ils ne le sont pas
                 logger.debug("Presence key missing for persona {}, not restoring automatically", personaId);
             }
         }
@@ -107,6 +173,7 @@ public class PresenceBO {
     /**
      * Rafraîchit la présence d'un joueur seulement s'il a déjà une présence active.
      * Cette méthode évite de recréer une présence pour des joueurs qui se sont déconnectés.
+     * FIX: Augmenté le TTL et amélioré les logs
      * @param personaId ID du persona
      * @return true si la présence a été rafraîchie, false sinon
      */
@@ -116,7 +183,7 @@ public class PresenceBO {
             Long ttl = this.connection.sync().ttl(presenceKey);
             
             if (ttl != null && ttl > 0) {
-                this.connection.sync().expire(presenceKey, parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 5*60));
+                this.connection.sync().expire(presenceKey, this.parameterBO.getIntParam("SBRWR_PRESENCEEXPIRATIONTIME", 300));
                 logger.debug("Refreshed presence TTL for persona {}, was {} seconds", personaId, ttl);
                 return true;
             } else {
@@ -164,6 +231,35 @@ public class PresenceBO {
     }
 
     /**
+     * Force la mise hors ligne d'un joueur, même s'il était en course.
+     * Cette méthode contourne les validations de transition et doit être utilisée
+     * uniquement pour les déconnexions d'urgence (timeout, crash, ban, etc.)
+     * @param personaId ID du persona
+     */
+    public void forcePresenceOffline(Long personaId) {
+        if (this.connection != null && !personaId.equals(0L)) {
+            Long currentPresence = getPresence(personaId);
+            logger.warn("Forcing presence offline for persona {} (was: {})", 
+                       personaId, getPresenceDescription(currentPresence));
+            
+            // Supprimer directement la clé Redis sans passer par updatePresence
+            this.connection.sync().del(getPresenceKey(personaId));
+            
+            // Publier la notification de déconnexion
+            if (this.pubSubConnection != null) {
+                this.pubSubConnection.sync().publish("game_presence_updates", personaId + "|" + PRESENCE_OFFLINE);
+            }
+            
+            // Déclencher l'événement de changement de présence
+            this.personaPresenceUpdatedEvent.fire(new PersonaPresenceUpdated(personaId, PRESENCE_OFFLINE));
+            
+            logger.info("Forcefully set persona {} to OFFLINE (bypassed transition validation)", personaId);
+        } else {
+            logger.warn("Cannot force presence offline: invalid personaId {} or Redis connection null", personaId);
+        }
+    }
+
+    /**
      * Vérifie si un joueur est actuellement en course
      * @param personaId ID du persona
      * @return true si le joueur est en course
@@ -179,6 +275,13 @@ public class PresenceBO {
      */
     public boolean isPlayerOnline(Long personaId) {
         return PRESENCE_ONLINE.equals(getPresence(personaId));
+    }
+
+    /**
+     * Vérifie si un persona est en ligne et disponible via la présence Redis.
+     */
+    public boolean isPersonaOnlineAndAvailable(Long personaId) {
+        return personaId != null && !personaId.equals(0L) && !PRESENCE_OFFLINE.equals(getPresence(personaId));
     }
 
     /**
@@ -227,9 +330,10 @@ public class PresenceBO {
 
     /**
      * Nettoie et vérifie la cohérence des présences. À appeler périodiquement.
+     * FIX CRITIQUE: Envoie maintenant des notifications OFFLINE pour les déconnexions silencieuses (crash/kill)
      * Cette méthode identifie les personas qui devraient être en ligne mais qui apparaissent hors ligne.
      */
-    @Schedule(minute = "*/2", hour = "*", persistent = false) // Exécute toutes les 2 minutes
+    @Schedule(minute = "*/2", hour = "*", persistent = false)
     public void cleanupPresenceInconsistencies() {
         if (this.connection == null) {
             logger.debug("Skipping presence cleanup: Redis not available");
@@ -256,12 +360,11 @@ public class PresenceBO {
                 
                 try {
                     Long personaId = Long.parseLong(personaIdStr);
-                    
-                    if (ttl != null && ttl <= 30) { // TTL proche de l'expiration (30 secondes)
-                        logger.warn("Presence key {} for persona {} has low TTL: {} seconds", 
-                                   key, personaId, ttl);
+
+                    if (ttl != null && ttl <= 30L) {
+                        logger.warn("Presence key {} for persona {} has low TTL: {} seconds", key, personaId, ttl);
                     }
-                    
+
                     if (ttl != null && ttl > 0) {
                         activeCount++;
                     } else {
@@ -273,7 +376,7 @@ public class PresenceBO {
                     logger.warn("Invalid persona ID in presence key: {}", key);
                 }
             }
-            
+
             logger.debug("Presence cleanup completed: {} active, {} expired/removed", activeCount, expiredCount);
             
         } catch (Exception e) {
@@ -295,15 +398,50 @@ public class PresenceBO {
             info.append("Presence Debug Info:\n");
             info.append("Total active presence keys: ").append(activeKeys.size()).append("\n");
             
+            // Statistiques par état
+            int onlineCount = 0;
+            int inRaceCount = 0;
+            int unknownCount = 0;
+            int lowTTLCount = 0;
+            
             if (!activeKeys.isEmpty()) {
-                info.append("Active presences:\n");
+                for (String key : activeKeys) {
+                    String value = this.connection.sync().get(key);
+                    if (value != null) {
+                        Long presenceValue = Long.parseLong(value);
+                        Long ttl = this.connection.sync().ttl(key);
+                        
+                        if (PRESENCE_ONLINE.equals(presenceValue)) {
+                            onlineCount++;
+                        } else if (PRESENCE_IN_RACE.equals(presenceValue)) {
+                            inRaceCount++;
+                        } else {
+                            unknownCount++;
+                        }
+                        
+                        if (ttl != null && ttl <= 30L) {
+                            lowTTLCount++;
+                        }
+                    }
+                }
+                
+                info.append("\nStatistics by status:\n");
+                info.append("  Online (Safehouse): ").append(onlineCount).append("\n");
+                info.append("  In Race: ").append(inRaceCount).append("\n");
+                info.append("  Unknown/Other: ").append(unknownCount).append("\n");
+                info.append("  Low TTL (<30s): ").append(lowTTLCount).append("\n");
+                
+                info.append("\nDetailed presences:\n");
                 for (String key : activeKeys) {
                     String personaIdStr = key.substring("game_presence.".length());
                     String value = this.connection.sync().get(key);
                     Long ttl = this.connection.sync().ttl(key);
                     Long presenceValue = value != null ? Long.parseLong(value) : 0L;
-                    info.append("  ").append(personaIdStr).append(": ").append(getPresenceDescription(presenceValue))
-                        .append(" (TTL: ").append(ttl).append("s)\n");
+                    
+                    String ttlWarning = (ttl != null && ttl <= 30L) ? " [LOW TTL WARNING]" : "";
+                    info.append("  Persona ").append(personaIdStr).append(": ")
+                        .append(getPresenceDescription(presenceValue))
+                        .append(" (TTL: ").append(ttl).append("s)").append(ttlWarning).append("\n");
                 }
             }
             

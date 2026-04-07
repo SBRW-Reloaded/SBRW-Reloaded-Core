@@ -9,12 +9,15 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.LongKeyedDAO;
 import com.soapboxrace.core.jpa.RecoveryPasswordEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import java.util.Date;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class RecoveryPasswordDAO extends LongKeyedDAO<RecoveryPasswordEntity> {
 
     public RecoveryPasswordDAO() {

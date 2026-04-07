@@ -20,7 +20,7 @@ import com.soapboxrace.jaxb.http.SessionInfo;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.core.xmpp.XmppChat;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -33,40 +33,40 @@ import org.slf4j.Logger;
 @Path("/matchmaking")
 public class MatchMaking {
 
-    @EJB
+    @Inject
     private EventBO eventBO;
 
-    @EJB
+    @Inject
     private LobbyBO lobbyBO;
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenSessionBO;
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
-    @EJB
+    @Inject
     private MatchmakingBO matchmakingBO;
 
-    @EJB
+    @Inject
     private DiscordWebhook discordWebhook;
     
-    @EJB
+    @Inject
     private LobbyDAO lobbyDAO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private EventDAO eventDAO;
 
-    @EJB
+    @Inject
     private OpenFireRestApiCli openFireRestApiCli;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @Inject
@@ -81,6 +81,7 @@ public class MatchMaking {
     @Produces(MediaType.APPLICATION_XML)
     public String joinQueueRaceNow() {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        requestSessionInfo.getTokenSessionEntity().setInSafehouse(false);
         logger.info("RACENOW ENDPOINT: PersonaId={} is requesting to join RaceNow queue", activePersonaId);
         
         OwnedCarTrans defaultCar = personaBO.getDefaultCar(activePersonaId);
@@ -99,6 +100,7 @@ public class MatchMaking {
     @Path("/joinqueueevent/{eventId}")
     @Produces(MediaType.APPLICATION_XML)
     public String joinQueueEvent(@PathParam("eventId") int eventId) {
+        requestSessionInfo.getTokenSessionEntity().setInSafehouse(false);
         lobbyBO.joinQueueEvent(requestSessionInfo.getActivePersonaId(), eventId);
         return "";
     }
@@ -109,13 +111,35 @@ public class MatchMaking {
     @Produces(MediaType.APPLICATION_XML)
     public String leaveQueue() {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
-        logger.info("LEAVE_QUEUE ENDPOINT: PersonaId={} is leaving all queues", activePersonaId);
+        Long activeLobbyId = requestSessionInfo.getActiveLobbyId();
+        
+        logger.info("LEAVE_QUEUE ENDPOINT: PersonaId={} is leaving all queues (ActiveLobbyId={})", 
+                    activePersonaId, activeLobbyId);
+        
+        // FIX CRITIQUE: Si le joueur est dans un lobby (via RaceNow auto-join ou invitation acceptée),
+        // il faut le retirer du lobby aussi, sinon il reste comme entrant fantôme
+        if (activeLobbyId != null && !activeLobbyId.equals(0L)) {
+            logger.info("LEAVE_QUEUE: PersonaId={} is in LobbyId={}, removing from lobby first", 
+                        activePersonaId, activeLobbyId);
+            
+            // Ignorer temporairement l'événement de ce lobby pour éviter un re-match immédiat
+            LobbyEntity leavingLobby = lobbyDAO.findById(activeLobbyId);
+            if (leavingLobby != null) {
+                matchmakingBO.ignoreEventTemporarily(activePersonaId, leavingLobby.getEvent().getId(), 60);
+            }
+            
+            lobbyBO.removeEntrantFromLobby(activePersonaId, activeLobbyId);
+            logger.info("LEAVE_QUEUE: PersonaId={} removed from LobbyId={}", activePersonaId, activeLobbyId);
+        }
+
+        // Sécurité supplémentaire: nettoyer toute appartenance résiduelle à d'autres lobbies actifs.
+        lobbyBO.removePersonaFromAllActiveLobbies(activePersonaId);
         
         matchmakingBO.removePlayerFromQueue(activePersonaId);
         // Retirer aussi de la file RaceNow persistante
         matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
         
-        logger.info("LEAVE_QUEUE ENDPOINT: PersonaId={} removed from all queues", activePersonaId);
+        logger.info("LEAVE_QUEUE ENDPOINT: PersonaId={} removed from all queues and lobbies", activePersonaId);
         
         tokenSessionBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
@@ -130,10 +154,20 @@ public class MatchMaking {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
         Long activeLobbyId = requestSessionInfo.getActiveLobbyId();
         if (activeLobbyId != null && !activeLobbyId.equals(0L)) {
+            // NE PAS ignorer l'événement quand le joueur quitte volontairement
+            // Il devrait pouvoir retrouver cet événement immédiatement via RaceNow
+            // L'ignore n'est utile que pour declineinvite (matchmakingBO.ignoreEvent)
+            
             lobbyBO.removeEntrantFromLobby(activePersonaId, activeLobbyId);
             tokenSessionBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
             tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         }
+
+        // Sécurité supplémentaire: nettoyer toute appartenance résiduelle à d'autres lobbies actifs.
+        lobbyBO.removePersonaFromAllActiveLobbies(activePersonaId);
+
+        matchmakingBO.removePlayerFromQueue(activePersonaId);
+        matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
         return "";
     }
 
@@ -163,7 +197,11 @@ public class MatchMaking {
     @Path("/makeprivatelobby/{eventId}")
     @Produces(MediaType.APPLICATION_XML)
     public String makePrivateLobby(@PathParam("eventId") int eventId) {
-        lobbyBO.createPrivateLobby(requestSessionInfo.getActivePersonaId(), eventId);
+        Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        logger.info("MAKEPRIVATELOBBY: PersonaId={} creating private lobby for EventId={}", 
+            activePersonaId, eventId);
+
+        lobbyBO.createPrivateLobby(activePersonaId, eventId);
         return "";
     }
 
@@ -172,10 +210,13 @@ public class MatchMaking {
     @Path("/acceptinvite")
     @Produces(MediaType.APPLICATION_XML)
     public LobbyInfo acceptInvite(@QueryParam("lobbyInviteId") Long lobbyInviteId) {
-        tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), lobbyInviteId);
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
 
         LobbyEntity lobbyInformation = lobbyDAO.findById(lobbyInviteId);
+
+        if (lobbyInformation == null) {
+            return new LobbyInfo();
+        }
 
 		if(activePersonaId.equals(lobbyInformation.getPersonaId()) && lobbyInformation.getIsPrivate() == false) {
 			EventEntity eventInformation = lobbyInformation.getEvent();
@@ -200,11 +241,19 @@ public class MatchMaking {
             } 
         }
 
-        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22) && lobbyInformation.getEvent().isRankedMode() == false) {
+        if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU") && (lobbyInformation.getEvent().getEventModeId() != 19 || lobbyInformation.getEvent().getEventModeId() != 22)) {
             openFireSoapBoxCli.send(XmppChat.createSystemMessage("SBRWR_NOPU_JOIN_MSG," + parameterBO.getStrParam("SBRWR_NOPU_REQUIREDPERCENT")), activePersonaId);
         }
 
-        return lobbyBO.acceptinvite(requestSessionInfo.getActivePersonaId(), lobbyInviteId);
+        try {
+            LobbyInfo lobbyInfo = lobbyBO.acceptinvite(requestSessionInfo.getActivePersonaId(), lobbyInviteId);
+            tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), lobbyInviteId);
+            return lobbyInfo;
+        } catch (RuntimeException e) {
+            // Éviter de laisser un activeLobbyId incohérent si l'acceptation échoue.
+            tokenSessionBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
+            throw e;
+        }
     }
 
     @PUT
@@ -220,5 +269,6 @@ public class MatchMaking {
         logger.info("DECLINE_INVITE ENDPOINT: PersonaId={} decline completed", activePersonaId);
         return "";
     }
-
 }
+        
+        

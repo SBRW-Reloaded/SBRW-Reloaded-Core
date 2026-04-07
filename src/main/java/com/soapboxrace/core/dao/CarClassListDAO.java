@@ -9,11 +9,14 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.StringKeyedDAO;
 import com.soapboxrace.core.jpa.CarClassListEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class CarClassListDAO extends StringKeyedDAO<CarClassListEntity> {
 
     public CarClassListDAO() {
@@ -25,9 +28,23 @@ public class CarClassListDAO extends StringKeyedDAO<CarClassListEntity> {
         return query.getResultList();
     }
 
+    public CarClassListEntity findByHash(int hash) {
+        TypedQuery<CarClassListEntity> query = entityManager.createNamedQuery("CarClassListEntity.findByHash", CarClassListEntity.class);
+        query.setParameter("hash", hash);
+        List<CarClassListEntity> resultList = query.getResultList();
+        return resultList.isEmpty() ? null : resultList.get(0);
+    }
+
     public CarClassListEntity findByRating(int rating) {
         TypedQuery<CarClassListEntity> query = entityManager.createNamedQuery("CarClassListEntity.findByRating", CarClassListEntity.class);
         query.setParameter("rating", rating);
         return query.getSingleResult();
+    }
+
+    public CarClassListEntity findByName(String name) {
+        TypedQuery<CarClassListEntity> query = entityManager.createNamedQuery("CarClassListEntity.findByName", CarClassListEntity.class);
+        query.setParameter("name", name.toUpperCase());
+        List<CarClassListEntity> results = query.getResultList();
+        return results.isEmpty() ? null : results.get(0);
     }
 }

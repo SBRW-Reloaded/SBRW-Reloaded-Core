@@ -10,12 +10,15 @@ import com.soapboxrace.core.dao.BanDAO;
 import com.soapboxrace.core.jpa.BanEntity;
 import com.soapboxrace.core.jpa.UserEntity;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class AuthenticationBO {
-    @EJB
+    @Inject
     private BanDAO banDAO;
 
     public BanEntity checkUserBan(UserEntity userEntity) {

@@ -13,8 +13,9 @@ import com.soapboxrace.core.jpa.UserEntity;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Resource;
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -24,16 +25,18 @@ import javax.mail.internet.MimeMessage;
 import java.util.Date;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class RecoveryPasswordBO {
 
-    @EJB
+    @Inject
     private RecoveryPasswordDAO recoveryPasswordDao;
 
-    @EJB
+    @Inject
     private UserDAO userDao;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @Resource(mappedName = "java:jboss/mail/Gmail")

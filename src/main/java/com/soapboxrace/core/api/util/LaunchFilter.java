@@ -13,7 +13,7 @@ import com.soapboxrace.jaxb.login.LoginStatusVO;
 import org.json.JSONObject;
 
 import javax.annotation.Priority;
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -27,13 +27,13 @@ import javax.ws.rs.ext.Provider;
 @Priority(Priorities.AUTHORIZATION)
 public class LaunchFilter implements ContainerRequestFilter {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @Context
     private HttpServletRequest sr;
 
-    @EJB
+    @Inject
     private UserDAO userDao;
 
     public static int compareVersions(String v1, String v2) {
@@ -55,7 +55,7 @@ public class LaunchFilter implements ContainerRequestFilter {
         String email = sr.getParameter("email");
 
         UserEntity userEntity = userDao.findByEmail(email);
-        if (userEntity != null) {
+        if (userEntity != null && hwid != null && !hwid.equals(userEntity.getHwid())) {
             userDao.updateHwid(userEntity.getId(), hwid);
         }
 

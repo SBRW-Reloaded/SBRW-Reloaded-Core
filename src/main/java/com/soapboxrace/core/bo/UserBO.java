@@ -26,34 +26,37 @@ import com.soapboxrace.jaxb.http.User;
 import com.soapboxrace.jaxb.http.UserInfo;
 import org.apache.commons.validator.routines.EmailValidator;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class UserBO {
 
-    @EJB
+    @Inject
     private UserDAO userDao;
 
-    @EJB
+    @Inject
     private InviteTicketDAO inviteTicketDAO;
 
-    @EJB
+    @Inject
     private OpenFireRestApiCli xmppRestApiCli;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private KCrewMemberDAO kCrewMemberDAO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
     public void createXmppUser(UserInfo userInfo) {

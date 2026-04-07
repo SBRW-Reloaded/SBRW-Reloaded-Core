@@ -11,19 +11,22 @@ import com.soapboxrace.core.bo.util.HelpingTools;
 import com.soapboxrace.core.bo.util.ServerInformationVO;
 import com.soapboxrace.core.jpa.OnlineUsersEntity;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class GetServerInformationBO {
 
-    @EJB
+    @Inject
     private OnlineUsersBO onlineUsersBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-	@EJB
+	@Inject
 	private RewardBO rewardBO;
 
     public ServerInformationVO getServerInformation() {

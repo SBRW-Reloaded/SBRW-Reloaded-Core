@@ -11,12 +11,15 @@ import com.soapboxrace.core.jpa.LobbyEntity;
 import com.soapboxrace.core.jpa.LobbyEntrantEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class LobbyEntrantDAO extends LongKeyedDAO<LobbyEntrantEntity> {
 
     public LobbyEntrantDAO() {
@@ -57,5 +60,38 @@ public class LobbyEntrantDAO extends LongKeyedDAO<LobbyEntrantEntity> {
         query.setParameter("lobby", lobby);
 
         return query.getSingleResult().intValue();
+    }
+
+    /**
+     * Compte le nombre d'entrants d'un lobby directement en base, sans passer par le cache JPA.
+     * Utilisé dans onTimeout pour obtenir un décompte fiable avant de lancer la course.
+     */
+    public long countByLobby(Long lobbyId) {
+        return entityManager.createQuery(
+            "SELECT COUNT(e) FROM LobbyEntrantEntity e WHERE e.lobby.id = :lobbyId",
+            Long.class
+        ).setParameter("lobbyId", lobbyId).getSingleResult();
+    }
+
+    /**
+     * Compte le nombre d'entrées d'un persona dans un lobby (doit être 0 ou 1 en fonctionnement normal).
+     */
+    public long countByPersonaAndLobby(Long personaId, Long lobbyId) {
+        return entityManager.createQuery(
+            "SELECT COUNT(e) FROM LobbyEntrantEntity e WHERE e.persona.personaId = :personaId AND e.lobby.id = :lobbyId",
+            Long.class
+        ).setParameter("personaId", personaId)
+         .setParameter("lobbyId", lobbyId)
+         .getSingleResult();
+    }
+
+    /**
+     * Retourne les IDs des lobbies actifs dans lesquels un persona est présent.
+     */
+    public List<Long> findActiveLobbyIdsByPersona(Long personaId) {
+        return entityManager.createQuery(
+            "SELECT DISTINCT e.lobby.id FROM LobbyEntrantEntity e WHERE e.persona.personaId = :personaId AND e.lobby.isActive = true",
+            Long.class
+        ).setParameter("personaId", personaId).getResultList();
     }
 }

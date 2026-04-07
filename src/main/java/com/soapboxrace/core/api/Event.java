@@ -15,9 +15,11 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -27,52 +29,51 @@ import java.time.LocalDateTime;
 @Path("/event")
 public class Event {
 
-    @EJB
+    private static final Logger logger = LoggerFactory.getLogger(Event.class);
+
+    @Inject
     private TokenSessionBO tokenBO;
 
-    @EJB
+    @Inject
     private EventBO eventBO;
 
-    @EJB
+    @Inject
     private EventResultDragBO eventResultDragBO;
 
-    @EJB
+    @Inject
     private EventResultPursuitBO eventResultPursuitBO;
 
-    @EJB
+    @Inject
     private EventResultRouteBO eventResultRouteBO;
 
-    @EJB
+    @Inject
     private EventResultTeamEscapeBO eventResultTeamEscapeBO;
 
-    @EJB
+    @Inject
     private MatchmakingBO matchmakingBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDao;
 
-    @EJB
+    @Inject
     private LobbyEntrantDAO lobbyEntrantDao;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDAO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
-    private RankedDAO rankedDAO;
-    
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @POST
@@ -95,41 +96,19 @@ public class Event {
             leavepenality.setRacerStatus(RacerStatus.ABANDONED);
 
             eventDataDAO.update(leavepenality);
-
-            if(leavepenality.getEvent().isRankedMode()) {
-                PersonaEntity personaEntity = personaDAO.find(activePersonaId);
-                int current_ranking_points = personaEntity.getRankingPoints();
-                int ranking_points_earned = parameterBO.getIntParam("SBRWR_RANKEDMODE_POINTS_LEFTRACE", -28);
-
-                if (ranking_points_earned < 0) {
-                    ranking_points_earned = ranking_points_earned/-1;
-                }
-
-                RankedEntity rankedEntity = new RankedEntity();
-                rankedEntity.setDate(LocalDateTime.now());
-                rankedEntity.setPersonaId(personaEntity.getPersonaId().intValue());
-                rankedEntity.setPointsWon(0);
-                rankedEntity.setPointsLost(ranking_points_earned);
-                rankedDAO.insert(rankedEntity);
-
-                int calculated_ranking_points = Math.max(current_ranking_points - ranking_points_earned, 0);
-                if(calculated_ranking_points == 0) ranking_points_earned = 0;
-
-                String rankingMessage = String.format("SBRWR_RANKEDMODE_POS_LEFT,%s,%s", ranking_points_earned, calculated_ranking_points);
-                openFireSoapBoxCli.send(XmppChat.createSystemMessage(rankingMessage), activePersonaId);
-
-                personaEntity.setRankingPoints(calculated_ranking_points);
-                personaDAO.update(personaEntity);
-            }
         }
         
         // Nettoyage des sessions
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), null);
         tokenBO.setActiveLobbyId(requestSessionInfo.getTokenSessionEntity(), null);
         
+        // Retirer le joueur des files d'attente pour éviter qu'un lobby Race Again lui envoie une invitation
+        matchmakingBO.removePlayerFromQueue(activePersonaId);
+        matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
+
         // Remettre le statut de présence à "en ligne" (1) après abandon de course
         if (activePersonaId != null && !activePersonaId.equals(0L)) {
-            presenceBO.updatePresence(activePersonaId, 1L); // 1 = en ligne
+            presenceBO.setPresenceOnline(activePersonaId);
         }
         
         return arbitrationRedirect.isEmpty() ? "" : arbitrationRedirect;
@@ -141,21 +120,34 @@ public class Event {
     @Produces(MediaType.APPLICATION_XML)
     public String launched(@QueryParam("eventSessionId") Long eventSessionId) {
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
+        EventSessionEntity eventSessionEntity = eventSessionDao.find(eventSessionId);
+        Long sessionStarted = eventSessionEntity != null ? eventSessionEntity.getStarted() : null;
+        long delayMs = (sessionStarted != null) ? (System.currentTimeMillis() - sessionStarted) : -1L;
+
+        logger.info("EVENT_LAUNCHED: PersonaId={} called /Event/launched for EventSessionId={} (DelaySinceSessionStart={}ms)", 
+            activePersonaId, eventSessionId, delayMs);
+        
         matchmakingBO.removePlayerFromQueue(activePersonaId);
+        matchmakingBO.removePlayerFromRaceNowQueue(activePersonaId);
+        
+        logger.info("EVENT_LAUNCHED: Creating EventData for PersonaId={} in EventSessionId={}", 
+            activePersonaId, eventSessionId);
         eventBO.createEventDataSession(activePersonaId, eventSessionId);
+        logger.info("EVENT_LAUNCHED: EventData created successfully for PersonaId={}", activePersonaId);
+        
         tokenBO.setEventSessionId(requestSessionInfo.getTokenSessionEntity(), eventSessionId);
+        requestSessionInfo.getTokenSessionEntity().setInSafehouse(false);
 
         // Mettre le statut de présence à "en course" (-1)
         if (activePersonaId != null && !activePersonaId.equals(0L)) {
-            presenceBO.updatePresence(activePersonaId, 2L); // 2 = en course
+            presenceBO.setPresenceInRace(activePersonaId);
         }
 
         //NOPU SETH
         if(parameterBO.getBoolParam("SBRWR_ENABLE_NOPU")) {
             Boolean nopuMode = false;
 
-            EventSessionEntity eventSessionEntity = eventSessionDao.find(eventSessionId);
-            LobbyEntity lobbyEntities = eventSessionEntity.getLobby();
+            LobbyEntity lobbyEntities = eventSessionEntity != null ? eventSessionEntity.getLobby() : null;
 
             if(lobbyEntities != null) {
                 List<LobbyEntrantEntity> lobbyEntrants = lobbyEntities.getEntrants();
@@ -169,8 +161,10 @@ public class Event {
                 }
             }
 
-            eventSessionEntity.setNopuMode(nopuMode);
-            eventSessionDao.update(eventSessionEntity);
+            if (eventSessionEntity != null) {
+                eventSessionEntity.setNopuMode(nopuMode);
+                eventSessionDao.update(eventSessionEntity);
+            }
         }
 
         return "";
@@ -216,7 +210,7 @@ public class Event {
 
         // Remettre le statut de présence à "en ligne" (1) après la course
         if (activePersonaId != null && !activePersonaId.equals(0L)) {
-            presenceBO.updatePresence(activePersonaId, 1L); // 1 = en ligne
+            presenceBO.setPresenceOnline(activePersonaId);
         }
 
         if (eventResult == null) {
@@ -244,7 +238,7 @@ public class Event {
         
         // Remettre le statut de présence à "en ligne" (1) après la poursuite
         if (activePersonaId != null && !activePersonaId.equals(0L)) {
-            presenceBO.updatePresence(activePersonaId, 1L); // 1 = en ligne
+            presenceBO.setPresenceOnline(activePersonaId);
         }
         
         return JAXBUtility.marshal(eventResultPursuitBO.handle(eventSessionEntity, activePersonaId, pursuitArbitrationPacket));

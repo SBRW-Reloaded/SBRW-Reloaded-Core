@@ -11,8 +11,10 @@ import javax.persistence.*;
 @Entity
 @Table(name = "CAR_CLASSLIST")
 @NamedQueries({
-    @NamedQuery(name = "CarClassListEntity.findByRating", query = "SELECT obj fROM CarClassListEntity obj WHERE obj.minVal <= :rating AND obj.maxVal >= :rating"),
-    @NamedQuery(name = "CarClassListEntity.findAll", query = "SELECT obj fROM CarClassListEntity obj")
+    @NamedQuery(name = "CarClassListEntity.findByRating", query = "SELECT obj FROM CarClassListEntity obj WHERE obj.minVal <= :rating AND obj.maxVal >= :rating"),
+    @NamedQuery(name = "CarClassListEntity.findAll", query = "SELECT obj FROM CarClassListEntity obj"),
+    @NamedQuery(name = "CarClassListEntity.findByHash", query = "SELECT obj FROM CarClassListEntity obj WHERE obj.hash = :hash"),
+    @NamedQuery(name = "CarClassListEntity.findByName", query = "SELECT obj FROM CarClassListEntity obj WHERE UPPER(obj.name) = :name")
 })
 public class CarClassListEntity {
 

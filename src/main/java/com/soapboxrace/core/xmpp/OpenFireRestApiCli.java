@@ -4,7 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
  
 import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
+import javax.inject.Inject;
+import javax.inject.Named;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import java.util.List;
@@ -16,10 +17,10 @@ public class OpenFireRestApiCli {
     
     private XmppProvider provider;
 
-    @EJB(beanName = "OpenfireXmppProvider")
+    @Inject @Named("OpenfireXmppProvider")
     XmppProvider openfireProvider;
  
-    @EJB(beanName = "SbrwXmppProvider")
+    @Inject @Named("SbrwXmppProvider")
     XmppProvider sbrwProvider;
  
      @PostConstruct
@@ -57,5 +58,17 @@ public class OpenFireRestApiCli {
  
      public void sendMessage(long recipient, String message) {
           provider.sendMessage(recipient, message);
+     }
+     
+     public boolean isPersonaOnline(long personaId) {
+          return provider.isPersonaOnline(personaId);
+     }
+     
+     public void removePersonaFromRoom(long personaId, String roomName) {
+          provider.removePersonaFromRoom(personaId, roomName);
+     }
+
+     public void kickOccupantFromRoom(long personaId, String roomName) {
+          provider.kickOccupantFromRoom(personaId, roomName);
      }
 }

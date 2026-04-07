@@ -19,7 +19,7 @@ import com.soapboxrace.jaxb.util.JAXBUtility;
 
 import com.soapboxrace.core.dao.HardwareInfoDAO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -28,19 +28,19 @@ import java.io.InputStream;
 @Path("/Reporting")
 public class Reporting {
 
-    @EJB
+    @Inject
     private HardwareInfoBO hardwareInfoBO;
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenBO;
 
-    @EJB
+    @Inject
     private UserDAO userDAO;
 
     @Inject
     private RequestSessionInfo requestSessionInfo;
     
-    @EJB
+    @Inject
     private HardwareInfoDAO hardwareInfoDAO;
 
     @POST

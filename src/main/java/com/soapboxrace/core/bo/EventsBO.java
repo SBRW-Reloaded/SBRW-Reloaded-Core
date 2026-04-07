@@ -20,38 +20,41 @@ import com.soapboxrace.core.jpa.TreasureHuntEntity;
 import com.soapboxrace.core.jpa.OnlineUsersEntity;
 import com.soapboxrace.jaxb.http.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Random;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class EventsBO {
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private TreasureHuntDAO treasureHuntDao;
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBo;
 
-    @EJB
+    @Inject
     private RewardBO rewardBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private TreasureHuntConfigDAO treasureHuntConfigDAO;
 
-    @EJB
+    @Inject
     private OnlineUsersBO onlineUsersBO;
 
     public TreasureHuntEventSession getTreasureHuntEventSession(Long activePersonaId) {

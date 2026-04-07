@@ -31,5 +31,13 @@ public abstract class BaseDAO<TE, TK> {
     public void delete(TE entity) {
         entityManager.remove(entityManager.merge(entity));
     }
+    
+    /**
+     * Force immediate synchronization of the persistence context to the database.
+     * Useful to ensure entities are immediately visible in the database.
+     */
+    public void flush() {
+        entityManager.flush();
+    }
 
 }

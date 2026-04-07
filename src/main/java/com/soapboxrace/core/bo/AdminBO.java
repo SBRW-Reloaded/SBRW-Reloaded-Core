@@ -18,34 +18,37 @@ import com.soapboxrace.core.dao.UserDAO;
 
 import com.soapboxrace.core.bo.util.DiscordWebhook;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class AdminBO {
-    @EJB
+    @Inject
     private TokenSessionBO tokenSessionBo;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private BanBO banBO;
 
-    @EJB
+    @Inject
     private DiscordWebhook discord;
     
-    @EJB
+    @Inject
 	private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private OpenFireRestApiCli openFireRestApiCli;
 
-    @EJB
+    @Inject
     private UserDAO userDAO;
 
     public void sendChatCommand(Long personaId, String command, String personaName) {

@@ -8,13 +8,16 @@ package com.soapboxrace.core.bo;
 
 import com.soapboxrace.core.vo.ModInfoVO;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class ModdingBO {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     public ModInfoVO getModInfo() {

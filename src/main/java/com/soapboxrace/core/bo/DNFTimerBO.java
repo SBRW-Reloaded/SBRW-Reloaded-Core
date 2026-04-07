@@ -1,4 +1,10 @@
 package com.soapboxrace.core.bo;
+import javax.inject.Inject;
+import javax.ejb.Stateless;
+import javax.ejb.Timeout;
+import javax.ejb.Timer;
+import javax.ejb.TimerConfig;
+import javax.ejb.TimerService;
 
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
@@ -6,16 +12,14 @@ import com.soapboxrace.jaxb.xmpp.XMPP_EventTimedOutType;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeEventTimedOut;
 
 import javax.annotation.Resource;
-import javax.ejb.*;
 import java.io.Serializable;
 
-@Singleton
-@Lock(LockType.READ)
+@Stateless
 public class DNFTimerBO {
     @Resource
     private TimerService timerService;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     public void scheduleDNF(EventSessionEntity eventSessionEntity, Long personaId) {

@@ -21,7 +21,7 @@ import com.soapboxrace.core.vo.*;
 import com.soapboxrace.jaxb.http.UserInfo;
 import com.soapboxrace.jaxb.login.LoginStatusVO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.*;
@@ -36,28 +36,28 @@ public class User {
     @Context
     private HttpServletRequest sr;
 
-    @EJB
+    @Inject
     private AuthenticationBO authenticationBO;
 
-    @EJB
+    @Inject
     private UserBO userBO;
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenBO;
 
-    @EJB
+    @Inject
     private OnlineUsersBO onlineUsersBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
-    @EJB
+    @Inject
     private MatchmakingBO matchmakingBO;
 
-    @EJB
+    @Inject
     private Argon2BO argon2BO;
 
 
@@ -92,12 +92,20 @@ public class User {
     @Path("SecureLoginPersona")
     @Produces(MediaType.APPLICATION_XML)
     public String secureLoginPersona(@QueryParam("personaId") Long personaId) {
+        // Vérifier le mode maintenance
+        if (Boolean.TRUE.equals(parameterBO.getBoolParam("IS_MAINTENANCE"))) {
+            if (!requestSessionInfo.isAdmin()) {
+                throw new EngineException("Server is currently under maintenance. Only administrators can connect.", 
+                    EngineExceptionCode.SecurityKickedArbitration, true);
+            }
+        }
+
         tokenBO.setActivePersonaId(requestSessionInfo.getTokenSessionEntity(), personaId);
         userBO.secureLoginPersona(requestSessionInfo.getUser().getId(), personaId);
         
         // FIX: Définir automatiquement la présence comme "en ligne" lors de la connexion
         // Cela garantit que le joueur apparaîtra en ligne même si UpdatePersonaPresence échoue
-        presenceBO.updatePresence(personaId, 1L); // 1L = en ligne
+        presenceBO.setPresenceOnline(personaId);
         
         // Question: Why is this here?
         // Answer: Weird things happen sometimes.

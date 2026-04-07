@@ -1,32 +1,37 @@
 package com.soapboxrace.core.bo;
+import javax.inject.Inject;
+import javax.ejb.Asynchronous;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
 
-import io.sentry.SentryClient;
-import io.sentry.SentryClientFactory;
+import io.sentry.Sentry;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.*;
 
 @Startup
 @Singleton
 public class ErrorReportingBO {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    private SentryClient sentryClient;
+    private boolean sentryEnabled;
 
     @PostConstruct
     public void init() {
         if (parameterBO.getBoolParam("ENABLE_SENTRY_REPORTING")) {
-            this.sentryClient = SentryClientFactory.sentryClient(parameterBO.getStrParam("SENTRY_DSN"));
+            String dsn = parameterBO.getStrParam("SENTRY_DSN");
+            if (dsn != null && !dsn.isEmpty()) {
+                Sentry.init(options -> options.setDsn(dsn));
+                sentryEnabled = true;
+            }
         }
     }
 
     @Asynchronous
-    @Lock(LockType.READ)
     public void sendException(Exception exception) {
-        if (this.sentryClient != null) {
-            this.sentryClient.sendException(exception);
+        if (sentryEnabled) {
+            Sentry.captureException(exception);
         }
     }
 }

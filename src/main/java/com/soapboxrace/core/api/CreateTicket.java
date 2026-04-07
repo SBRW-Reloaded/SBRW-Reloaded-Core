@@ -10,7 +10,7 @@ import com.soapboxrace.core.bo.InviteTicketBO;
 import com.soapboxrace.core.bo.ParameterBO;
 import com.soapboxrace.core.jpa.InviteTicketEntity;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -20,10 +20,10 @@ import javax.ws.rs.core.MediaType;
 @Path("/CreateTicket")
 public class CreateTicket {
 
-    @EJB
+    @Inject
     private InviteTicketBO bo;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @POST

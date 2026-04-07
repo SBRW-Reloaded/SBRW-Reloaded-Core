@@ -20,9 +20,12 @@ import com.soapboxrace.jaxb.http.ArrayOfInventoryItemTrans;
 import com.soapboxrace.jaxb.http.InventoryItemTrans;
 import com.soapboxrace.jaxb.http.InventoryTrans;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ejb.Schedule;
-import javax.ejb.Stateless;
+import javax.ejb.Singleton;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -31,26 +34,28 @@ import java.time.format.DateTimeFormatter;
  * It provides facilities to manage inventory items, set up inventories,
  * and fetch information to be given to the client.
  */
-@Stateless
+@Singleton
+@Lock(LockType.READ)
+@Transactional
 public class InventoryBO {
 
     //region Dependencies
-    @EJB
+    @Inject
     private InventoryDAO inventoryDAO;
 
-    @EJB
+    @Inject
     private InventoryItemDAO inventoryItemDAO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private ProductDAO productDAO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
     //endregion
 
@@ -87,10 +92,8 @@ public class InventoryBO {
      * @return The new {@link InventoryTrans} instance to be returned to the client.
      */
     public InventoryTrans getClientInventory(InventoryEntity inventoryEntity) {
-        //Let's get actual count of items:
-        int visualparts = 0;
-        int skillmodparts = 0;
-        int performanceparts = 0;
+        recalculateInventorySlots(inventoryEntity);
+        inventoryDAO.update(inventoryEntity);
 
         InventoryTrans inventoryTrans = new InventoryTrans();
         inventoryTrans.setPerformancePartsCapacity(inventoryEntity.getPerformancePartsCapacity());
@@ -102,6 +105,10 @@ public class InventoryBO {
         inventoryTrans.setInventoryItems(new ArrayOfInventoryItemTrans());
 
         for (InventoryItemEntity inventoryItemEntity : inventoryEntity.getInventoryItems()) {
+            if (inventoryItemEntity.getExpirationDate() != null
+                    && inventoryItemEntity.getExpirationDate().isBefore(LocalDateTime.now())) {
+                continue;
+            }
             if(inventoryItemEntity.getProductEntity() != null) {
                 if(inventoryItemEntity.getProductEntity().getProductType().equals("POWERUP")) {
                     inventoryTrans.getInventoryItems().getInventoryItemTrans().add(convertItemToItemTrans(inventoryItemEntity));
@@ -116,28 +123,9 @@ public class InventoryBO {
                     for(int itemCount = 0; itemCount < actualUseCount; itemCount++) {
                         inventoryTrans.getInventoryItems().getInventoryItemTrans().add(convertItemToItemTrans(inventoryItemEntity));
                     }
-
-                    for(int itemCount = 0; itemCount < inventoryItemEntity.getRemainingUseCount(); itemCount++) {
-                        switch(inventoryItemEntity.getProductEntity().getProductType()) {
-                            case "PERFORMANCEPART":     performanceparts++;     break;
-                            case "VISUALPART":          visualparts++;          break;
-                            case "SKILLMODPART":        skillmodparts++;        break;
-                        }
-                    }
                 }
             }
         }
-
-        //Let's update user entity
-        InventoryEntity inventoryEntity_update = inventoryDAO.findByPersonaId(inventoryEntity.getPersonaEntity().getPersonaId());
-        inventoryEntity_update.setPerformancePartsUsedSlotCount(performanceparts);
-        inventoryEntity_update.setVisualPartsUsedSlotCount(visualparts);
-        inventoryEntity_update.setSkillModPartsUsedSlotCount(skillmodparts);
-        inventoryDAO.update(inventoryEntity);
-
-        inventoryTrans.setPerformancePartsUsedSlotCount(performanceparts);
-        inventoryTrans.setVisualPartsUsedSlotCount(visualparts);
-        inventoryTrans.setSkillModPartsUsedSlotCount(skillmodparts);
 
         return inventoryTrans;
     }
@@ -149,6 +137,8 @@ public class InventoryBO {
         inventoryItemTrans.setEntitlementTag(productEntity.getEntitlementTag());
         if (inventoryItemEntity.getExpirationDate() != null) {
             inventoryItemTrans.setExpirationDate(inventoryItemEntity.getExpirationDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
+        } else {
+            inventoryItemTrans.setExpirationDate("2099-12-31T23:59:59");
         }
         inventoryItemTrans.setHash(productEntity.getHash());
         inventoryItemTrans.setInventoryId(inventoryEntity.getId());
@@ -306,9 +296,9 @@ public class InventoryBO {
         inventoryItemEntity.setInventoryEntity(inventoryEntity);
 
         // finish up
-        updateInventorySlots(inventoryEntity, productEntity, true);
         inventoryItemDAO.insert(inventoryItemEntity);
         inventoryEntity.getInventoryItems().add(inventoryItemEntity);
+        recalculateInventorySlots(inventoryEntity);
         return inventoryItemEntity;
     }
 
@@ -358,6 +348,7 @@ public class InventoryBO {
             // update RemainingUseCount
             existingItem.setRemainingUseCount(existingItem.getRemainingUseCount() + quantity);
             inventoryItemDAO.update(existingItem);
+            recalculateInventorySlots(inventoryEntity);
             return existingItem;
         } else {
             // create a new item
@@ -398,11 +389,12 @@ public class InventoryBO {
 
         if (existingItem.getRemainingUseCount() <= 0) {
             // the <= should just be a == but you never know what could happen
-            updateInventorySlots(inventoryEntity, existingItem.getProductEntity(), false);
             inventoryEntity.getInventoryItems().remove(existingItem);
             inventoryItemDAO.delete(existingItem);
-            inventoryDAO.update(inventoryEntity);
         }
+
+        recalculateInventorySlots(inventoryEntity);
+        inventoryDAO.update(inventoryEntity);
 
         return existingItem;
     }
@@ -491,23 +483,29 @@ public class InventoryBO {
                     "IID: " + inventoryEntity.getId(),
                     EngineExceptionCode.EntitlementNoSuchGroup, true);
 
-        if (quantity == -1 || quantity == inventoryItemEntity.getRemainingUseCount()) {
-            updateInventorySlots(inventoryEntity, inventoryItemEntity.getProductEntity(), false);
+        // Treat quantity <= 0 as "sell entire stack"
+        if (quantity <= 0) {
+            quantity = inventoryItemEntity.getRemainingUseCount();
+        }
+
+        if (quantity > inventoryItemEntity.getRemainingUseCount())
+            throw new EngineException("An invalid removal operation was requested. Cannot remove " + quantity +
+                    " items from the stack, as there are only " + inventoryItemEntity.getRemainingUseCount(),
+                    EngineExceptionCode.EntitlementInvalidCount, true);
+
+        int cashToAdd = inventoryItemEntity.getResellPrice() * quantity;
+
+        if (quantity == inventoryItemEntity.getRemainingUseCount()) {
             inventoryEntity.getInventoryItems().remove(inventoryItemEntity);
             inventoryItemDAO.delete(inventoryItemEntity);
-            inventoryDAO.update(inventoryEntity);
-            driverPersonaBO.updateCash(personaEntity, personaEntity.getCash() + inventoryItemEntity.getResellPrice());
         } else {
-            if (quantity < 1)
-                throw new EngineException("An invalid removal operation was requested. Cannot remove " + quantity +
-                        " items from a stack.", EngineExceptionCode.EntitlementInvalidCount, true);
-            if (quantity > inventoryItemEntity.getRemainingUseCount())
-                throw new EngineException("An invalid removal operation was requested. Cannot remove " + quantity +
-                        " items from the stack, as there are only " + inventoryItemEntity.getRemainingUseCount(),
-                        EngineExceptionCode.EntitlementInvalidCount, true);
             inventoryItemEntity.setRemainingUseCount(inventoryItemEntity.getRemainingUseCount() - quantity);
             inventoryItemDAO.update(inventoryItemEntity);
         }
+
+        recalculateInventorySlots(inventoryEntity);
+        inventoryDAO.update(inventoryEntity);
+        driverPersonaBO.updateCash(personaEntity, personaEntity.getCash() + cashToAdd);
     }
 
     //endregion
@@ -515,25 +513,31 @@ public class InventoryBO {
 
     //region Private methods (implementation)
 
-    private void updateInventorySlots(InventoryEntity inventoryEntity, ProductEntity productEntity,
-                                      boolean isItemAdded) {
-        switch (productEntity.getProductType()) {
-            case "PERFORMANCEPART":
-                inventoryEntity.setPerformancePartsUsedSlotCount(isItemAdded ?
-                        inventoryEntity.getPerformancePartsUsedSlotCount() + 1 :
-                        inventoryEntity.getPerformancePartsUsedSlotCount() - 1);
-                break;
-            case "SKILLMODPART":
-                inventoryEntity.setSkillModPartsUsedSlotCount(isItemAdded ?
-                        inventoryEntity.getSkillModPartsUsedSlotCount() + 1 :
-                        inventoryEntity.getSkillModPartsUsedSlotCount() - 1);
-                break;
-            case "VISUALPART":
-                inventoryEntity.setVisualPartsUsedSlotCount(isItemAdded ?
-                        inventoryEntity.getVisualPartsUsedSlotCount() + 1 :
-                        inventoryEntity.getVisualPartsUsedSlotCount() - 1);
-                break;
+    private void recalculateInventorySlots(InventoryEntity inventoryEntity) {
+        int performanceparts = 0;
+        int skillmodparts = 0;
+        int visualparts = 0;
+
+        for (InventoryItemEntity item : inventoryEntity.getInventoryItems()) {
+            if (item.getProductEntity() == null) continue;
+            if (item.getExpirationDate() != null && item.getExpirationDate().isBefore(LocalDateTime.now())) continue;
+
+            switch (item.getProductEntity().getProductType()) {
+                case "PERFORMANCEPART":
+                    performanceparts += item.getRemainingUseCount();
+                    break;
+                case "SKILLMODPART":
+                    skillmodparts += item.getRemainingUseCount();
+                    break;
+                case "VISUALPART":
+                    visualparts += item.getRemainingUseCount();
+                    break;
+            }
         }
+
+        inventoryEntity.setPerformancePartsUsedSlotCount(performanceparts);
+        inventoryEntity.setSkillModPartsUsedSlotCount(skillmodparts);
+        inventoryEntity.setVisualPartsUsedSlotCount(visualparts);
     }
 
     private void addDefaultInventoryItems(InventoryEntity inventoryEntity) {

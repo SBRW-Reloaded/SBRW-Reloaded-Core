@@ -18,7 +18,7 @@ import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypePowerupActivated;
 
 import com.soapboxrace.core.xmpp.XmppChat;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -27,25 +27,25 @@ import java.util.Map;
 @Path("/powerups")
 public class Powerups {
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private PowerupTrackingBO usedPowerupBO;
 
-    @EJB
+    @Inject
     private EventBO eventBO;
 
     @Inject

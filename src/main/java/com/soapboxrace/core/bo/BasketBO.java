@@ -18,77 +18,80 @@ import com.soapboxrace.jaxb.http.CommerceResultTrans;
 import com.soapboxrace.jaxb.http.OwnedCarTrans;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class BasketBO {
 
-    @EJB
+    @Inject
     private PersonaBO personaBo;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private BasketDefinitionDAO basketDefinitionsDAO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private CardPackDAO cardPackDAO;
 
-    @EJB
+    @Inject
     private ProductDAO productDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private TokenSessionBO tokenSessionBO;
 
-    @EJB
+    @Inject
     private InventoryDAO inventoryDao;
 
-    @EJB
+    @Inject
     private InventoryItemDAO inventoryItemDao;
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private TreasureHuntDAO treasureHuntDAO;
 
-    @EJB
+    @Inject
     private CarClassesDAO carClassesDAO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
 
-    @EJB
+    @Inject
     private PerformanceBO performanceBO;
 
-    @EJB
+    @Inject
     private ItemRewardBO itemRewardBO;
 
-    @EJB
+    @Inject
     private CarDamageBO carDamageBO;
 
-    @EJB
+    @Inject
     private CarSlotBO carSlotBO;
 
-    @EJB
+    @Inject
     private AmplifierDAO amplifierDAO;
 
-    @EJB
+    @Inject
     private UserDAO userDao;
 
     public ProductEntity findProduct(String productId) {

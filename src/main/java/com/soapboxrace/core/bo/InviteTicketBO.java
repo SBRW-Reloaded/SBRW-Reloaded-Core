@@ -9,14 +9,17 @@ package com.soapboxrace.core.bo;
 import com.soapboxrace.core.dao.InviteTicketDAO;
 import com.soapboxrace.core.jpa.InviteTicketEntity;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.Date;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class InviteTicketBO {
 
-    @EJB
+    @Inject
     private InviteTicketDAO inviteTicketDAO;
 
     public InviteTicketEntity createTicket(String discordName) {

@@ -20,35 +20,38 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class LegitRaceBO {
 
-    @EJB
+    @Inject
     private SocialBO socialBo;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private CarClassesDAO carClassesDAO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB 
+    @Inject 
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDAO;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     private Boolean isLegit = true;
@@ -85,6 +88,16 @@ public class LegitRaceBO {
                 TimeConverter.secToTime(timediff));
 
             reportCheating("AUTOFINISH", reportMessage);
+        }
+
+        if (Math.abs(arbitrationPacket.getEventDurationInMilliseconds() - dataEntity.getServerTimeInMilliseconds()) >= 5000) {
+            if (Math.abs(arbitrationPacket.getAlternateEventDurationInMilliseconds() - dataEntity.getServerTimeInMilliseconds()) >= 5000) {
+                socialBo.sendReport(null, activePersonaId, 3,
+                    String.format("Significant clock drift between client and server? Client reported time of %d ms, server reported %d ms",
+                        arbitrationPacket.getEventDurationInMilliseconds(), dataEntity.getServerTimeInMilliseconds(),
+                        arbitrationPacket.getAlternateEventDurationInMilliseconds(), dataEntity.getServerTimeInMilliseconds()),
+                    (int) arbitrationPacket.getCarId(), 0, arbitrationPacket.getHacksDetected());
+            }
         }
 
         if (arbitrationPacket.getKonami() > 0) {

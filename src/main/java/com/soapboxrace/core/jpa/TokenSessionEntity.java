@@ -32,6 +32,12 @@ public class TokenSessionEntity {
 
     private Long eventSessionId;
 
+    private Long lastHeartbeatTime;
+
+    private boolean inSafehouse = false;
+
+    private long safehouseEnteredAt = 0;
+
     private Set<Long> allowedPersonaIds = new HashSet<>();
 
     public String getSecurityToken() {
@@ -120,5 +126,29 @@ public class TokenSessionEntity {
 
     public void setAllowedPersonaIds(Set<Long> allowedPersonaIds) {
         this.allowedPersonaIds = allowedPersonaIds;
+    }
+
+    public Long getLastHeartbeatTime() {
+        return lastHeartbeatTime;
+    }
+
+    public void setLastHeartbeatTime(Long lastHeartbeatTime) {
+        this.lastHeartbeatTime = lastHeartbeatTime;
+    }
+
+    public boolean isInSafehouse() {
+        return inSafehouse;
+    }
+
+    public void setInSafehouse(boolean inSafehouse) {
+        this.inSafehouse = inSafehouse;
+    }
+
+    public long getSafehouseEnteredAt() {
+        return safehouseEnteredAt;
+    }
+
+    public void setSafehouseEnteredAt(long safehouseEnteredAt) {
+        this.safehouseEnteredAt = safehouseEnteredAt;
     }
 }

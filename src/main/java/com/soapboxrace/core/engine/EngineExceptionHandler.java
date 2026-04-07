@@ -9,7 +9,7 @@ package com.soapboxrace.core.engine;
 import com.soapboxrace.core.bo.ErrorReportingBO;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -19,7 +19,7 @@ import javax.ws.rs.ext.Provider;
 @Provider
 public class EngineExceptionHandler implements ExceptionMapper<Exception> {
 
-    @EJB
+    @Inject
     private ErrorReportingBO errorReportingBO;
 
     @Override

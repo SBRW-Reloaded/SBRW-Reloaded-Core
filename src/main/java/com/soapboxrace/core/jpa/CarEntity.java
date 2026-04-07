@@ -19,14 +19,17 @@ import java.util.Set;
 @Table(name = "CAR")
 @NamedQueries({
         @NamedQuery(name = "CarEntity.findByPersonaId", //
-                query = "SELECT obj FROM CarEntity obj WHERE obj.persona.personaId = :persona ORDER BY obj.id"),
+                query = "SELECT obj FROM CarEntity obj WHERE obj.persona.personaId = :persona " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate > CURRENT_TIMESTAMP) ORDER BY obj.id"),
         @NamedQuery(name = "CarEntity.findByPersonaIdEager", //
-                query = "SELECT obj FROM CarEntity obj WHERE obj.persona.personaId = :persona ORDER BY obj.id"), //
+                query = "SELECT obj FROM CarEntity obj WHERE obj.persona.personaId = :persona " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate > CURRENT_TIMESTAMP) ORDER BY obj.id"), //
         @NamedQuery(name = "CarEntity.findNumNonRentalsByPersonaId", //
                 query = "SELECT COUNT(obj) FROM CarEntity obj  WHERE obj.persona.personaId = :persona" +
                         " AND obj.expirationDate IS NULL"), //
         @NamedQuery(name = "CarEntity.findNumByPersonaId",
-                query = "SELECT COUNT(obj) FROM CarEntity obj WHERE obj.persona.personaId = :persona AND obj.sold_at IS NULL"),
+                query = "SELECT COUNT(obj) FROM CarEntity obj WHERE obj.persona.personaId = :persona AND obj.sold_at IS NULL " +
+                        "AND (obj.expirationDate IS NULL OR obj.expirationDate > CURRENT_TIMESTAMP)"),
         @NamedQuery(name = "CarEntity.deleteByPersona", //
                 query = "DELETE FROM CarEntity obj WHERE obj.persona = :persona"), //
         @NamedQuery(name = "CarEntity.deleteAllExpired", //

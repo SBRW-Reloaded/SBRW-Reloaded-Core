@@ -18,6 +18,7 @@ import javax.persistence.*;
 public class OnlineUsersEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int ID;
 
     @Column(name = "time", nullable = false)

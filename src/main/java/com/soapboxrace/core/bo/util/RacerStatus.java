@@ -16,4 +16,16 @@ public enum RacerStatus {
     public Integer racerStatus() {
         return racerStatus;
     }
+
+    public static RacerStatus fromCode(Integer code) {
+        if (code == null) {
+            return UNKNOWN;
+        }
+        for (RacerStatus status : RacerStatus.values()) {
+            if (status.racerStatus.equals(code)) {
+                return status;
+            }
+        }
+        return UNKNOWN;
+    }
 }

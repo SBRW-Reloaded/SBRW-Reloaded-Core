@@ -9,10 +9,13 @@ package com.soapboxrace.core.xmpp.sbrwxmpp;
 import com.soapboxrace.core.bo.ParameterBO;
 import com.soapboxrace.core.xmpp.XmppChat;
 import com.soapboxrace.core.xmpp.XmppProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
-import javax.ejb.Singleton;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -20,17 +23,21 @@ import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 
-@Singleton
+@ApplicationScoped
+@Named("SbrwXmppProvider")
 public class SbrwXmppProvider implements XmppProvider {
+    private static final Logger logger = LoggerFactory.getLogger(SbrwXmppProvider.class);
+    
     private String sbrwxmppToken;
     private String sbrwxmppAddress;
     private String domain;
     private Client client;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @PostConstruct
@@ -70,6 +77,23 @@ public class SbrwXmppProvider implements XmppProvider {
         Builder builder = getBuilder("sessions");
         return builder.get(new GenericType<>() {
         });
+    }
+
+    @Override
+    public boolean isPersonaOnline(long personaId) {
+        try {
+            // Vérifier si le persona est dans la liste des sessions actives
+            List<String> activeSessions = getSessions();
+            String personaName = "sbrw." + personaId;
+            
+            boolean isOnline = activeSessions.contains(personaName);
+            logger.debug("Persona {} XMPP session check: {}", personaId, isOnline);
+            return isOnline;
+        } catch (Exception e) {
+            // En cas d'erreur, supposer offline par sécurité
+            logger.debug("Error checking XMPP session for persona {}: {}", personaId, e.getMessage());
+            return false;
+        }
     }
 
     private List<RoomEntity> getAllRooms() {
@@ -129,4 +153,45 @@ public class SbrwXmppProvider implements XmppProvider {
         }
         return personaList;
     }
+    
+    @Override
+    public void removePersonaFromRoom(long personaId, String roomName) {
+        String userName = "sbrw." + personaId;
+        try {
+            Builder builder = getBuilder("rooms/" + roomName + "/members/" + userName);
+            Response response = builder.delete();
+            int status = response.getStatus();
+            response.close();
+            if (status == 200 || status == 204) {
+                logger.info("XMPP: Removed persona {} from room {} (affiliation)", personaId, roomName);
+            } else if (status == 404) {
+                logger.debug("XMPP: Persona {} not in room {} or room gone", personaId, roomName);
+            } else {
+                logger.warn("XMPP: Failed to remove persona {} from room {} (status: {})", personaId, roomName, status);
+            }
+        } catch (Exception e) {
+            logger.warn("XMPP: Error removing persona {} from room {}: {}", personaId, roomName, e.getMessage());
+        }
+    }
+
+    @Override
+    public void kickOccupantFromRoom(long personaId, String roomName) {
+        String userName = "sbrw." + personaId;
+        try {
+            Builder builder = getBuilder("rooms/" + roomName + "/kick/" + userName);
+            Response response = builder.post(null);
+            int status = response.getStatus();
+            response.close();
+            if (status == 200) {
+                logger.info("XMPP: Kicked occupant {} from room {} (SBRWXMPP)", personaId, roomName);
+            } else if (status == 404) {
+                logger.debug("XMPP: Occupant {} not in room {} or room gone (SBRWXMPP)", personaId, roomName);
+            } else {
+                logger.warn("XMPP: Failed to kick occupant {} from room {} (status: {}, SBRWXMPP)", personaId, roomName, status);
+            }
+        } catch (Exception e) {
+            logger.warn("XMPP: Error kicking occupant {} from room {} (SBRWXMPP): {}", personaId, roomName, e.getMessage());
+        }
+    }
+
 }

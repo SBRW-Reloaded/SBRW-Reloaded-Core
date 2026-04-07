@@ -10,7 +10,7 @@ import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.LoginAnnouncementBO;
 import com.soapboxrace.jaxb.http.LoginAnnouncementsDefinition;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -20,7 +20,7 @@ import javax.ws.rs.core.MediaType;
 @Path("/LoginAnnouncements")
 public class LoginAnnouncements {
 
-    @EJB
+    @Inject
     private LoginAnnouncementBO bo;
 
     @GET

@@ -5,19 +5,22 @@ import com.soapboxrace.core.dao.PersonaDAO;
 import com.soapboxrace.core.dao.UsedPowerupDAO;
 import com.soapboxrace.core.jpa.UsedPowerupEntity;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class PowerupTrackingBO {
 
-    @EJB
+    @Inject
     private UsedPowerupDAO usedPowerupDAO;
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDAO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
     public void createPowerupRecord(Long eventSessionId, Long activePersonaId, Integer powerupHash) {

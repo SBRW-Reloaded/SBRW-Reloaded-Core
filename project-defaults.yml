@@ -3,7 +3,7 @@ thorntail:
     data-sources:
       SoapBoxDS:
         driver-name: mysql
-        connection-url: jdbc:mysql://localhost:3306/SOAPBOX
+        connection-url: jdbc:mysql://localhost:3306/SOAPBOX?useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true&socketTimeout=60000&connectTimeout=30000
         user-name: soapbox
         password: secrets
         valid-connection-checker-class-name: org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker
@@ -12,6 +12,8 @@ thorntail:
         exception-sorter-class-name: org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter
         max-pool-size: 64
         min-pool-size: 8
+        idle-timeout-minutes: 5
+        use-fast-fail: true
         share-prepared-statements: true
   mail:
     mail-sessions:

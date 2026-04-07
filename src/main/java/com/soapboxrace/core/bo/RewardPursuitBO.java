@@ -13,23 +13,24 @@ import com.soapboxrace.jaxb.http.Accolades;
 import com.soapboxrace.jaxb.http.EnumRewardType;
 import com.soapboxrace.jaxb.http.PursuitArbitrationPacket;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Typed;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+@Typed(RewardPursuitBO.class)
+@Transactional
 public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private LegitRaceBO legitRaceBO;
 
-    @EJB
+    @Inject
     private LeaderboardBO leaderboardBO;
-
-    @EJB
-    private RankingBO rankingBO;
 
     public Accolades getAccolades(Long activePersonaId, PursuitArbitrationPacket pursuitArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity,
@@ -46,25 +47,24 @@ public class RewardPursuitBO extends RewardEventBO<PursuitArbitrationPacket> {
         RewardVO rewardVO = getRewardVO(personaEntity);
         EventRewardEntity eventRewardEntity = eventEntity.getSingleplayerRewardConfig();
 
-        setPursuitRewards(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, pursuitArbitrationPacket, rewardVO);
+        setPursuitRewards(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, eventDataEntity, pursuitArbitrationPacket, rewardVO);
 
         applyRaceReward(rewardVO.getRep(), rewardVO.getCash(), personaEntity, true, achievementTransaction);
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, pursuitArbitrationPacket, eventSessionEntity, eventDataEntity);
-        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, pursuitArbitrationPacket, rewardVO);
     }
 
     private void setPursuitRewards(PersonaEntity personaEntity, EventEntity eventEntity, EventRewardEntity eventRewardEntity,
-                                   PursuitArbitrationPacket pursuitArbitrationPacket, RewardVO rewardVO) {
-        setBaseReward(personaEntity, eventEntity, eventRewardEntity, pursuitArbitrationPacket, rewardVO);
+                                   EventDataEntity eventDataEntity, PursuitArbitrationPacket pursuitArbitrationPacket, RewardVO rewardVO) {
+        setBaseReward(personaEntity, eventEntity, eventRewardEntity, eventDataEntity, pursuitArbitrationPacket, rewardVO);
         setPursitParamReward(pursuitArbitrationPacket.getCopsDeployed(), EnumRewardType.COP_CARS_DEPLOYED, rewardVO);
         setPursitParamReward(pursuitArbitrationPacket.getCopsDisabled(), EnumRewardType.COP_CARS_DISABLED, rewardVO);
         setPursitParamReward(pursuitArbitrationPacket.getCopsRammed(), EnumRewardType.COP_CARS_RAMMED, rewardVO);
         setPursitParamReward(pursuitArbitrationPacket.getCostToState(), EnumRewardType.COST_TO_STATE, rewardVO);
-        setPursitParamReward(pursuitArbitrationPacket.getEventDurationInMilliseconds(), EnumRewardType.PURSUIT_LENGTH
+        setPursitParamReward(eventDataEntity.getServerTimeInMilliseconds(), EnumRewardType.PURSUIT_LENGTH
                 , rewardVO);
         setPursitParamReward(pursuitArbitrationPacket.getHeat(), EnumRewardType.HEAT_LEVEL, rewardVO);
         setPursitParamReward(pursuitArbitrationPacket.getInfractions(), EnumRewardType.INFRACTIONS, rewardVO);

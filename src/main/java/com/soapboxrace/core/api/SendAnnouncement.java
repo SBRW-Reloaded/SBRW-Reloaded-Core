@@ -14,7 +14,7 @@ import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.dao.PersonaDAO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.POST;
@@ -26,19 +26,19 @@ import javax.ws.rs.core.MediaType;
 @Path("/Send")
 public class SendAnnouncement {
 
-    @EJB
+    @Inject
     private OpenFireRestApiCli openFireRestApiCli;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBo;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
     @POST

@@ -12,14 +12,14 @@ import de.mkammerer.argon2.Argon2Factory;
 import de.mkammerer.argon2.Argon2Helper;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 
-@Singleton
 @Startup
+@Singleton
 public class Argon2BO {
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     private Argon2 argon2 = Argon2Factory.create();

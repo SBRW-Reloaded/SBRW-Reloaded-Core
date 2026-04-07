@@ -11,7 +11,7 @@ import com.soapboxrace.core.bo.NewsArticleBO;
 import com.soapboxrace.core.bo.RequestSessionInfo;
 import com.soapboxrace.jaxb.http.ArrayOfNewsArticleTrans;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -21,7 +21,7 @@ import javax.ws.rs.core.MediaType;
 @Path("/NewsArticles")
 public class NewsArticles {
 
-    @EJB
+    @Inject
     private NewsArticleBO newsArticleBO;
 
     @Inject

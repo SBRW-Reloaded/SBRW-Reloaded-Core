@@ -13,23 +13,24 @@ import com.soapboxrace.jaxb.http.Accolades;
 import com.soapboxrace.jaxb.http.EnumRewardType;
 import com.soapboxrace.jaxb.http.TeamEscapeArbitrationPacket;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Typed;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+@Typed(RewardTeamEscapeBO.class)
+@Transactional
 public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacket> {
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private LegitRaceBO legitRaceBO;
     
-    @EJB
+    @Inject
     private LeaderboardBO leaderboardBO;
-
-    @EJB
-    private RankingBO rankingBO;
 
     public Accolades getAccolades(Long activePersonaId,
                                   TeamEscapeArbitrationPacket teamEscapeArbitrationPacket,
@@ -48,7 +49,7 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
         RewardVO rewardVO = getRewardVO(personaEntity);
         EventRewardEntity eventRewardEntity = getRewardConfiguration(eventSessionEntity);
 
-        setBaseReward(personaEntity, eventDataEntity.getEvent(), eventRewardEntity, teamEscapeArbitrationPacket, rewardVO);
+        setBaseReward(personaEntity, eventDataEntity.getEvent(), eventRewardEntity, eventDataEntity, teamEscapeArbitrationPacket, rewardVO);
         setRankReward(eventRewardEntity, teamEscapeArbitrationPacket, rewardVO);
 
         float bustedBaseRep = rewardVO.getBaseRep() / bustedCount;
@@ -62,7 +63,7 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
         setPursitParamReward(teamEscapeArbitrationPacket.getCopsDisabled(), EnumRewardType.COP_CARS_DISABLED, rewardVO);
         setPursitParamReward(teamEscapeArbitrationPacket.getCopsRammed(), EnumRewardType.COP_CARS_RAMMED, rewardVO);
         setPursitParamReward(teamEscapeArbitrationPacket.getCostToState(), EnumRewardType.COST_TO_STATE, rewardVO);
-        setPursitParamReward(teamEscapeArbitrationPacket.getEventDurationInMilliseconds(),
+        setPursitParamReward(eventDataEntity.getServerTimeInMilliseconds(),
                 EnumRewardType.PURSUIT_LENGTH, rewardVO);
         setPursitParamReward(teamEscapeArbitrationPacket.getInfractions(), EnumRewardType.INFRACTIONS, rewardVO);
         setPursitParamReward(teamEscapeArbitrationPacket.getRoadBlocksDodged(), EnumRewardType.ROADBLOCKS_DODGED,
@@ -79,7 +80,6 @@ public class RewardTeamEscapeBO extends RewardEventBO<TeamEscapeArbitrationPacke
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, teamEscapeArbitrationPacket, eventSessionEntity, eventDataEntity); 
-        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, teamEscapeArbitrationPacket, rewardVO);
     }

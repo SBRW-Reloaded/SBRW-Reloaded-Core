@@ -4,7 +4,7 @@ import com.soapboxrace.core.bo.*;
 import com.soapboxrace.core.bo.util.OwnedCarConverter;
 import com.soapboxrace.core.dao.CarDAO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -15,10 +15,10 @@ import javax.ws.rs.core.Response;
 @Path("/api")
 public class Api {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
     @GET

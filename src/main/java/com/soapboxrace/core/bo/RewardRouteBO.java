@@ -12,23 +12,24 @@ import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.Accolades;
 import com.soapboxrace.jaxb.http.RouteArbitrationPacket;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Typed;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+@Typed(RewardRouteBO.class)
+@Transactional
 public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private LegitRaceBO legitRaceBO;
 
-    @EJB
+    @Inject
     private LeaderboardBO leaderboardBO;
-
-    @EJB
-    private RankingBO rankingBO;
 
     public Accolades getAccolades(Long activePersonaId, RouteArbitrationPacket routeArbitrationPacket,
                                   EventDataEntity eventDataEntity, EventSessionEntity eventSessionEntity, AchievementTransaction achievementTransaction) {
@@ -43,7 +44,7 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
         RewardVO rewardVO = getRewardVO(personaEntity);
         EventRewardEntity eventRewardEntity = getRewardConfiguration(eventSessionEntity);
 
-        setBaseReward(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, routeArbitrationPacket, rewardVO);
+        setBaseReward(personaEntity, eventSessionEntity.getEvent(), eventRewardEntity, eventDataEntity, routeArbitrationPacket, rewardVO);
         setRankReward(eventRewardEntity, routeArbitrationPacket, rewardVO);
         setPerfectStartReward(eventRewardEntity, routeArbitrationPacket.getPerfectStart(), rewardVO);
         setTopSpeedReward(eventRewardEntity, routeArbitrationPacket.getTopSpeed(), rewardVO);
@@ -55,7 +56,6 @@ public class RewardRouteBO extends RewardEventBO<RouteArbitrationPacket> {
 
         //Set leaderboard things
         leaderboardBO.setupLeaderboard(activePersonaId, routeArbitrationPacket, eventSessionEntity, eventDataEntity);        
-        rankingBO.setupRanking(activePersonaId, eventDataEntity);
 
         return getAccolades(personaEntity, eventRewardEntity, routeArbitrationPacket, rewardVO);
     }

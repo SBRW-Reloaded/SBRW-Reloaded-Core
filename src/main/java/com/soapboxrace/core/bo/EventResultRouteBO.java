@@ -6,6 +6,7 @@
 
 package com.soapboxrace.core.bo;
 
+import com.soapboxrace.core.bo.util.CardDecks;
 import com.soapboxrace.core.dao.EventDataDAO;
 import com.soapboxrace.core.dao.EventSessionDAO;
 import com.soapboxrace.core.dao.PersonaDAO;
@@ -15,8 +16,6 @@ import com.soapboxrace.core.jpa.EventDataEntity;
 import com.soapboxrace.core.jpa.EventSessionEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.xmpp.OpenFireSoapBoxCli;
-import com.soapboxrace.core.xmpp.XmppChat;
-import com.soapboxrace.core.xmpp.XmppEvent;
 import com.soapboxrace.jaxb.http.ArrayOfRouteEntrantResult;
 import com.soapboxrace.jaxb.http.RouteArbitrationPacket;
 import com.soapboxrace.jaxb.http.RouteEntrantResult;
@@ -24,42 +23,49 @@ import com.soapboxrace.jaxb.http.RouteEventResult;
 import com.soapboxrace.jaxb.xmpp.XMPP_ResponseTypeRouteEntrantResult;
 import com.soapboxrace.jaxb.xmpp.XMPP_RouteEntrantResultType;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, RouteEventResult> {
 
-    @EJB
+    @Inject
     private EventSessionDAO eventSessionDao;
 
-    @EJB
+    @Inject
     private EventDataDAO eventDataDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
 
-    @EJB
+    @Inject
     private RewardRouteBO rewardRouteBO;
 
-    @EJB
+    @Inject
     private CarDamageBO carDamageBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
-    @EJB
+    @Inject
     private DNFTimerBO dnfTimerBO;
 
     protected RouteEventResult handleInternal(EventSessionEntity eventSessionEntity, Long activePersonaId,
                                               RouteArbitrationPacket routeArbitrationPacket) {
         Long eventSessionId = eventSessionEntity.getId();
 
-        // Calculer un rang temporaire pour XMPP (sera recalculé plus tard)
-        int temporaryRank = calculateTemporaryRank(eventSessionEntity, activePersonaId, routeArbitrationPacket.getEventDurationInMilliseconds());
+        EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
+        
+        // If no event data exists, return empty result (player aborted before joining)
+        if (eventDataEntity == null) {
+            return new RouteEventResult();
+        }
 
         XMPP_RouteEntrantResultType xmppRouteResult = new XMPP_RouteEntrantResultType();
         xmppRouteResult.setBestLapDurationInMilliseconds(routeArbitrationPacket.getBestLapDurationInMilliseconds());
@@ -67,13 +73,11 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         xmppRouteResult.setEventSessionId(eventSessionEntity.getId());
         xmppRouteResult.setFinishReason(routeArbitrationPacket.getFinishReason());
         xmppRouteResult.setPersonaId(activePersonaId);
-        xmppRouteResult.setRanking(temporaryRank); // Utiliser le rang temporaire pour XMPP
+        xmppRouteResult.setRanking(eventDataEntity.getRank());
         xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
 
         XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
         routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
-
-        EventDataEntity eventDataEntity = eventDataDao.findByPersonaAndEventSessionId(activePersonaId, eventSessionId);
 
         if (eventDataEntity.getFinishReason() != 0) {
             return new RouteEventResult();
@@ -103,11 +107,10 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
             arrayOfRouteEntrantResult.getRouteEntrantResult().add(routeEntrantResult);
 
             if (!racer.getPersonaId().equals(activePersonaId)) {
-                XmppEvent xmppEvent = new XmppEvent(racer.getPersonaId(), openFireSoapBoxCli);
-                xmppEvent.sendRaceEnd(routeEntrantResultResponse);
+                asyncXmppBO.sendMessage(routeEntrantResultResponse, racer.getPersonaId());
 
-                if ((routeArbitrationPacket.getFinishReason() == 22) && temporaryRank == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
-                    xmppEvent.sendEventTimingOut(eventSessionEntity);
+                if ((routeArbitrationPacket.getFinishReason() == 22) && eventDataEntity.getRank() == 1 && eventSessionEntity.getEvent().isDnfEnabled()) {
+                    asyncXmppBO.sendEventTimingOut(eventSessionEntity.getId(), eventSessionEntity.getEvent().getDnfTimerTime(), racer.getPersonaId());
                     dnfTimerBO.scheduleDNF(eventSessionEntity, racer.getPersonaId());
                 }
             }
@@ -117,8 +120,9 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         AchievementTransaction transaction = achievementBO.createTransaction(activePersonaId);
         RouteEventResult routeEventResult = new RouteEventResult();
         
-        // Utiliser le rang temporaire pour les récompenses au lieu du rang 0 de la BDD
-        routeArbitrationPacket.setRank(temporaryRank);
+        eventSessionDao.update(eventSessionEntity);
+        eventDataDao.update(eventDataEntity);
+
         routeEventResult.setAccolades(rewardRouteBO.getAccolades(activePersonaId, routeArbitrationPacket,
                 eventDataEntity, eventSessionEntity, transaction));
         routeEventResult.setDurability(carDamageBO.induceCarDamage(activePersonaId, routeArbitrationPacket,
@@ -127,18 +131,14 @@ public class EventResultRouteBO extends EventResultBO<RouteArbitrationPacket, Ro
         routeEventResult.setEventId(eventDataEntity.getEvent().getId());
         routeEventResult.setEventSessionId(eventSessionId);
         routeEventResult.setPersonaId(activePersonaId);
-        prepareRaceAgain(eventSessionEntity, routeEventResult, routeArbitrationPacket);
+        prepareRaceAgain(eventSessionEntity, activePersonaId, routeEventResult, routeArbitrationPacket);
 
         updateEventAchievements(eventDataEntity, eventSessionEntity, activePersonaId, routeArbitrationPacket, transaction);
-        // NE PAS committer les achievements ici - attendre le recalcul des rangs finaux
 
-        eventSessionDao.update(eventSessionEntity);
-        eventDataDao.update(eventDataEntity);
+        if (routeEventResult.getAccolades() != null && routeEventResult.getAccolades().getLuckyDrawInfo() != null) {
+            routeEventResult.getAccolades().getLuckyDrawInfo().setCardDeck(CardDecks.forRank(eventDataEntity.getRank()));
+        }
 
-        // Recalculer tous les rangs maintenant que tous les résultats sont finalisés
-        recalculateAllRanks(eventSessionEntity);
-        
-        // Maintenant que les rangs finaux sont calculés, committer les achievements
         commitEventAchievementsWithFinalRank(eventDataEntity, activePersonaId, transaction);
 
         if (eventSessionEntity.getLobby() != null && !eventSessionEntity.getLobby().getIsPrivate()) {

@@ -14,7 +14,7 @@ import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.jaxb.http.BadgeBundle;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PUT;
@@ -24,7 +24,7 @@ import java.io.InputStream;
 @Path("/badges")
 public class Badges {
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
     @Inject

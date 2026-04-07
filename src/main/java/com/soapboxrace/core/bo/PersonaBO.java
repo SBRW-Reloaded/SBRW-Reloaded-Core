@@ -19,29 +19,32 @@ import com.soapboxrace.jaxb.http.BadgeBundle;
 import com.soapboxrace.jaxb.http.BadgeInput;
 import com.soapboxrace.jaxb.http.OwnedCarTrans;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class PersonaBO {
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private PersonaBadgeDAO personaBadgeDAO;
 
-    @EJB
+    @Inject
     private BadgeDefinitionDAO badgeDefinitionDAO;
 
-    @EJB
+    @Inject
     private CarDamageBO carDamageBO;
 
-    @EJB
+    @Inject
     private CarSlotBO carSlotBO;
 
     public void updateBadges(Long personaId, BadgeBundle badgeBundle) {
@@ -141,6 +144,10 @@ public class PersonaBO {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public CarEntity getCarByOwnedCarId(Long ownedCarId) {
         CarEntity carEntity = carDAO.find(ownedCarId);
+
+        if (carEntity == null) {
+            return null;
+        }
 
         // Load customcar data since we can't do it in the query
         carEntity.getPaints().size();

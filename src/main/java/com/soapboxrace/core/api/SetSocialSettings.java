@@ -15,7 +15,7 @@ import com.soapboxrace.jaxb.http.SocialSettings;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 import org.eclipse.microprofile.metrics.annotation.Timed;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import javax.ws.rs.PUT;
@@ -31,10 +31,10 @@ public class SetSocialSettings {
     @Inject
     RequestSessionInfo requestSessionInfo;
 
-    @EJB
+    @Inject
     UserDAO userDAO;
 
-    @EJB
+    @Inject
     PresenceBO presenceBO;
 
     @PUT

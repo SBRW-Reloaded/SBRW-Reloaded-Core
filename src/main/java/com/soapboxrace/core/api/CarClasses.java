@@ -12,7 +12,7 @@ import com.soapboxrace.core.jpa.CarClassListEntity;
 import com.soapboxrace.jaxb.http.ArrayOfCarClass;
 import com.soapboxrace.jaxb.http.CarClass;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -20,7 +20,7 @@ import javax.ws.rs.core.MediaType;
 
 @Path("/carclasses")
 public class CarClasses {
-    @EJB
+    @Inject
     private CarClassListDAO CarClassListDAO;
 
     @GET

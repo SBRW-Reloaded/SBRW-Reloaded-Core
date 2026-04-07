@@ -11,34 +11,42 @@ import com.soapboxrace.core.dao.UserDAO;
 import com.soapboxrace.core.jpa.OnlineUsersEntity;
 import com.soapboxrace.core.xmpp.OpenFireRestApiCli;
 
-import javax.annotation.PostConstruct;
-import javax.ejb.*;
+import javax.ejb.ConcurrencyManagement;
+import javax.ejb.ConcurrencyManagementType;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Schedule;
+import javax.ejb.Singleton;
+import javax.inject.Inject;
 import java.util.Date;
 
 @Singleton
-@Lock(LockType.READ)
+@ConcurrencyManagement(ConcurrencyManagementType.CONTAINER)
 public class OnlineUsersBO {
 
-    @EJB
+    @Inject
     private OpenFireRestApiCli openFireRestApiCli;
 
-    @EJB
+    @Inject
     private OnlineUsersDAO onlineUsersDAO;
 
-    @EJB
+    @Inject
     private UserDAO userDAO;
 
-    private OnlineUsersEntity lastRecordedStats;
+    private volatile OnlineUsersEntity lastRecordedStats;
 
+    @Lock(LockType.READ)
     public OnlineUsersEntity getOnlineUsersStats() {
+        if (lastRecordedStats == null) {
+            OnlineUsersEntity empty = new OnlineUsersEntity();
+            empty.setNumberOfOnline(0);
+            empty.setNumberOfRegistered(0);
+            return empty;
+        }
         return lastRecordedStats;
     }
 
-    @PostConstruct
-    public void init() {
-        insertOnlineStats();
-    }
-
+    @Lock(LockType.WRITE)
     @Schedule(minute = "*", hour = "*", persistent = false)
     public void insertOnlineStats() {
         long timeLong = new Date().getTime() / 1000L;

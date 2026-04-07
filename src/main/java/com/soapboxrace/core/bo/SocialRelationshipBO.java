@@ -5,6 +5,10 @@
  */
 
 package com.soapboxrace.core.bo;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
 
 import com.soapboxrace.core.dao.PersonaDAO;
 import com.soapboxrace.core.dao.SocialRelationshipDAO;
@@ -21,25 +25,26 @@ import org.slf4j.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.ejb.*;
+import javax.ejb.Asynchronous;
+import javax.ejb.Schedule;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 
-@Singleton
 @Startup
+@Singleton
 @Lock(LockType.READ)
 public class SocialRelationshipBO {
-    @EJB
+    @Inject
     private SocialRelationshipDAO socialRelationshipDAO;
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
-    @EJB
+    @Inject
     private OpenFireSoapBoxCli openFireSoapBoxCli;
-    @EJB
+    @Inject
     private DriverPersonaBO driverPersonaBO;
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
     @Inject
     private Logger logger;
@@ -56,30 +61,71 @@ public class SocialRelationshipBO {
 
     @Asynchronous
     public void handlePersonaPresenceUpdated(@Observes PersonaPresenceUpdated personaPresenceUpdated) {
-        Long personaPresence = personaPresenceUpdated.getPresence();
-        PersonaEntity personaEntity = personaDAO.find(personaPresenceUpdated.getPersonaId());
+        if (personaPresenceUpdated == null || personaPresenceUpdated.getPersonaId() == null) {
+            logger.warn("Received null PersonaPresenceUpdated event or null personaId");
+            return;
+        }
         
-        if (personaEntity != null) {
+        Long personaId = personaPresenceUpdated.getPersonaId();
+        Long personaPresence = personaPresenceUpdated.getPresence();
+        
+        if (personaPresence == null) {
+            logger.warn("Received PersonaPresenceUpdated with null presence for persona {}", personaId);
+            return;
+        }
+        
+        try {
+            PersonaEntity personaEntity = personaDAO.find(personaId);
+            
+            if (personaEntity == null) {
+                logger.warn("Cannot handle presence update for persona {}: persona not found", personaId);
+                return;
+            }
+            
+            if (personaEntity.getUser() == null) {
+                logger.warn("Cannot handle presence update for persona {}: user is null", personaId);
+                return;
+            }
+            
             logger.debug("Handling presence update for persona {}: {}", personaEntity.getName(), personaPresence);
             
-            // AMÉLIORATION : Ajouter un délai pour éviter les race conditions lors de la connexion
+            // FIX: R\u00e9duit le d\u00e9lai de 100ms \u00e0 30ms pour r\u00e9duire les race conditions
+            // Ce d\u00e9lai permet \u00e0 Redis de se synchroniser avant de v\u00e9rifier la pr\u00e9sence
             try {
-                Thread.sleep(100); // Petit délai pour laisser la connexion se stabiliser
+                Thread.sleep(30);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                logger.warn("Interrupted while waiting to process presence update for persona {}", personaId);
+                return;
             }
             
             // Vérifier que la présence est toujours valide après le délai
-            Long currentPresence = presenceBO.getPresence(personaEntity.getPersonaId());
-            if (currentPresence.equals(personaPresence)) {
+            Long currentPresence = presenceBO.getPresence(personaId);
+            
+            if (currentPresence == null) {
+                logger.debug("Current presence is null for persona {}, using event presence {}", 
+                           personaId, personaPresence);
+                currentPresence = personaPresence;
+            }
+            
+            // FIX: Ne pas envoyer de mises à jour si le joueur a "Apparaître hors ligne" activé
+            if (personaEntity.getUser().isAppearOffline()) {
+                logger.debug("Persona {} has appearOffline enabled, broadcasting OFFLINE status", personaEntity.getName());
+                // Envoyer OFFLINE même si le joueur est en ligne
+                sendPresencePacketsWithRetry(personaEntity, PresenceBO.PRESENCE_OFFLINE);
+            } else if (currentPresence.equals(personaPresence)) {
+                // La présence n'a pas changé pendant le délai, envoyer la notification
                 sendPresencePacketsWithRetry(personaEntity, personaPresence);
             } else {
-                logger.debug("Presence changed during processing for persona {}, using current: {}", 
-                           personaEntity.getName(), currentPresence);
+                // La présence a changé pendant le traitement, utiliser la valeur actuelle
+                logger.debug("Presence changed during processing for persona {}: event={}, current={}", 
+                           personaEntity.getName(), personaPresence, currentPresence);
                 sendPresencePacketsWithRetry(personaEntity, currentPresence);
             }
-        } else {
-            logger.warn("Cannot handle presence update for persona {}: persona not found", personaPresenceUpdated.getPersonaId());
+            
+        } catch (Exception e) {
+            logger.error("Unexpected error handling presence update for persona {}: {}", 
+                       personaId, e.getMessage(), e);
         }
     }
     
@@ -420,9 +466,23 @@ public class SocialRelationshipBO {
     /**
      * AMÉLIORATION: Validation des présences avec gestion des erreurs
      * Cette méthode valide et rafraîchit les présences pour éviter les incohérences
+     * FIX: Respecte désormais le paramètre appearOffline de l'utilisateur
      */
     private Long getValidatedPresence(Long personaId) {
         try {
+            PersonaEntity personaEntity = personaDAO.find(personaId);
+            
+            if (personaEntity == null) {
+                logger.debug("Persona {} not found, returning offline", personaId);
+                return PresenceBO.PRESENCE_OFFLINE;
+            }
+            
+            // FIX CRITIQUE: Vérifier si le joueur a activé "Apparaître hors ligne"
+            if (personaEntity.getUser().isAppearOffline()) {
+                logger.debug("Persona {} has appearOffline enabled, returning offline", personaId);
+                return PresenceBO.PRESENCE_OFFLINE;
+            }
+            
             Long presence = presenceBO.getPresence(personaId);
             
             if (presence == null) {
@@ -469,7 +529,15 @@ public class SocialRelationshipBO {
     private void sendPresencePackets(PersonaEntity personaEntity, Long presence) {
         Objects.requireNonNull(personaEntity, "personaEntity is null!");
         
+        if (presence == null) {
+            logger.warn("Cannot send presence packets for persona {}: presence is null", personaEntity.getName());
+            return;
+        }
+        
         logger.debug("Sending presence packets for persona {} with presence {}", personaEntity.getName(), presence);
+        
+        int successCount = 0;
+        int failureCount = 0;
         
         // Trouver toutes les relations où ce persona est l'ami distant (les personnes qui ont ce persona comme ami)
         List<SocialRelationshipEntity> friendsWhoHaveThisPersona = socialRelationshipDAO.findByRemotePersonaId(personaEntity.getPersonaId());
@@ -478,14 +546,33 @@ public class SocialRelationshipBO {
         for (SocialRelationshipEntity relationship : friendsWhoHaveThisPersona) {
             if (relationship.getStatus() == 1) { // Seulement les amis confirmés
                 try {
-                    // Obtenir le premier persona de l'utilisateur ami
+                    // Obtenir le persona actif de l'utilisateur ami
                     if (relationship.getUser() != null && !relationship.getUser().getPersonas().isEmpty()) {
-                        Long friendPersonaId = relationship.getUser().getPersonas().get(0).getPersonaId();
-                        sendPresencePacket(personaEntity, presence, friendPersonaId);
-                        logger.debug("Sent presence update for {} to friend {}", personaEntity.getName(), friendPersonaId);
+                        // Trouver le persona qui a une présence active (en ligne)
+                        PersonaEntity targetPersona = null;
+                        for (PersonaEntity p : relationship.getUser().getPersonas()) {
+                            if (p.getDeletedAt() == null) {
+                                Long friendPresence = presenceBO.getPresence(p.getPersonaId());
+                                if (friendPresence != null && !friendPresence.equals(PresenceBO.PRESENCE_OFFLINE)) {
+                                    targetPersona = p;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (targetPersona != null) {
+                            sendPresencePacketWithRetry(personaEntity, presence, targetPersona.getPersonaId());
+                            successCount++;
+                            logger.debug("Sent presence update for {} to friend {} (online)", 
+                                       personaEntity.getName(), targetPersona.getPersonaId());
+                        } else {
+                            logger.trace("Friend user {} has no online personas, skipping presence update", 
+                                       relationship.getUser().getId());
+                        }
                     }
                 } catch (Exception e) {
-                    logger.error("Error sending presence packet for persona {} to friend {}: {}", 
+                    failureCount++;
+                    logger.error("Error sending presence packet for persona {} to friend user {}: {}", 
                                personaEntity.getName(), relationship.getUser().getId(), e.getMessage());
                 }
             }
@@ -495,23 +582,77 @@ public class SocialRelationshipBO {
         List<SocialRelationshipEntity> thisPersonaFriends = socialRelationshipDAO.findByUserIdAndStatus(personaEntity.getUser().getId(), 1L);
         for (SocialRelationshipEntity relationship : thisPersonaFriends) {
             try {
-                sendPresencePacket(personaEntity, presence, relationship.getRemotePersonaId());
-                logger.debug("Sent presence update for {} to their friend {}", personaEntity.getName(), relationship.getRemotePersonaId());
+                Long remotePersonaId = relationship.getRemotePersonaId();
+                
+                // Vérifier que l'ami distant est en ligne avant d'envoyer
+                Long remotePresence = presenceBO.getPresence(remotePersonaId);
+                if (remotePresence != null && !remotePresence.equals(PresenceBO.PRESENCE_OFFLINE)) {
+                    sendPresencePacketWithRetry(personaEntity, presence, remotePersonaId);
+                    successCount++;
+                    logger.debug("Sent presence update for {} to their online friend {}", 
+                               personaEntity.getName(), remotePersonaId);
+                } else {
+                    logger.trace("Friend persona {} is offline, skipping presence update", remotePersonaId);
+                }
             } catch (Exception e) {
+                failureCount++;
                 logger.error("Error sending presence packet for persona {} to their friend {}: {}", 
                            personaEntity.getName(), relationship.getRemotePersonaId(), e.getMessage());
             }
         }
+        
+        logger.info("Presence packets sent for persona {}: {} succeeded, {} failed", 
+                   personaEntity.getName(), successCount, failureCount);
     }
 
+    /**
+     * Envoie un paquet de présence avec retry automatique
+     */
+    private void sendPresencePacketWithRetry(PersonaEntity personaEntity, Long presence, Long targetPersonaId) {
+        int maxRetries = 2;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                sendPresencePacket(personaEntity, presence, targetPersonaId);
+                return; // Succès
+            } catch (Exception e) {
+                if (attempt < maxRetries) {
+                    logger.debug("Retry {}/{} sending presence for {} to {}", 
+                               attempt, maxRetries, personaEntity.getName(), targetPersonaId);
+                    try {
+                        Thread.sleep(30 * attempt); // Délai croissant: 30ms, 60ms
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                } else {
+                    throw e; // Dernier essai échoué, propager l'exception
+                }
+            }
+        }
+    }
+    
     private void sendPresencePacket(PersonaEntity personaEntity, Long presence,
                                     Long targetPersonaId) {
-        XMPP_ResponseTypePersonaBase personaPacket = new XMPP_ResponseTypePersonaBase();
-        PersonaBase xmppPersonaBase = driverPersonaBO.getPersonaBase(personaEntity);
-        xmppPersonaBase.setPresence(presence);
-        personaPacket.setPersonaBase(xmppPersonaBase);
+        if (personaEntity == null || targetPersonaId == null || targetPersonaId.equals(0L)) {
+            logger.warn("Invalid parameters for sendPresencePacket: persona={}, target={}", 
+                      personaEntity != null ? personaEntity.getName() : "null", targetPersonaId);
+            return;
+        }
+        
+        try {
+            XMPP_ResponseTypePersonaBase personaPacket = new XMPP_ResponseTypePersonaBase();
+            PersonaBase xmppPersonaBase = driverPersonaBO.getPersonaBase(personaEntity);
+            xmppPersonaBase.setPresence(presence);
+            personaPacket.setPersonaBase(xmppPersonaBase);
 
-        openFireSoapBoxCli.send(personaPacket, targetPersonaId);
+            openFireSoapBoxCli.send(personaPacket, targetPersonaId);
+            logger.trace("XMPP presence packet sent: {} (presence={}) -> persona {}", 
+                       personaEntity.getName(), presence, targetPersonaId);
+        } catch (Exception e) {
+            logger.error("Failed to send XMPP presence packet: {} (presence={}) -> persona {}: {}", 
+                       personaEntity.getName(), presence, targetPersonaId, e.getMessage());
+            throw e;
+        }
     }
 
     /**

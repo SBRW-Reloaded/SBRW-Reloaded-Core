@@ -11,8 +11,9 @@ import com.soapboxrace.core.jpa.ProductEntity;
 
 import com.soapboxrace.core.bo.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -21,9 +22,11 @@ import javax.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class ProductDAO extends LongKeyedDAO<ProductEntity> {
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     public ProductDAO() {

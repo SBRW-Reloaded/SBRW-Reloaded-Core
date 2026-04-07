@@ -8,9 +8,9 @@
 package com.soapboxrace.core.bo;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import javax.ejb.Asynchronous;
 import javax.ejb.DependsOn;
-import javax.ejb.EJB;
 import javax.ejb.Schedule;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
@@ -29,7 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 @DependsOn(value = "ParameterBO")
 public class LauncherChecksBO {
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
     @PostConstruct

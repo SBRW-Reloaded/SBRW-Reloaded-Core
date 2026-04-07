@@ -12,13 +12,16 @@ import com.soapboxrace.core.jpa.NewsArticleEntity;
 import com.soapboxrace.jaxb.http.ArrayOfNewsArticleTrans;
 import com.soapboxrace.jaxb.http.NewsArticleTrans;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class NewsArticleBO {
-    @EJB
+    @Inject
     private NewsArticleDAO newsArticleDAO;
 
     public ArrayOfNewsArticleTrans getNewsArticles(Long personaId) {

@@ -1,16 +1,11 @@
-/*
- * This file is part of the Soapbox Race World core source code.
- * If you use any of this code for third-party purposes, please provide attribution.
- * Copyright (c) 2020.
- */
-
 package com.soapboxrace.core.api;
 
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.PresenceBO;
 import com.soapboxrace.core.bo.RequestSessionInfo;
+import com.soapboxrace.core.bo.TokenSessionBO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -21,16 +16,25 @@ import java.util.Objects;
 @Path("/heartbeat")
 public class HeartBeat {
 
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
     @Inject
     private RequestSessionInfo requestSessionInfo;
 
+    @Inject
+    private TokenSessionBO tokenSessionBO;
+
     @POST
     @Secured
     @Produces(MediaType.APPLICATION_XML)
     public com.soapboxrace.jaxb.http.HeartBeat heartbeat() {
+        // Record the heartbeat timestamp for session expiration tracking
+        String securityToken = requestSessionInfo.getSecurityToken();
+        if (securityToken != null) {
+            tokenSessionBO.recordHeartbeat(securityToken);
+        }
+
         Long activePersonaId = requestSessionInfo.getActivePersonaId();
         if (!Objects.isNull(activePersonaId) && !activePersonaId.equals(0L)) {
             // Utiliser la méthode sécurisée qui ne recrée pas de présence

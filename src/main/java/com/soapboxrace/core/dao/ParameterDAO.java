@@ -9,10 +9,13 @@ package com.soapboxrace.core.dao;
 import com.soapboxrace.core.dao.util.StringKeyedDAO;
 import com.soapboxrace.core.jpa.ParameterEntity;
 
-import javax.ejb.Stateless;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.util.List;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class ParameterDAO extends StringKeyedDAO<ParameterEntity> {
 
     public ParameterDAO() {

@@ -14,7 +14,7 @@ import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -26,19 +26,19 @@ import java.util.List;
 @Path("/events")
 public class Events {
 
-    @EJB
+    @Inject
     private EventBO eventBO;
 
-    @EJB
+    @Inject
     private EventsBO eventsBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDAO;
 
     @Inject
@@ -75,16 +75,6 @@ public class Events {
                 }
             }
 
-            // 3. Vérification du mode classé (peut override les autres)
-            if (eventEntity.isRankedMode()) {
-                if (eventEntity.getRankMin() <= personaEntity.getRankingPoints() && personaEntity.getRankingPoints() <= eventEntity.getRankMax()) {
-                    System.out.println(personaEntity.getName() + " is within the rank range for " + eventEntity.getName() + ".");
-                    isLocked = false;  // Le rang correct déverrouille
-                } else {
-                    isLocked = true;
-                }
-            }
-            
             eventEntity.setLocked(isLocked);
 
             arrayOfEventDefinition.getEventDefinition().add(getEventDefinitionWithId(eventEntity));

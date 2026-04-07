@@ -9,6 +9,7 @@ package com.soapboxrace.core.api;
 import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.*;
 import com.soapboxrace.core.bo.util.OwnedCarConverter;
+import com.soapboxrace.core.engine.EngineException;
 import com.soapboxrace.core.jpa.CarEntity;
 import com.soapboxrace.core.jpa.PersonaEntity;
 import com.soapboxrace.core.jpa.ProductEntity;
@@ -16,7 +17,6 @@ import com.soapboxrace.core.jpa.TokenSessionEntity;
 import com.soapboxrace.jaxb.http.*;
 import com.soapboxrace.jaxb.util.JAXBUtility;
 
-import javax.ejb.EJB;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -29,28 +29,28 @@ import java.util.stream.Collectors;
 @Path("/personas")
 public class Personas {
 
-    @EJB
+    @Inject
     private BasketBO basketBO;
 
-    @EJB
+    @Inject
     private PersonaBO personaBO;
 
-    @EJB
+    @Inject
     private CarSlotBO carSlotBO;
 
-    @EJB
+    @Inject
     private CommerceBO commerceBO;
 
-    @EJB
+    @Inject
     private TokenSessionBO sessionBO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private AchievementBO achievementBO;
 
     @Inject
@@ -143,6 +143,8 @@ public class Personas {
     @Produces(MediaType.APPLICATION_XML)
     public CarSlotInfoTrans carslots(@PathParam(value = "personaId") Long personaId) {
         sessionBO.verifyPersonaOwnership(requestSessionInfo.getTokenSessionEntity(), personaId);
+        requestSessionInfo.getTokenSessionEntity().setInSafehouse(true);
+        requestSessionInfo.getTokenSessionEntity().setSafehouseEnteredAt(System.currentTimeMillis());
 
         PersonaEntity personaEntity = personaBO.getPersonaById(personaId);
         List<CarEntity> personasCar = carSlotBO.getPersonasCar(personaId);
@@ -199,9 +201,29 @@ public class Personas {
     @Secured
     @Path("/inventory/sell/{entitlementTag}")
     @Produces(MediaType.APPLICATION_XML)
-    public String sellInventoryItem(@HeaderParam("securityToken") String securityToken,
+    public String sellInventoryItemByPath(@HeaderParam("securityToken") String securityToken,
                                     @PathParam("entitlementTag") String entitlementTag) {
-        inventoryBO.removeItem(requestSessionInfo.getActivePersonaId(), entitlementTag);
+        return doSellInventoryItem(entitlementTag);
+    }
+
+    @GET
+    @Secured
+    @Path("/inventory/sell")
+    @Produces(MediaType.APPLICATION_XML)
+    public String sellInventoryItemByQuery(@HeaderParam("securityToken") String securityToken,
+                                    @QueryParam("entitlementTag") String entitlementTag) {
+        return doSellInventoryItem(entitlementTag);
+    }
+
+    private String doSellInventoryItem(String entitlementTag) {
+        if (entitlementTag == null || entitlementTag.isEmpty()) {
+            return "";
+        }
+        try {
+            inventoryBO.removeItem(requestSessionInfo.getActivePersonaId(), entitlementTag);
+        } catch (EngineException e) {
+            // Item not found - already sold, expired, or removed by another action
+        }
         return "";
     }
 
@@ -241,6 +263,9 @@ public class Personas {
     public OwnedCarTrans carsGet(@PathParam(value = "personaId") Long personaId,
                                  @PathParam(value = "carId") Long carId) {
         CarEntity carEntity = personaBO.getCarByOwnedCarId(carId);
+        if (carEntity == null) {
+            return new OwnedCarTrans();
+        }
         return OwnedCarConverter.entity2Trans(carEntity);
     }
 

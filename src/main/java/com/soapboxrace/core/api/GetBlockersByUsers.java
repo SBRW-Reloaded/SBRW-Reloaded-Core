@@ -10,7 +10,7 @@ import com.soapboxrace.core.api.util.Secured;
 import com.soapboxrace.core.bo.RequestSessionInfo;
 import com.soapboxrace.core.bo.SocialRelationshipBO;
 
-import javax.ejb.EJB;
+import javax.inject.Inject;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -22,7 +22,7 @@ import javax.ws.rs.core.Response;
 @Path("/getblockersbyusers")
 public class GetBlockersByUsers {
 
-    @EJB
+    @Inject
     private SocialRelationshipBO socialRelationshipBO;
 
     @Inject

@@ -12,62 +12,65 @@ import com.soapboxrace.core.engine.EngineExceptionCode;
 import com.soapboxrace.core.jpa.*;
 import com.soapboxrace.jaxb.http.*;
 
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 
-@Stateless
+@ApplicationScoped
+
+@Transactional
 public class DriverPersonaBO {
 
-    @EJB
+    @Inject
     private UserDAO userDao;
 
-    @EJB
+    @Inject
     private PersonaDAO personaDao;
 
-    @EJB
+    @Inject
     private LobbyEntrantDAO lobbyEntrantDAO;
 
-    @EJB
+    @Inject
     private LevelRepDAO levelRepDAO;
 
-    @EJB
+    @Inject
     private CarDAO carDAO;
 
-    @EJB
+    @Inject
     private TreasureHuntDAO treasureHuntDAO;
 
-    @EJB
+    @Inject
     private InventoryDAO inventoryDAO;
 
-    @EJB
+    @Inject
     private InventoryItemDAO inventoryItemDAO;
 
-    @EJB
+    @Inject
     private PersonaBadgeDAO personaBadgeDAO;
 
-    @EJB
+    @Inject
     private ParameterBO parameterBO;
 
-    @EJB
+    @Inject
     private InventoryBO inventoryBO;
 
-    @EJB
+    @Inject
     private PresenceBO presenceBO;
 
-    @EJB
+    @Inject
     private PersonaAchievementRankDAO personaAchievementRankDAO;
 
-    @EJB
+    @Inject
     private PersonaAchievementDAO personaAchievementDAO;
 
-    @EJB
+    @Inject
     private SocialRelationshipDAO socialRelationshipDAO;
     
-    @EJB
+    @Inject
     private KCrewMemberDAO kCrewMemberDAO;
 
     public ProfileData createPersona(Long userId, PersonaEntity personaEntity) {
